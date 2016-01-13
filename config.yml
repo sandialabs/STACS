@@ -1,0 +1,5 @@
+npdat: 2
+npnet: 4
+tmax:  100
+
+filebase: "test/tick"

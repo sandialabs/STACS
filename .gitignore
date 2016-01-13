@@ -7,6 +7,8 @@
 # Precompiled Headers
 *.gch
 *.pch
+*.decl.h
+*.def.h
 
 # Compiled Dynamic libraries
 *.so
@@ -26,3 +28,17 @@
 *.exe
 *.out
 *.app
+stacs
+charmrun
+
+# Graph Files
+*.dist
+*.metis
+*.coord.*
+*.adjcy.*
+*.state.*
+*.part.*
+
+# Temporary Files
+*.swp
+

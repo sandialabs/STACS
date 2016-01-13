@@ -1,0 +1,71 @@
+module network {
+  initnode void registerMinTick(void);
+  initnode void registerNetDist(void);
+
+  message mGo {
+    idx_t iter;
+  };
+  
+  message mDist {
+    idx_t vtxdist[];
+    idx_t edgdist[];
+    idx_t statedist[];
+    idx_t stickdist[];
+    idx_t modtype[];
+    idx_t xmodname[];
+    char modname[];
+    idx_t nmodel;
+  };
+  
+  message mModel {
+    idx_t modtype[];
+    idx_t nstate[];
+    idx_t nstick[];
+    idx_t xparam[];
+    real_t param[];
+    idx_t nmodel;
+  };
+
+  message mPart {
+    idx_t vtxdist[];
+    idx_t vtxmodidx[];
+    real_t xyz[];
+    idx_t xadj[];
+    idx_t adjcy[];
+    idx_t edgmodidx[];
+    real_t state[];
+    tick_t stick[];
+    idx_t nvtx;
+    idx_t nedg;
+    idx_t nstate;
+    idx_t nstick;
+    idx_t prtidx;
+  };
+  
+  message mRPC {
+    real_t rpcdata[];
+    idx_t nrpcdata;
+    idx_t command;
+  };
+  
+  array [1D] NetData {
+    entry NetData(mDist *msg);
+    
+    entry void LoadNetwork(int prtidx, const CkCallback &cb);
+    entry void SaveNetwork(mPart *msg);
+    entry void CheckNetwork(mPart *msg);
+  };
+
+  array [1D] Network {
+    entry Network(mModel *msg);
+
+    entry void LoadNetwork(CProxy_NetData cpdat);
+    entry void LoadNetwork(mPart *msg);
+    entry void SaveNetwork();
+
+    entry void GoAhead(mGo *msg);
+    entry void Cycle();
+
+    entry void RPCMsg(mRPC *msg);
+  };
+};

@@ -1,0 +1,37 @@
+mainmodule stacs {
+  extern module network;
+
+  readonly CProxy_Main mainProxy;
+  readonly CkGroupID mCastGrpId;
+  readonly std::string filebase;
+  readonly std::string filemod;
+  readonly idx_t npdat;
+  readonly idx_t npnet;
+  readonly tick_t tmax;
+  readonly tick_t tstep;
+  readonly tick_t tcheck;
+  readonly std::string rpcport;
+  
+  message mVtxDist {
+    idx_t vtxdist[];
+  };
+  
+  mainchare Main {
+    entry Main(CkArgMsg *msg);
+
+    entry [reductiontarget] void InitSim();
+    entry [reductiontarget] void StartSim();
+    entry void CheckSim(CkReductionMsg *msg);
+    entry [reductiontarget] void SaveSim();
+    entry void FiniSim(CkReductionMsg *msg);
+  };
+  
+  chare StreamRPC {
+    entry StreamRPC(mVtxDist *msg);
+    entry void Open(CProxy_Network cpnet);
+    entry void Close();
+
+    entry [reductiontarget] void RPCSync();
+    entry [reductiontarget] void RPCPause();
+  };
+};

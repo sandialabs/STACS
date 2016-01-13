@@ -1,0 +1,31 @@
+vertex:
+  - modname: dummyvtx
+    order: 80
+    shape: circle  # uniform circle
+    radius: 100.0  # of radius 100
+  - modname: dummyvtx1
+    order: 20
+    shape: circle  # uniform circle
+    radius: 100.0  # of radius 100
+
+edge:
+  - source: dummyvtx
+    target: [dummyvtx, dummyvtx1]
+    modname: dummyedg
+    cutoff: 50.0
+    connect:
+      - type: sigmoid
+        maxprob: .75
+        midpoint: 25.0
+        slope: 0.02
+      - type: sigmoid
+        maxprob: .05
+        midpoint: 37.0
+        slope: 0.03
+  - source: dummyvtx1
+    target: [dummyvtx, dummyvtx1]
+    modname: dummyedg
+    cutoff: 50.0
+    connect:
+      - type: uniform
+        prob: 0.3
