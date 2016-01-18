@@ -64,6 +64,10 @@ int Main::ReadDist() {
     oldstr = newstr;
     // stickdist
     netdist[i].nstick = strtoidx(oldstr, &newstr, 10);
+    oldstr = newstr;
+    // eventdist
+    netdist[i].nevent = strtoidx(oldstr, &newstr, 10);
+    oldstr = newstr;
     // prtidx
     netdist[i].prtidx = 0;
   }
@@ -86,6 +90,7 @@ int Main::WriteDist() {
   idx_t nedg;
   idx_t nstate;
   idx_t nstick;
+  idx_t nevent;
 
   // Open File
   sprintf(csrfile, "%s%s.dist", filebase.c_str(), filemod.c_str());
@@ -100,14 +105,15 @@ int Main::WriteDist() {
 
   // Write to file
   CkPrintf("  Writing network distribution\n");
-  nvtx = nedg = nstate = nstick = 0;
-  fprintf(pDist, "%" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx "\n", nvtx, nedg, nstate, nstick);
+  nvtx = nedg = nstate = nstick = nevent = 0;
+  fprintf(pDist, "%" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx "\n", nvtx, nedg, nstate, nstick, nevent);
   for (std::size_t i = 0; i < netdist.size(); ++i) {
     nvtx += netdist[i].nvtx;
     nedg += netdist[i].nedg;
     nstate += netdist[i].nstate;
     nstick += netdist[i].nstick;
-    fprintf(pDist, "%" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx "\n", nvtx, nedg, nstate, nstick);
+    nevent += netdist[i].nevent;
+    fprintf(pDist, "%" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx "\n", nvtx, nedg, nstate, nstick, nevent);
   }
 
   // Cleanup
@@ -128,6 +134,7 @@ void NetData::ReadCSR() {
   FILE *pCoord;
   FILE *pAdjcy;
   FILE *pState;
+  FILE *pEvent;
   char csrfile[100];
   char *line;
   char *oldstr, *newstr;
@@ -136,6 +143,7 @@ void NetData::ReadCSR() {
   idx_t jedgmodidx; // edgmodidx
   idx_t jstate; // state
   idx_t jstick; // time state
+  idx_t jevent; // event
   
   // Prepare buffer
   line = new char[MAXLINE];
@@ -147,7 +155,10 @@ void NetData::ReadCSR() {
   pAdjcy = fopen(csrfile,"r");
   sprintf(csrfile, "%s.state.%" PRIidx "", filebase.c_str(), datidx);
   pState = fopen(csrfile,"r");
-  if (pCoord == NULL || pAdjcy == NULL || pState == NULL || line == NULL) {
+  sprintf(csrfile, "%s.event.%" PRIidx "", filebase.c_str(), datidx);
+  pEvent = fopen(csrfile,"r");
+  if (pCoord == NULL || pAdjcy == NULL || pState == NULL ||
+      pEvent == NULL || line == NULL) {
     CkPrintf("Error opening graph files on %" PRIidx "\n", datidx);
     CkExit();
   }
@@ -158,6 +169,7 @@ void NetData::ReadCSR() {
     idx_t nedg = edgdist[xprt+k+1] - edgdist[xprt+k];
     idx_t nstate = statedist[xprt+k+1] - statedist[xprt+k];
     idx_t nstick = stickdist[xprt+k+1] - stickdist[xprt+k];
+    idx_t nevent = eventdist[xprt+k+1] - eventdist[xprt+k];
 
     // Initialize partition data message
     int msgSize[MSG_Part];
@@ -169,6 +181,11 @@ void NetData::ReadCSR() {
     msgSize[5] = nedg;          // edgmodidx
     msgSize[6] = nstate;        // state
     msgSize[7] = nstick;        // stick
+    msgSize[8] = nvtx+1;        // xevent
+    msgSize[9] = nevent;        // diffuse
+    msgSize[10] = nevent;       // target
+    msgSize[11] = nevent;       // type
+    msgSize[12] = nevent;       // data
     parts[k] = new(msgSize, 0) mPart;
     
     // Data sizes
@@ -176,6 +193,7 @@ void NetData::ReadCSR() {
     parts[k]->nedg = nedg;
     parts[k]->nstate = nstate;
     parts[k]->nstick = nstick;
+    parts[k]->nevent = nevent;
     parts[k]->prtidx = xprt+k;
 
     // vtxdist
@@ -185,12 +203,14 @@ void NetData::ReadCSR() {
 
     // first prefix entry is zero
     parts[k]->xadj[0] = 0;
+    parts[k]->xevent[0] = 0;
     
     // initialize counters
     jadjcy = 0;
     jedgmodidx = 0;
     jstate = 0;
     jstick = 0;
+    jevent = 0;
 
     // Extract Graph Information
     for (idx_t i = 0; i < nvtx; ++i) {
@@ -269,18 +289,49 @@ void NetData::ReadCSR() {
         modidx = strtomodidx(oldstr, &newstr);
         oldstr = newstr;
       }
+
+      // Read line (events)
+      while(fgets(line, MAXLINE, pEvent) && line[0] == '%');
+      oldstr = line;
+      newstr = NULL;
+      // xevent
+      jevent += strtoidx(oldstr, &newstr, 10);
+      parts[k]->xevent[i+1] = jevent;
+      oldstr = newstr;
+      for(idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
+        // diffuse
+        parts[k]->diffuse[e] = strtotick(oldstr, &newstr, 10);
+        oldstr = newstr;
+        // target
+        parts[k]->target[e] = strtoidx(oldstr, &newstr, 10);
+        oldstr = newstr;
+        // type
+        idx_t type = strtoidx(oldstr, &newstr, 10);
+        oldstr = newstr;
+        parts[k]->type[e] = type;
+        // data
+        if (type == EVENT_SPIKE) {
+          parts[k]->data[e] = 0.0;
+        }
+        else {
+          parts[k]->data[e] = strtoreal(oldstr, &newstr);
+          oldstr = newstr;
+        }
+      }
     }
     // Sanity check
     CkAssert(jadjcy == nedg);
     CkAssert(jedgmodidx == nedg);
     CkAssert(jstate == nstate);
     CkAssert(jstick == nstick);
+    CkAssert(jevent == nevent);
   }
 
   // Cleanup
   fclose(pCoord);
   fclose(pAdjcy);
   fclose(pState);
+  fclose(pEvent);
   delete[] line;
 }
     
@@ -291,6 +342,7 @@ void NetData::WriteCSR() {
   FILE *pCoord;
   FILE *pAdjcy;
   FILE *pState;
+  FILE *pEvent;
   char csrfile[100];
 
   // Open files for writing
@@ -300,7 +352,9 @@ void NetData::WriteCSR() {
   pAdjcy = fopen(csrfile,"w");
   sprintf(csrfile, "%s%s.state.%" PRIidx "", filebase.c_str(), filemod.c_str(), datidx);
   pState = fopen(csrfile,"w");
-  if (pCoord == NULL || pAdjcy == NULL || pState == NULL) {
+  sprintf(csrfile, "%s%s.event.%" PRIidx "", filebase.c_str(), filemod.c_str(), datidx);
+  pEvent = fopen(csrfile,"w");
+  if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
     CkPrintf("Error opening files for writing %" PRIidx "\n", datidx);
     CkExit();
   }
@@ -316,6 +370,7 @@ void NetData::WriteCSR() {
     netdist[k].nedg = parts[k]->nedg;
     netdist[k].nstate = parts[k]->nstate;
     netdist[k].nstick = parts[k]->nstick;
+    netdist[k].nevent = parts[k]->nevent;
 
     // initialize counters
     idx_t jstate = 0;
@@ -351,9 +406,25 @@ void NetData::WriteCSR() {
           fprintf(pState, " %" PRItick "", parts[k]->stick[jstick++]);
         }
       }
+
+      // Events
+      fprintf(pEvent, " %" PRIidx "", parts[k]->xevent[i+1] - parts[k]->xevent[i]);
+      for (idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
+        // event
+        if (parts[k]->type[e] == EVENT_SPIKE) {
+          fprintf(pEvent, " %" PRItick " %" PRIidx " %" PRIidx "",
+              parts[k]->diffuse[e], parts[k]->target[e], parts[k]->type[e]);
+        }
+        else {
+          fprintf(pEvent, " %" PRItick " %" PRIidx " %" PRIidx " %" PRIrealfull "",
+              parts[k]->diffuse[e], parts[k]->target[e], parts[k]->type[e], parts[k]->data[e]);
+        }
+      }
+
       // xadj
       fprintf(pAdjcy, "\n");
       fprintf(pState, "\n");
+      fprintf(pEvent, "\n");
     }
     // Sanity check
     CkAssert(jstate == parts[k]->nstate);
@@ -363,4 +434,6 @@ void NetData::WriteCSR() {
   // Cleanup
   fclose(pCoord);
   fclose(pAdjcy);
+  fclose(pState);
+  fclose(pEvent);
 }

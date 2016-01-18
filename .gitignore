@@ -37,6 +37,7 @@ charmrun
 *.coord.*
 *.adjcy.*
 *.state.*
+*.event.*
 *.part.*
 
 # Temporary Files

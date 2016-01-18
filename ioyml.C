@@ -24,6 +24,7 @@ extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
+extern /*readonly*/ idx_t evtcal;
 extern /*readonly*/ std::string rpcport;
 
 
@@ -76,7 +77,7 @@ int Main::ParseConfig(std::string configfile) {
   // Maximum simulation time (in ms)
   real_t treal;
   try {
-     treal = config["tmax"].as<real_t>();
+    treal = config["tmax"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
     treal = TMAX_DEFAULT;
     CkPrintf("  tmax not defined, defaulting to: %.2g ms\n", treal);
@@ -84,7 +85,7 @@ int Main::ParseConfig(std::string configfile) {
   tmax = (tick_t)(treal*TICKS_PER_MS);
   // Time of a simulation step (in ms)
   try {
-     treal = config["tstep"].as<real_t>();
+    treal = config["tstep"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
     treal = TSTEP_DEFAULT;
     CkPrintf("  tstep not defined, defaulting to: %.2g ms\n", treal);
@@ -92,15 +93,22 @@ int Main::ParseConfig(std::string configfile) {
   tstep = (tick_t)(treal*TICKS_PER_MS);
   // Time between checkpoints (in ms)
   try {
-     treal = config["tcheck"].as<real_t>();
+    treal = config["tcheck"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
     treal = TCHECK_DEFAULT;
     CkPrintf("  tcheck not defined, defaulting to: %.2g ms\n", treal);
   }
   tcheck = (tick_t)(treal*TICKS_PER_MS);
+  // Event queue calendar days per year
+  try {
+    evtcal = config["evtcal"].as<idx_t>();
+  } catch (YAML::RepresentationException& e) {
+    evtcal = EVTCAL_DEFAULT;
+    CkPrintf("  evtcal not defined, defaulting to: %d iters\n", evtcal);
+  }
   // RPC port
   try {
-     rpcport = config["rpcport"].as<std::string>();
+    rpcport = config["rpcport"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
     rpcport = RPCPORT_DEFAULT;
     CkPrintf("  rpcport not defined, defaulting to: %s\n", rpcport.c_str());

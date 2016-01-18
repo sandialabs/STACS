@@ -11,6 +11,7 @@ module network {
     idx_t edgdist[];
     idx_t statedist[];
     idx_t stickdist[];
+    idx_t eventdist[];
     idx_t modtype[];
     idx_t xmodname[];
     char modname[];
@@ -35,11 +36,26 @@ module network {
     idx_t edgmodidx[];
     real_t state[];
     tick_t stick[];
+    idx_t xevent[];
+    tick_t diffuse[];
+    idx_t target[];
+    idx_t type[];
+    real_t data[];
     idx_t nvtx;
     idx_t nedg;
     idx_t nstate;
     idx_t nstick;
+    idx_t nevent;
     idx_t prtidx;
+  };
+
+  message mEvent {
+    tick_t diffuse[];
+    idx_t source[];
+    idx_t type[];
+    real_t data[];
+    idx_t iter;
+    idx_t nevent;
   };
   
   message mRPC {
@@ -62,6 +78,8 @@ module network {
     entry void LoadNetwork(CProxy_NetData cpdat);
     entry void LoadNetwork(mPart *msg);
     entry void SaveNetwork();
+
+    entry void CommEvent(mEvent *msg);
 
     entry void GoAhead(mGo *msg);
     entry void Cycle();

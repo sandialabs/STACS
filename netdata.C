@@ -59,11 +59,13 @@ NetData::NetData(mDist *msg) {
   edgdist.resize(npnet+1);
   statedist.resize(npnet+1);
   stickdist.resize(npnet+1);
+  eventdist.resize(npnet+1);
   for (idx_t i = 0; i < npnet+1; ++i) {
     vtxdist[i] = msg->vtxdist[i];
     edgdist[i] = msg->edgdist[i];
     statedist[i] = msg->statedist[i];
     stickdist[i] = msg->stickdist[i];
+    eventdist[i] = msg->eventdist[i];
   }
   // Models
   for (std::size_t i = 0; i < netmodel.size(); ++i) {

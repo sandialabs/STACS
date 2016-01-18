@@ -17,7 +17,7 @@ class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
     DummyVtx() { nparam = 1; nstate = 2; nstick = 0; }
 
     /* Simulation */
-    void Step(tick_t tdrift);
+    void Step(tick_t tdrift, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>&evtlog);
 };
 
 
@@ -27,6 +27,10 @@ class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
 
 // Simulation step
 //
-void DummyVtx::Step(tick_t tdrift) {
+void DummyVtx::Step(tick_t tdrift, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
   usleep(tdrift/1000); // tdrift ms
+
+  evtlog.push_back(evtlog[0]);
+  evtlog.back().diffuse += tdrift/2;
+  evtlog.back().type = EVENT_SPIKE;
 }

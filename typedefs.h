@@ -8,6 +8,7 @@
 #define __STACS_TYPEDEFS_H__
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#include <vector>
 //#include <math.h>
 
 typedef float real4;
@@ -50,9 +51,23 @@ struct dist_t {
   idx_t nedg;
   idx_t nstate;
   idx_t nstick;
+  idx_t nevent;
 
   bool operator<(const dist_t& dist) const {
     return prtidx < dist.prtidx;
+  }
+};
+
+// Events
+//
+struct event_t {
+  tick_t diffuse;
+  idx_t index;
+  idx_t type;
+  real_t data;
+  
+  bool operator<(const event_t& event) const {
+    return diffuse < event.diffuse;
   }
 };
 

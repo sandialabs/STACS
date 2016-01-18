@@ -24,4 +24,6 @@
 #define RPCSYNC_SYNCING    1
 #define RPCSYNC_SYNCED     2
 
+#define EVENT_SPIKE        0
+
 #endif //__STACS_MESSAGES_H__

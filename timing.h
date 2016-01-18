@@ -12,4 +12,6 @@
 #define TCHECK_DEFAULT     50.0 // 50ms
 #define TICKS_PER_MS    1000000 // 1 million
 
+#define EVTCAL_DEFAULT       20 // Days per year
+
 #endif //__STACS_TIMING_H__

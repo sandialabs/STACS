@@ -50,13 +50,14 @@ class mGo : public CkMcastBaseMsg, public CMessage_mGo {
 
 // Graph adjacency distribution
 //
-#define MSG_Dist 7
+#define MSG_Dist 8
 class mDist : public CMessage_mDist {
   public:
     idx_t *vtxdist; // number of vertices in partitions
     idx_t *edgdist; // number of edges in partitions
     idx_t *statedist; // number of states in partitions
     idx_t *stickdist; // number of ticks in partitions
+    idx_t *eventdist; // number of events in partitions
     idx_t *modtype;
     idx_t *xmodname;
     char *modname;
@@ -78,7 +79,7 @@ class mModel : public CMessage_mModel {
 
 // Network partition data
 //
-#define MSG_Part 8
+#define MSG_Part 13
 class mPart : public CMessage_mPart {
   public:
     /* Data */
@@ -91,13 +92,34 @@ class mPart : public CMessage_mPart {
     real_t *state;
     tick_t *stick;
     /* Events */
+    idx_t *xevent;
+    tick_t *diffuse;
+    idx_t *target;
+    idx_t *type;
+    real_t *data;
     /* Sizes */
     idx_t nvtx;
     idx_t nedg;
     idx_t nstate;
     idx_t nstick;
+    idx_t nevent;
     /* Bookkeeping */
     idx_t prtidx;
+};
+
+// Network event data
+//
+#define MSG_Event 4
+class mEvent : public CkMcastBaseMsg, public CMessage_mEvent {
+  public:
+    /* Data */
+    tick_t *diffuse;
+    idx_t *source;
+    idx_t *type;
+    real_t *data;
+    /* Bookkeeping */
+    idx_t iter;
+    idx_t nevent;
 };
 
 // RPC Command to Network
@@ -131,7 +153,7 @@ class NetModel {
       param = std::vector<real_t>(p, p+nparam);
     }
     /* Abstract Functions */
-    virtual void Step(tick_t tdrift) = 0;
+    virtual void Step(tick_t tdrift, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
   protected:
     /* Bookkeeping */
     idx_t modtype;
@@ -204,7 +226,7 @@ const idx_t NetModelTmpl<TYPE, IMPL>::MODELTYPE = NetModelFactory::getNetModel()
 class NoneModel : public NetModelTmpl < 0, NoneModel > {
   public:
     NoneModel() { nparam = 0; nstate = 0; nstick = 0; }
-    void Step(tick_t tdrift) { }
+    void Step(tick_t tdrift, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) { }
 };
 
 
@@ -268,6 +290,7 @@ class NetData : public CBase_NetData {
     std::vector<idx_t> edgdist;
     std::vector<idx_t> statedist;
     std::vector<idx_t> stickdist;
+    std::vector<idx_t> eventdist;
     /* Network Model */
     std::vector<NetModel*> netmodel;      // collection of model objects (empty)
     std::vector<std::string> modname;     // model names in order of of object index
@@ -296,6 +319,11 @@ class Network : public CBase_Network {
 
     /* Computation */
     void LoadNetModel();
+
+    /* Communication */
+    mEvent* BuildEvent();
+    void CommEvent(mEvent *msg);
+    void RedisEvent();
 
     /* Simulation */
     void GoAhead(mGo *msg);
@@ -328,6 +356,12 @@ class Network : public CBase_Network {
     std::vector<std::vector<std::vector<real_t>>> state;
         // first level is the vertex, second level is the models, third is state data
     std::vector<std::vector<std::vector<tick_t>>> stick;
+    /* Network Events */
+    std::vector<std::vector<std::vector<event_t>>> event;
+        // event queue per vertex per iteration (use as calendar queue)
+    std::vector<std::vector<event_t>> evtaux; // spillover event queue
+    std::vector<event_t> evtreaux;  // spillover spillover event queue
+    std::vector<event_t> evtlog; // event buffer for generated events
     /* Timing */
     tick_t tsim;
     idx_t iter;

@@ -19,6 +19,7 @@
 /*readonly*/ tick_t tmax;
 /*readonly*/ tick_t tstep;
 /*readonly*/ tick_t tcheck;
+/*readonly*/ idx_t evtcal;
 /*readonly*/ std::string rpcport;
 
 

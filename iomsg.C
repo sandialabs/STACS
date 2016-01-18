@@ -37,9 +37,10 @@ mDist* Main::BuildDist() {
   msgSize[1] = npnet+1;         // edgdist
   msgSize[2] = npnet+1;         // statedist
   msgSize[3] = npnet+1;         // stickdist
-  msgSize[4] = models.size();   // modtype
-  msgSize[5] = models.size()+1; // xmodname
-  msgSize[6] = nmodname;        // modname
+  msgSize[4] = npnet+1;         // eventdist
+  msgSize[5] = models.size();   // modtype
+  msgSize[6] = models.size()+1; // xmodname
+  msgSize[7] = nmodname;        // modname
   mDist *mdist = new(msgSize, 0) mDist;
   mdist->nmodel = models.size();
 
@@ -53,6 +54,8 @@ mDist* Main::BuildDist() {
     mdist->statedist[i] = netdist[i].nstate;
     // stickdist
     mdist->stickdist[i] = netdist[i].nstick;
+    // eventdist
+    mdist->eventdist[i] = netdist[i].nevent;
   }
 
   // Prefixes starts with zero
