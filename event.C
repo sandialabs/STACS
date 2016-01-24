@@ -24,23 +24,25 @@ mEvent* Network::BuildEvent() {
   // Initialize distribution message
   int msgSize[MSG_Event];
   msgSize[0] = evtlog.size()-1;     // diffuse
-  msgSize[1] = evtlog.size()-1;     // source
+  msgSize[1] = evtlog.size()-1;     // index
   msgSize[2] = evtlog.size()-1;     // type
   msgSize[3] = evtlog.size()-1;     // data
   mEvent *mevent = new(msgSize, 0) mEvent;
   mevent->nevent = evtlog.size()-1;
   mevent->iter = iter;
+  //mevent->prtidx = prtidx;
   
   // Pack event information (0'th is event template)
   for (std::size_t i = 1; i < evtlog.size(); ++i) {
-    // diffuse
     mevent->diffuse[i-1] = evtlog[i].diffuse;
-    // source
-    mevent->source[i-1] = evtlog[i].index;
-    // type
+    mevent->index[i-1] = evtlog[i].index;
     mevent->type[i-1] = evtlog[i].type;
-    // data
     mevent->data[i-1] = evtlog[i].data;
+
+    // Add to record if listed
+    if (evtlog[i].type & recevtlist) {
+      recevt.push_back(evtlog[i]);
+    }
   }
 
   return mevent;
@@ -63,8 +65,8 @@ void Network::CommEvent(mEvent *msg) {
     evtdif = msg->diffuse[i];
     evtpre.type = msg->type[i];
     evtpre.data = msg->data[i];
-    // Find target mapping
-    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = adjmap.find(msg->source[i]);
+    // Find target mapping from source
+    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = adjmap.find(msg->index[i]);
     if (targets != adjmap.end()) {
       for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
         evtpre.index = (*target)[1];

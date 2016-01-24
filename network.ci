@@ -51,11 +51,21 @@ module network {
 
   message mEvent {
     tick_t diffuse[];
-    idx_t source[];
+    idx_t index[];
     idx_t type[];
     real_t data[];
+    idx_t prtidx;
     idx_t iter;
     idx_t nevent;
+  };
+
+  message mRecord {
+    tick_t drift[];
+    idx_t xdata[];
+    real_t data[];
+    idx_t prtidx;
+    idx_t iter;
+    idx_t nrecord;
   };
   
   message mRPC {
@@ -68,8 +78,13 @@ module network {
     entry NetData(mDist *msg);
     
     entry void LoadNetwork(int prtidx, const CkCallback &cb);
-    entry void SaveNetwork(mPart *msg);
     entry void CheckNetwork(mPart *msg);
+    entry void SaveNetwork(mPart *msg);
+
+    entry void CheckRecord(mRecord *msg);
+    entry void SaveRecord(mRecord *msg);
+    entry void CheckRecevt(mEvent *msg);
+    entry void SaveRecevt(mEvent *msg);
   };
 
   array [1D] Network {

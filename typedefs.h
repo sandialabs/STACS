@@ -24,13 +24,14 @@ typedef real8 real_t;
 // Reading from file
 #define strtoidx strtoll
 #define strtouidx strtoull
-#define strtotick strtoul
+#define strtotick strtoull
 #define strtoreal strtod
 
 // Printing to string
 #define PRIidx PRId64
 #define PRIuidx PRIu64
 #define PRItick PRIu64
+#define PRItickhex PRIx64
 #define PRIreal ".2g"
 #define PRIrealfull " .7e"
 
@@ -69,6 +70,22 @@ struct event_t {
   bool operator<(const event_t& event) const {
     return diffuse < event.diffuse;
   }
+};
+
+// Records
+//
+struct record_t {
+  tick_t drift;
+  std::vector<real_t> data;
+};
+
+// Record list
+//
+struct reclist_t {
+  idx_t type;
+  idx_t vertex;
+  idx_t model;
+  idx_t index;
 };
 
 #endif //__STACS_TYPEDEFS_H__

@@ -50,7 +50,7 @@ NetData::NetData(mDist *msg) {
   datidx = thisIndex;
   idx_t ndiv = npnet/npdat;
   idx_t nrem = npnet%npdat;
-  cprt = 0;
+  cprt = eprt = rprt = 0;
   nprt = ndiv + (datidx < nrem);
   xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
 
@@ -90,7 +90,9 @@ NetData::NetData(mDist *msg) {
   delete msg;
 
   // Data
-  parts = new mPart*[nprt];
+  parts.resize(nprt);
+  recevts.resize(nprt);
+  records.resize(nprt);
 
   // Read in files
   CkPrintf("  Loading input %" PRIidx "\n", datidx);
@@ -109,7 +111,6 @@ NetData::NetData(CkMigrateMessage *msg) {
 // NetData destructor
 //
 NetData::~NetData() {
-  delete[] parts;
   for (std::size_t i = 0; i < netmodel.size(); ++i) {
     delete netmodel[i];
   }
@@ -127,31 +128,6 @@ void NetData::LoadNetwork(idx_t prtidx, const CkCallback &cb) {
   cb.send(parts[prtidx - xprt]);
 }
 
-// Receive data from network partition
-//
-void NetData::SaveNetwork(mPart *msg) {
-  // Stash part
-  parts[msg->prtidx - xprt] = msg;
-  
-  // Wait for all parts
-  if (++cprt == nprt) {
-    cprt = 0;
-
-    // Write data
-    CkPrintf("  Saving output %" PRIidx "\n", datidx);
-    WriteCSR();
-
-    // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
-      delete parts[i];
-    }
-
-    // Return control to main
-    CkCallback *cb = new CkCallback(CkIndex_Main::FiniSim(NULL), mainProxy);
-    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
-  }
-}
-
 // Receive data from network partition (checkpointing)
 //
 void NetData::CheckNetwork(mPart *msg) {
@@ -163,8 +139,8 @@ void NetData::CheckNetwork(mPart *msg) {
     cprt = 0;
 
     // Write data
-    CkPrintf("  Saving output %" PRIidx "\n", datidx);
-    WriteCSR();
+    CkPrintf("  Writing network %" PRIidx "\n", datidx);
+    WriteCSR(true);
 
     // Cleanup stash
     for (idx_t i = 0; i < nprt; ++i) {
@@ -173,6 +149,31 @@ void NetData::CheckNetwork(mPart *msg) {
 
     // Return control to main
     CkCallback *cb = new CkCallback(CkIndex_Main::CheckSim(NULL), mainProxy);
+    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
+  }
+}
+
+// Receive data from network partition
+//
+void NetData::SaveNetwork(mPart *msg) {
+  // Stash part
+  parts[msg->prtidx - xprt] = msg;
+  
+  // Wait for all parts
+  if (++cprt == nprt) {
+    cprt = 0;
+
+    // Write data
+    CkPrintf("  Writing network %" PRIidx "\n", datidx);
+    WriteCSR();
+
+    // Cleanup stash
+    for (idx_t i = 0; i < nprt; ++i) {
+      delete parts[i];
+    }
+
+    // Return control to main
+    CkCallback *cb = new CkCallback(CkIndex_Main::FiniSim(NULL), mainProxy);
     contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
   }
 }

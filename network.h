@@ -114,12 +114,27 @@ class mEvent : public CkMcastBaseMsg, public CMessage_mEvent {
   public:
     /* Data */
     tick_t *diffuse;
-    idx_t *source;
+    idx_t *index;
     idx_t *type;
     real_t *data;
     /* Bookkeeping */
+    idx_t prtidx;
     idx_t iter;
     idx_t nevent;
+};
+
+// Network record data
+//
+#define MSG_Record 3
+class mRecord : public CMessage_mRecord {
+  public:
+    tick_t *drift;
+    idx_t *xdata;
+    real_t *data;
+    /* Bookkeeping */
+    idx_t prtidx;
+    idx_t iter;
+    idx_t nrecord;
 };
 
 // RPC Command to Network
@@ -246,9 +261,17 @@ class NetData : public CBase_NetData {
     /* Persistence */
     void LoadNetwork(idx_t prtidx, const CkCallback &cb);
     void ReadCSR();
-    void SaveNetwork(mPart *msg);
     void CheckNetwork(mPart *msg);
-    void WriteCSR();
+    void SaveNetwork(mPart *msg);
+    void WriteCSR(bool check = false);
+
+    /* Recording */
+    void CheckRecord(mRecord *msg);
+    void SaveRecord(mRecord *msg);
+    void WriteRecord();
+    void CheckRecevt(mEvent *msg);
+    void SaveRecevt(mEvent *msg);
+    void WriteRecevt();
     
     /* Helper Functions */
     idx_t strtomodidx(const char* nptr, char** endptr) {
@@ -283,7 +306,9 @@ class NetData : public CBase_NetData {
 
   private:
     /* Network Data */
-    mPart **parts;
+    std::vector<mPart*> parts;
+    std::vector<mEvent*> recevts;
+    std::vector<mRecord*> records;
     /* Distributions */
     std::vector<dist_t> netdist;
     std::vector<idx_t> vtxdist;
@@ -297,7 +322,8 @@ class NetData : public CBase_NetData {
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     /* Bookkeeping */
     idx_t datidx;;
-    idx_t nprt, cprt, xprt;
+    idx_t nprt, cprt, eprt, rprt;
+    idx_t xprt;
 };
 
 // Network partitions
@@ -316,6 +342,11 @@ class Network : public CBase_Network {
     void LoadNetwork(CProxy_NetData cpdat);
     void LoadNetwork(mPart *msg);
     void SaveNetwork();
+
+    /* Recording */
+    mEvent* BuildRecevt();
+    mRecord* BuildRecord();
+    void StoreRecord();
 
     /* Computation */
     void LoadNetModel();
@@ -362,6 +393,11 @@ class Network : public CBase_Network {
     std::vector<std::vector<event_t>> evtaux; // spillover event queue
     std::vector<event_t> evtreaux;  // spillover spillover event queue
     std::vector<event_t> evtlog; // event buffer for generated events
+    /* Recording */
+    std::vector<record_t> record; // record keeping
+    std::vector<reclist_t> recordlist; // what to record
+    std::vector<event_t> recevt; // record keeping for events
+    idx_t recevtlist; // types of events to record
     /* Timing */
     tick_t tsim;
     idx_t iter;
@@ -374,6 +410,7 @@ class Network : public CBase_Network {
     /* Checkpointing */
     bool cpflag;
     idx_t checkiter;
+    tick_t trec;
 #ifdef STACS_WITH_YARP
     /* RPC Control */
     CkCallback cbrpc;

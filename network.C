@@ -16,6 +16,7 @@ extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
+extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ idx_t evtcal;
 
 
@@ -154,6 +155,11 @@ void Network::LoadNetwork(mPart *msg) {
   evtreaux.clear();
   evtlog.clear();
   evtlog.push_back(event_t());
+  evtlog[0].type = EVENT_DUMMY;
+  record.clear();
+  recordlist.clear();
+  recevt.clear();
+  recevtlist = EVENT_SPIKE;
   
   // Graph distribution information
   for (idx_t i = 0; i < npnet+1; ++i) {
@@ -244,6 +250,8 @@ void Network::LoadNetwork(mPart *msg) {
   // Set up checkpointing
   cpflag = false;
   checkiter = (idx_t) (tcheck/tstep);
+  // Set up recordning
+  trec = trecord;
 #ifdef STACS_WITH_YARP
   // Set up synchronization
   synciter = IDX_T_MAX;
@@ -431,6 +439,15 @@ void Network::SaveNetwork() {
   }
   else {
     netdata(datidx).SaveNetwork(part);
+
+    // Final event records
+    mEvent *mrecevt = BuildRecevt();
+    netdata(datidx).SaveRecevt(mrecevt);
+    recevt.clear();
+    // Final periodic records
+    mRecord *mrecord = BuildRecord();
+    netdata(datidx).SaveRecord(mrecord);
+    record.clear();
   }
 }
 
@@ -502,6 +519,22 @@ void Network::Cycle() {
       CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
     }
 
+    
+    // Recording
+    if (tsim == trec) {
+      trec += trecord;
+      // Event records
+      mEvent *mrecevt = BuildRecevt();
+      netdata(datidx).CheckRecevt(mrecevt);
+      recevt.clear();
+      // Periodic records
+      mRecord *mrecord = BuildRecord();
+      netdata(datidx).CheckRecord(mrecord);
+      record.clear();
+    }
+    // Store new records (periodic)
+    StoreRecord();
+
     // Clear event buffer
     evtlog.resize(1);
     evtlog[0].diffuse = tsim;
@@ -529,7 +562,7 @@ void Network::Cycle() {
       // Update event template
       ++evtlog[0].index;
     }
-    CkPrintf("    Events on %d: %d\n", prtidx, nevent);
+    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
 
     // Increment simulated time
     tsim += tstep;
@@ -540,8 +573,6 @@ void Network::Cycle() {
     // Simple go-ahead method (if no events)
     // mGo *go = new mGo(iter);
     // netgroup.GoAhead(go);
-
-    // Send messages to netdata (file)
 
 #ifdef STACS_WITH_YARP
     // Send messages to streams (yarp)

@@ -32,13 +32,15 @@ stacs
 charmrun
 
 # Graph Files
-*.dist
-*.metis
+*.dist*
+*.metis*
 *.coord.*
 *.adjcy.*
 *.state.*
 *.event.*
 *.part.*
+*.record.*
+*.recevt.*
 
 # Temporary Files
 *.swp

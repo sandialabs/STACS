@@ -4,12 +4,14 @@ mainmodule stacs {
   readonly CProxy_Main mainProxy;
   readonly CkGroupID mCastGrpId;
   readonly std::string filebase;
-  readonly std::string filemod;
+  readonly std::string filein;
+  readonly std::string fileout;
   readonly idx_t npdat;
   readonly idx_t npnet;
   readonly tick_t tmax;
   readonly tick_t tstep;
   readonly tick_t tcheck;
+  readonly tick_t trecord;
   readonly idx_t evtcal;
   readonly std::string rpcport;
   
@@ -25,6 +27,7 @@ mainmodule stacs {
     entry void CheckSim(CkReductionMsg *msg);
     entry [reductiontarget] void SaveSim();
     entry void FiniSim(CkReductionMsg *msg);
+    entry [reductiontarget] void Halt();
   };
   
   chare StreamRPC {

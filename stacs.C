@@ -13,12 +13,14 @@
 /*readonly*/ CProxy_Main mainProxy;
 /*readonly*/ CkGroupID mCastGrpId;
 /*readonly*/ std::string filebase;
-/*readonly*/ std::string filemod;
+/*readonly*/ std::string filein;
+/*readonly*/ std::string fileout;
 /*readonly*/ idx_t npdat;
 /*readonly*/ idx_t npnet;
 /*readonly*/ tick_t tmax;
 /*readonly*/ tick_t tstep;
 /*readonly*/ tick_t tcheck;
+/*readonly*/ tick_t trecord;
 /*readonly*/ idx_t evtcal;
 /*readonly*/ std::string rpcport;
 
@@ -149,6 +151,12 @@ void Main::StartSim() {
   CkCallback *cb = new CkCallback(CkReductionTarget(Main, SaveSim), mainProxy);
   network.ckSetReductionClient(cb);
   network.Cycle();
+  
+  // For halting
+  chalt = 0;
+  nhalt = 3; // checkpoint, records, recevts
+  CkCallback *cbh = new CkCallback(CkReductionTarget(Main, Halt), mainProxy);
+  netdata.ckSetReductionClient(cbh);
 }
 
 
@@ -169,13 +177,10 @@ void Main::CheckSim(CkReductionMsg *msg) {
   delete msg;
 
   // Write distribution
-  if (WriteDist()) {
+  if (WriteDist(true)) {
     CkPrintf("Error writing distribution...\n");
     CkExit();
   }
-
-  // Restart simulation
-  //network.Cycle();
 }
 
 /**************************************************************************
@@ -217,10 +222,18 @@ void Main::FiniSim(CkReductionMsg *msg) {
   yarp.fini();
 #endif
   
-  // Simulation complete
-  CkExit();
+  Halt();
 }
 
+// Halt
+//
+void Main::Halt() {
+  // Everything checks back to here
+  if (++chalt == nhalt) {
+    // Simulation complete
+    CkExit();
+  }
+}
 
 /**************************************************************************
 * Charm++ Definitions

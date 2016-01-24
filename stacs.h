@@ -65,7 +65,7 @@ class Main : public CBase_Main {
     /* Persistence */
     int ReadDist();
     int ReadModel();
-    int WriteDist();
+    int WriteDist(bool check = false);
 
     /* Chare Messages */
     mDist* BuildDist();
@@ -80,6 +80,7 @@ class Main : public CBase_Main {
     void CheckSim(CkReductionMsg *msg);
     void SaveSim();
     void FiniSim(CkReductionMsg *msg);
+    void Halt();
 
   private:
     /* Persistence */
@@ -95,6 +96,7 @@ class Main : public CBase_Main {
 #endif
     /* Bookkeeping */
     int ninit, cinit;
+    int nhalt, chalt;
 };
 
 

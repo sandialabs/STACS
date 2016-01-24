@@ -18,12 +18,14 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ std::string filebase;
-extern /*readonly*/ std::string filemod;
+extern /*readonly*/ std::string filein;
+extern /*readonly*/ std::string fileout;
 extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
+extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ idx_t evtcal;
 extern /*readonly*/ std::string rpcport;
 
@@ -53,12 +55,19 @@ int Main::ParseConfig(std::string configfile) {
     CkPrintf("  filebase: %s\n", e.what());
     return 1;
   }
+  // input filename modifications
+  try {
+    filein = config["filein"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  filein not defined, defaulting to: \"\"\n");
+    filein = std::string("");
+  }
   // output filename modifications
   try {
-    filemod = config["filemod"].as<std::string>();
+    fileout = config["fileout"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  filemod not defined, defaulting to: \".o\"\n");
-    filemod = std::string(".o");
+    CkPrintf("  fileout not defined, defaulting to: \".o\"\n");
+    fileout = std::string(".o");
   }
   // Number of data files
   try {
@@ -99,6 +108,14 @@ int Main::ParseConfig(std::string configfile) {
     CkPrintf("  tcheck not defined, defaulting to: %.2g ms\n", treal);
   }
   tcheck = (tick_t)(treal*TICKS_PER_MS);
+  // Time between recording points (in ms)
+  try {
+    treal = config["trecord"].as<real_t>();
+  } catch (YAML::RepresentationException& e) {
+    treal = TRECORD_DEFAULT;
+    CkPrintf("  trecord not defined, defaulting to: %.2g ms\n", treal);
+  }
+  trecord = (tick_t)(treal*TICKS_PER_MS);
   // Event queue calendar days per year
   try {
     evtcal = config["evtcal"].as<idx_t>();

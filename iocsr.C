@@ -18,7 +18,8 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ std::string filebase;
-extern /*readonly*/ std::string filemod;
+extern /*readonly*/ std::string filein;
+extern /*readonly*/ std::string fileout;
 extern /*readonly*/ idx_t npnet;
 
 
@@ -40,7 +41,7 @@ int Main::ReadDist() {
   
   // Open files for reading
   //TODO: change gencsr (how, old me, how?)
-  sprintf(csrfile, "%s.dist", filebase.c_str());
+  sprintf(csrfile, "%s.dist%s", filebase.c_str(), filein.c_str());
   pDist = fopen(csrfile,"r");
   if (pDist == NULL || line == NULL) {
     return 1;
@@ -81,7 +82,7 @@ int Main::ReadDist() {
 
 // Write graph adjacency distribution
 //
-int Main::WriteDist() {
+int Main::WriteDist(bool check) {
   /* File operations */
   FILE *pDist;
   char csrfile[100];
@@ -93,7 +94,7 @@ int Main::WriteDist() {
   idx_t nevent;
 
   // Open File
-  sprintf(csrfile, "%s%s.dist", filebase.c_str(), filemod.c_str());
+  sprintf(csrfile, "%s.dist%s", filebase.c_str(), (check ? ".check" : fileout.c_str()));
   pDist = fopen(csrfile,"w");
   if (pDist == NULL) {
     printf("Error opening file for writing\n");
@@ -149,13 +150,13 @@ void NetData::ReadCSR() {
   line = new char[MAXLINE];
   
   // Open files for reading
-  sprintf(csrfile, "%s.coord.%" PRIidx "", filebase.c_str(), datidx);
+  sprintf(csrfile, "%s.coord.%" PRIidx "%s", filebase.c_str(), datidx, filein.c_str());
   pCoord = fopen(csrfile,"r");
-  sprintf(csrfile, "%s.adjcy.%" PRIidx "", filebase.c_str(), datidx);
+  sprintf(csrfile, "%s.adjcy.%" PRIidx "%s", filebase.c_str(), datidx, filein.c_str());
   pAdjcy = fopen(csrfile,"r");
-  sprintf(csrfile, "%s.state.%" PRIidx "", filebase.c_str(), datidx);
+  sprintf(csrfile, "%s.state.%" PRIidx "%s", filebase.c_str(), datidx, filein.c_str());
   pState = fopen(csrfile,"r");
-  sprintf(csrfile, "%s.event.%" PRIidx "", filebase.c_str(), datidx);
+  sprintf(csrfile, "%s.event.%" PRIidx "%s", filebase.c_str(), datidx, filein.c_str());
   pEvent = fopen(csrfile,"r");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL ||
       pEvent == NULL || line == NULL) {
@@ -261,7 +262,7 @@ void NetData::ReadCSR() {
         parts[k]->state[jstate++] = state;
       }
       for(idx_t s = 0; s < netmodel[modidx]->getNStick(); ++s) {
-        tick_t stick = strtotick(oldstr, &newstr, 10);
+        tick_t stick = strtotick(oldstr, &newstr, 16);
         oldstr = newstr;
         // state
         parts[k]->stick[jstick++] = stick;
@@ -281,7 +282,7 @@ void NetData::ReadCSR() {
           parts[k]->state[jstate++] = state;
         }
         for(idx_t s = 0; s < netmodel[modidx]->getNStick(); ++s) {
-          tick_t stick = strtotick(oldstr, &newstr, 10);
+          tick_t stick = strtotick(oldstr, &newstr, 16);
           oldstr = newstr;
           // state
           parts[k]->stick[jstick++] = stick;
@@ -300,7 +301,7 @@ void NetData::ReadCSR() {
       oldstr = newstr;
       for(idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
         // diffuse
-        parts[k]->diffuse[e] = strtotick(oldstr, &newstr, 10);
+        parts[k]->diffuse[e] = strtotick(oldstr, &newstr, 16);
         oldstr = newstr;
         // target
         parts[k]->target[e] = strtoidx(oldstr, &newstr, 10);
@@ -337,7 +338,7 @@ void NetData::ReadCSR() {
     
 // Write out network files
 //
-void NetData::WriteCSR() {
+void NetData::WriteCSR(bool check) {
   /* File operations */
   FILE *pCoord;
   FILE *pAdjcy;
@@ -346,13 +347,13 @@ void NetData::WriteCSR() {
   char csrfile[100];
 
   // Open files for writing
-  sprintf(csrfile, "%s%s.coord.%" PRIidx "", filebase.c_str(), filemod.c_str(), datidx);
+  sprintf(csrfile, "%s.coord.%" PRIidx "%s", filebase.c_str(), datidx, (check ? ".check" : fileout.c_str()));
   pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s%s.adjcy.%" PRIidx "", filebase.c_str(), filemod.c_str(), datidx);
+  sprintf(csrfile, "%s.adjcy.%" PRIidx "%s", filebase.c_str(), datidx, (check ? ".check" : fileout.c_str()));
   pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s%s.state.%" PRIidx "", filebase.c_str(), filemod.c_str(), datidx);
+  sprintf(csrfile, "%s.state.%" PRIidx "%s", filebase.c_str(), datidx, (check ? ".check" : fileout.c_str()));
   pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s%s.event.%" PRIidx "", filebase.c_str(), filemod.c_str(), datidx);
+  sprintf(csrfile, "%s.event.%" PRIidx "%s", filebase.c_str(), datidx, (check ? ".check" : fileout.c_str()));
   pEvent = fopen(csrfile,"w");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
     CkPrintf("Error opening files for writing %" PRIidx "\n", datidx);
@@ -390,7 +391,7 @@ void NetData::WriteCSR() {
         fprintf(pState, " %" PRIrealfull "", parts[k]->state[jstate++]);
       }
       for(idx_t s = 0; s < netmodel[parts[k]->vtxmodidx[i]]->getNStick(); ++s) {
-        fprintf(pState, " %" PRItick "", parts[k]->stick[jstick++]);
+        fprintf(pState, " %" PRItickhex "", parts[k]->stick[jstick++]);
       }
 
       // Edges
@@ -403,7 +404,7 @@ void NetData::WriteCSR() {
           fprintf(pState, " %" PRIrealfull "", parts[k]->state[jstate++]);
         }
         for(idx_t s = 0; s < netmodel[parts[k]->edgmodidx[j]]->getNStick(); ++s) {
-          fprintf(pState, " %" PRItick "", parts[k]->stick[jstick++]);
+          fprintf(pState, " %" PRItickhex "", parts[k]->stick[jstick++]);
         }
       }
 
@@ -412,11 +413,11 @@ void NetData::WriteCSR() {
       for (idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
         // event
         if (parts[k]->type[e] == EVENT_SPIKE) {
-          fprintf(pEvent, " %" PRItick " %" PRIidx " %" PRIidx "",
+          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx "",
               parts[k]->diffuse[e], parts[k]->target[e], parts[k]->type[e]);
         }
         else {
-          fprintf(pEvent, " %" PRItick " %" PRIidx " %" PRIidx " %" PRIrealfull "",
+          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "",
               parts[k]->diffuse[e], parts[k]->target[e], parts[k]->type[e], parts[k]->data[e]);
         }
       }

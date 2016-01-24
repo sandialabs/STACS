@@ -24,6 +24,11 @@
 #define RPCSYNC_SYNCING    1
 #define RPCSYNC_SYNCED     2
 
-#define EVENT_SPIKE        0
+#define EVENT_DUMMY        0
+#define EVENT_SPIKE        1
+
+#define RECORD_STATE       0
+#define RECORD_STICK       1
+#define RECORD_COORD       2
 
 #endif //__STACS_MESSAGES_H__
