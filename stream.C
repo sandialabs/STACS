@@ -123,7 +123,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
             "   - pause: un/pause the simulation\n"
             "   - stop:  stop the simulation\n"
             "   - check: checkpoint the simulation\n"
-            "   - step <t>: step the simulation <t> ms\n");
+            "   - step <t>: step the simulation <t> ms\n"
             "   - stim <t o a d>: apply stimulation\n");
   }
 

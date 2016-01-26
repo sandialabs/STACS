@@ -54,17 +54,20 @@ module network {
     idx_t index[];
     idx_t type[];
     real_t data[];
-    idx_t prtidx;
     idx_t iter;
     idx_t nevent;
   };
 
   message mRecord {
+    tick_t diffuse[];
+    idx_t index[];
+    idx_t type[];
+    real_t data[];
     tick_t drift[];
     idx_t xdata[];
-    real_t data[];
     idx_t prtidx;
     idx_t iter;
+    idx_t nrecevt;
     idx_t nrecord;
   };
   
@@ -83,8 +86,6 @@ module network {
 
     entry void CheckRecord(mRecord *msg);
     entry void SaveRecord(mRecord *msg);
-    entry void CheckRecevt(mEvent *msg);
-    entry void SaveRecevt(mEvent *msg);
   };
 
   array [1D] Network {
@@ -98,6 +99,8 @@ module network {
 
     entry void GoAhead(mGo *msg);
     entry void Cycle();
+    
+    entry void SaveRecord();
 
     entry void RPCMsg(mRPC *msg);
   };

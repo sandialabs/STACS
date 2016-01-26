@@ -16,57 +16,39 @@ extern /*readonly*/ std::string filebase;
 * Network Recording
 **************************************************************************/
 
-// Store periodic records
+// Store records
 //
 void Network::StoreRecord() {
-  // record time
-  record.push_back(record_t());
-  record.back().drift = tsim;
-
-  // Add data
-  for (std::size_t i = 0; i < recordlist.size(); ++i) {
-    if (recordlist[i].type == RECORD_STATE) {
-      record.back().data.push_back(state[recordlist[i].vertex][recordlist[i].model][recordlist[i].index]);
-    }
-    else if (recordlist[i].type == RECORD_STICK) {
-      record.back().data.push_back((real_t)(stick[recordlist[i].vertex][recordlist[i].model][recordlist[i].index]));
-    }
-    else if (recordlist[i].type == RECORD_COORD) {
-      record.back().data.push_back(xyz[((recordlist[i].vertex)*3)+0]);
-      record.back().data.push_back(xyz[((recordlist[i].vertex)*3)+1]);
-      record.back().data.push_back(xyz[((recordlist[i].vertex)*3)+2]);
+  // Periodic Records
+  for (std::size_t r = 0; r < recordlist.size(); ++r) {
+    if (recordlist[r].trec <= tsim) {
+      // Set next recording
+      recordlist[r].trec = tsim + recordlist[r].tfreq;
+      // record time
+      record.push_back(record_t());
+      record.back().drift = tsim;
+      // add data
+      for (std::size_t i = 0; i < recordlist[r].index.size(); ++i) {
+        if (recordlist[r].type[i] == RECORD_STATE) {
+          record.back().data.push_back(state[recordlist[r].index[i]][recordlist[r].model[i]][recordlist[r].value[i]]);
+        }
+        else if (recordlist[r].type[i] == RECORD_STICK) {
+          record.back().data.push_back((real_t)(stick[recordlist[r].index[i]][recordlist[r].model[i]][recordlist[r].value[i]]));
+        }
+        else if (recordlist[r].type[i] == RECORD_COORD) {
+          record.back().data.push_back(xyz[recordlist[r].index[i]*3+0]);
+          record.back().data.push_back(xyz[recordlist[r].index[i]*3+1]);
+          record.back().data.push_back(xyz[recordlist[r].index[i]*3+2]);
+        }
+      }
     }
   }
+  // Event records are recorded in BuildEvent
 }
 
-// Build message for recording (events)
+// Send Records for writing
 //
-mEvent* Network::BuildRecevt() {
-  // Initialize distribution message
-  int msgSize[MSG_Event];
-  msgSize[0] = recevt.size();     // diffuse
-  msgSize[1] = recevt.size();     // index
-  msgSize[2] = recevt.size();     // type
-  msgSize[3] = recevt.size();     // data
-  mEvent *mrecevt = new(msgSize, 0) mEvent;
-  mrecevt->nevent = recevt.size();
-  mrecevt->iter = iter;
-  mrecevt->prtidx = prtidx;
-  
-  // Pack record information
-  for (std::size_t i = 0; i < recevt.size(); ++i) {
-    mrecevt->diffuse[i] = recevt[i].diffuse;
-    mrecevt->index[i] = recevt[i].index;
-    mrecevt->type[i] = recevt[i].type;
-    mrecevt->data[i] = recevt[i].data;
-  }
-
-  return mrecevt;
-}
-
-// Build message for recording (periodic)
-//
-mRecord* Network::BuildRecord() {
+void Network::SaveRecord() {
   /* Bookkeeping */
   idx_t ndata = 0;
 
@@ -77,19 +59,31 @@ mRecord* Network::BuildRecord() {
 
   // Initialize distribution message
   int msgSize[MSG_Record];
-  msgSize[0] = record.size();   // drift
-  msgSize[1] = record.size()+1; // xdata
-  msgSize[2] = ndata;           // data
+  msgSize[0] = recevt.size();       // diffuse
+  msgSize[1] = recevt.size();       // index
+  msgSize[2] = recevt.size();       // type
+  msgSize[3] = recevt.size()+ndata; // data
+  msgSize[4] = record.size();       // drift
+  msgSize[5] = record.size()+1;     // xdata
   mRecord *mrecord = new(msgSize, 0) mRecord;
+  mrecord->nrecevt = recevt.size();
   mrecord->nrecord = record.size();
   mrecord->iter = iter;
   mrecord->prtidx = prtidx;
 
-  // Counters
-  idx_t jdata = 0;
+  // Pack event information
+  for (std::size_t i = 0; i < recevt.size(); ++i) {
+    mrecord->diffuse[i] = recevt[i].diffuse;
+    mrecord->index[i] = recevt[i].index;
+    mrecord->type[i] = recevt[i].type;
+    mrecord->data[i] = recevt[i].data;
+  }
   
-  // Prefixes start at 0
-  mrecord->xdata[0] = 0;
+  // Counters
+  idx_t jdata = recevt.size();
+  
+  // Prefix starts at the end of event data
+  mrecord->xdata[0] = recevt.size();
 
   // Pack record information
   for (std::size_t i = 0; i < record.size(); ++i) {
@@ -100,60 +94,30 @@ mRecord* Network::BuildRecord() {
       mrecord->data[jdata++] = record[i].data[j];
     }
   }
-  CkAssert(jdata == ndata);
+  CkAssert(jdata == recevt.size() + ndata);
+  
 
-  return mrecord;
+  if (recflag) {
+    recflag = false;
+    netdata(datidx).CheckRecord(mrecord);
+    record.clear();
+    recevt.clear();
+    
+    // Start a new cycle (checked data sent)
+    thisProxy(prtidx).Cycle();
+  }
+  else {
+    // Final records
+    netdata(datidx).SaveRecord(mrecord);
+    record.clear();
+    recevt.clear();
+  }
 }
 
 
 /**************************************************************************
 * Netdata recording to file
 **************************************************************************/
-
-// Write irregular events to file
-//
-void NetData::CheckRecevt(mEvent *msg) {
-  // Stash record
-  recevts[msg->prtidx - xprt] = msg;
-  
-  // Wait for all parts
-  if (++eprt == nprt) {
-    eprt = 0;
-    
-    // Write data
-    CkPrintf("  Writing events %" PRIidx "\n", datidx);
-    WriteRecevt();
-
-    // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
-      delete recevts[i];
-    }
-  }
-}
-
-// Write irregular events to file (final)
-//
-void NetData::SaveRecevt(mEvent *msg) {
-  // Stash record
-  recevts[msg->prtidx - xprt] = msg;
-  
-  // Wait for all parts
-  if (++eprt == nprt) {
-    eprt = 0;
-    
-    // Write data
-    CkPrintf("  Writing events %" PRIidx "\n", datidx);
-    WriteRecevt();
-
-    // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
-      delete recevts[i];
-    }
-    
-    // Return control to main
-    contribute(0, NULL, CkReduction::nop);
-  }
-}
 
 // Write periodic records to file
 //
@@ -195,7 +159,7 @@ void NetData::SaveRecord(mRecord *msg) {
       delete records[i];
     }
     
-    // Return control to main
+    // Return control to main (halting)
     contribute(0, NULL, CkReduction::nop);
   }
 }
@@ -204,40 +168,6 @@ void NetData::SaveRecord(mRecord *msg) {
 /**************************************************************************
 * Writing Record Information
 **************************************************************************/
-
-// Writing Events to file
-//
-void NetData::WriteRecevt() {
-  /* File operations */
-  FILE *pRecevt;
-  char recfile[100];
-
-  // Open File
-  sprintf(recfile, "%s.recevt.%" PRIidx ".%" PRIidx "", filebase.c_str(), datidx, recevts[0]->iter);
-  pRecevt = fopen(recfile,"w");
-  if (pRecevt == NULL) {
-    CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
-    CkExit();
-  }
-
-  // Loop through parts
-  for (idx_t k = 0; k < nprt; ++k) {
-    // Loop through records
-    for (idx_t e = 0; e < recevts[k]->nevent; ++e) {
-      if (recevts[k]->type[e] == EVENT_SPIKE) {
-        fprintf(pRecevt, "%" PRItickhex " %" PRIidx " %" PRIidx "\n",
-            recevts[k]->diffuse[e], recevts[k]->index[e], recevts[k]->type[e]);
-      }
-      else {
-        fprintf(pRecevt, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
-            recevts[k]->diffuse[e], recevts[k]->index[e], recevts[k]->type[e], recevts[k]->data[e]);
-      }
-    }
-  }
-  
-  // Cleanup
-  fclose(pRecevt);
-}
 
 // Writing Records to file
 //
@@ -256,9 +186,23 @@ void NetData::WriteRecord() {
 
   // Loop through parts
   for (idx_t k = 0; k < nprt; ++k) {
+    // Loop through events
+    for (idx_t e = 0; e < records[k]->nrecevt; ++e) {
+      // types lacking data
+      if (records[k]->type[e] == EVENT_SPIKE) {
+        fprintf(pRecord, "%" PRItickhex " %" PRIidx " %" PRIidx "\n",
+            records[k]->diffuse[e], records[k]->type[e], records[k]->index[e]);
+      }
+      // events with data
+      else {
+        fprintf(pRecord, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
+            records[k]->diffuse[e], records[k]->type[e], records[k]->index[e], records[k]->data[e]);
+      }
+    }
     // Loop through records
     for (idx_t r = 0; r < records[k]->nrecord; ++r) {
-      fprintf(pRecord, "%" PRItickhex " %" PRIidx "", records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
+      // 'event type' 0 followed by amount of data
+      fprintf(pRecord, "%" PRItickhex " 0 %" PRIidx "", records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
       // data
       for (idx_t d = records[k]->xdata[r]; d < records[k]->xdata[r+1]; ++d) {
         fprintf(pRecord, " %" PRIrealfull "", records[k]->data[d]);

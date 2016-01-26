@@ -151,12 +151,6 @@ void Main::StartSim() {
   CkCallback *cb = new CkCallback(CkReductionTarget(Main, SaveSim), mainProxy);
   network.ckSetReductionClient(cb);
   network.Cycle();
-  
-  // For halting
-  chalt = 0;
-  nhalt = 3; // checkpoint, records, recevts
-  CkCallback *cbh = new CkCallback(CkReductionTarget(Main, Halt), mainProxy);
-  netdata.ckSetReductionClient(cbh);
 }
 
 
@@ -193,7 +187,15 @@ void Main::SaveSim() {
   CkPrintf("Saving simulation\n");
 
   // Save data from network parts to output files
+  chalt = nhalt = 0;
   network.SaveNetwork();
+  ++nhalt;
+  network.SaveRecord();
+  ++nhalt;
+  
+  // Set callback for halting
+  CkCallback *cb = new CkCallback(CkReductionTarget(Main, Halt), mainProxy);
+  netdata.ckSetReductionClient(cb);
 }
 
 // Coordination for file output
@@ -214,15 +216,8 @@ void Main::FiniSim(CkReductionMsg *msg) {
     CkExit();
   }
 
-#ifdef STACS_WITH_YARP
-  // Close RPC port
-  streamrpc.Close();
-
-  // Finalize YARP
-  yarp.fini();
-#endif
-  
-  Halt();
+  // Finished
+  thisProxy.Halt();
 }
 
 // Halt
@@ -230,6 +225,14 @@ void Main::FiniSim(CkReductionMsg *msg) {
 void Main::Halt() {
   // Everything checks back to here
   if (++chalt == nhalt) {
+#ifdef STACS_WITH_YARP
+    // Close RPC port
+    streamrpc.Close();
+
+    // Finalize YARP
+    yarp.fini();
+#endif
+  
     // Simulation complete
     CkExit();
   }

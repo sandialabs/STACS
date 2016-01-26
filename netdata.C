@@ -50,7 +50,7 @@ NetData::NetData(mDist *msg) {
   datidx = thisIndex;
   idx_t ndiv = npnet/npdat;
   idx_t nrem = npnet%npdat;
-  cprt = eprt = rprt = 0;
+  cprt = rprt = 0;
   nprt = ndiv + (datidx < nrem);
   xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
 
@@ -91,7 +91,6 @@ NetData::NetData(mDist *msg) {
 
   // Data
   parts.resize(nprt);
-  recevts.resize(nprt);
   records.resize(nprt);
 
   // Read in files

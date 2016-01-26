@@ -118,22 +118,25 @@ class mEvent : public CkMcastBaseMsg, public CMessage_mEvent {
     idx_t *type;
     real_t *data;
     /* Bookkeeping */
-    idx_t prtidx;
     idx_t iter;
     idx_t nevent;
 };
 
 // Network record data
 //
-#define MSG_Record 3
+#define MSG_Record 6
 class mRecord : public CMessage_mRecord {
   public:
+    tick_t *diffuse;
+    idx_t *index;
+    idx_t *type;
+    real_t *data;
     tick_t *drift;
     idx_t *xdata;
-    real_t *data;
     /* Bookkeeping */
     idx_t prtidx;
     idx_t iter;
+    idx_t nrecevt;
     idx_t nrecord;
 };
 
@@ -269,9 +272,6 @@ class NetData : public CBase_NetData {
     void CheckRecord(mRecord *msg);
     void SaveRecord(mRecord *msg);
     void WriteRecord();
-    void CheckRecevt(mEvent *msg);
-    void SaveRecevt(mEvent *msg);
-    void WriteRecevt();
     
     /* Helper Functions */
     idx_t strtomodidx(const char* nptr, char** endptr) {
@@ -307,7 +307,6 @@ class NetData : public CBase_NetData {
   private:
     /* Network Data */
     std::vector<mPart*> parts;
-    std::vector<mEvent*> recevts;
     std::vector<mRecord*> records;
     /* Distributions */
     std::vector<dist_t> netdist;
@@ -321,9 +320,9 @@ class NetData : public CBase_NetData {
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     /* Bookkeeping */
-    idx_t datidx;;
-    idx_t nprt, cprt, eprt, rprt;
-    idx_t xprt;
+    idx_t datidx;
+    idx_t cprt, rprt;
+    idx_t nprt, xprt;
 };
 
 // Network partitions
@@ -344,9 +343,8 @@ class Network : public CBase_Network {
     void SaveNetwork();
 
     /* Recording */
-    mEvent* BuildRecevt();
-    mRecord* BuildRecord();
     void StoreRecord();
+    void SaveRecord();
 
     /* Computation */
     void LoadNetModel();
@@ -395,7 +393,7 @@ class Network : public CBase_Network {
     std::vector<event_t> evtlog; // event buffer for generated events
     /* Recording */
     std::vector<record_t> record; // record keeping
-    std::vector<reclist_t> recordlist; // what to record
+    std::vector<recentry_t> recordlist; // what to record
     std::vector<event_t> recevt; // record keeping for events
     idx_t recevtlist; // types of events to record
     /* Timing */
@@ -410,7 +408,8 @@ class Network : public CBase_Network {
     /* Checkpointing */
     bool cpflag;
     idx_t checkiter;
-    tick_t trec;
+    bool recflag;
+    idx_t reciter;
 #ifdef STACS_WITH_YARP
     /* RPC Control */
     CkCallback cbrpc;

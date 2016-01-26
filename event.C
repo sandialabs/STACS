@@ -33,15 +33,27 @@ mEvent* Network::BuildEvent() {
   //mevent->prtidx = prtidx;
   
   // Pack event information (0'th is event template)
-  for (std::size_t i = 1; i < evtlog.size(); ++i) {
-    mevent->diffuse[i-1] = evtlog[i].diffuse;
-    mevent->index[i-1] = evtlog[i].index;
-    mevent->type[i-1] = evtlog[i].type;
-    mevent->data[i-1] = evtlog[i].data;
-
-    // Add to record if listed
-    if (evtlog[i].type & recevtlist) {
-      recevt.push_back(evtlog[i]);
+  // Check if recording events
+  if (recevtlist) {
+    for (std::size_t i = 1; i < evtlog.size(); ++i) {
+      // Add event to message
+      mevent->diffuse[i-1] = evtlog[i].diffuse;
+      mevent->index[i-1] = evtlog[i].index;
+      mevent->type[i-1] = evtlog[i].type;
+      mevent->data[i-1] = evtlog[i].data;
+      // Add to record if listed
+      if (evtlog[i].type & recevtlist) {
+        recevt.push_back(evtlog[i]);
+      }
+    }
+  }
+  else {
+    for (std::size_t i = 1; i < evtlog.size(); ++i) {
+      // Add event to message
+      mevent->diffuse[i-1] = evtlog[i].diffuse;
+      mevent->index[i-1] = evtlog[i].index;
+      mevent->type[i-1] = evtlog[i].type;
+      mevent->data[i-1] = evtlog[i].data;
     }
   }
 

@@ -81,11 +81,13 @@ struct record_t {
 
 // Record list
 //
-struct reclist_t {
-  idx_t type;
-  idx_t vertex;
-  idx_t model;
-  idx_t index;
+struct recentry_t {
+  tick_t trec;
+  tick_t tfreq;
+  std::vector<idx_t> type;
+  std::vector<idx_t> index;
+  std::vector<idx_t> model;
+  std::vector<idx_t> value;
 };
 
 #endif //__STACS_TYPEDEFS_H__

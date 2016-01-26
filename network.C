@@ -251,7 +251,8 @@ void Network::LoadNetwork(mPart *msg) {
   cpflag = false;
   checkiter = (idx_t) (tcheck/tstep);
   // Set up recordning
-  trec = trecord;
+  recflag = false;
+  reciter = (idx_t) (trecord/tstep);
 #ifdef STACS_WITH_YARP
   // Set up synchronization
   synciter = IDX_T_MAX;
@@ -439,15 +440,6 @@ void Network::SaveNetwork() {
   }
   else {
     netdata(datidx).SaveNetwork(part);
-
-    // Final event records
-    mEvent *mrecevt = BuildRecevt();
-    netdata(datidx).SaveRecevt(mrecevt);
-    recevt.clear();
-    // Final periodic records
-    mRecord *mrecord = BuildRecord();
-    netdata(datidx).SaveRecord(mrecord);
-    record.clear();
   }
 }
 
@@ -512,28 +504,21 @@ void Network::Cycle() {
     cpflag = true;
     thisProxy(prtidx).SaveNetwork();
   }
+  // Recording
+  else if (iter == reciter) {
+    // Bookkeeping
+    reciter = reciter + (idx_t) (trecord/tstep);
+
+    // Send records
+    recflag = true;
+    thisProxy(prtidx).SaveRecord();
+  }
   // Simulate next cycle
   else {
     // Display iteration information
     if (prtidx == 0) {
       CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
     }
-
-    
-    // Recording
-    if (tsim == trec) {
-      trec += trecord;
-      // Event records
-      mEvent *mrecevt = BuildRecevt();
-      netdata(datidx).CheckRecevt(mrecevt);
-      recevt.clear();
-      // Periodic records
-      mRecord *mrecord = BuildRecord();
-      netdata(datidx).CheckRecord(mrecord);
-      record.clear();
-    }
-    // Store new records (periodic)
-    StoreRecord();
 
     // Clear event buffer
     evtlog.resize(1);
@@ -564,9 +549,6 @@ void Network::Cycle() {
     }
     //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
 
-    // Increment simulated time
-    tsim += tstep;
-
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();
     netgroup.CommEvent(mevent);
@@ -577,6 +559,12 @@ void Network::Cycle() {
 #ifdef STACS_WITH_YARP
     // Send messages to streams (yarp)
 #endif
+    
+    // Increment simulated time
+    tsim += tstep;
+
+    // Store new records
+    StoreRecord();
   }
 }
 
