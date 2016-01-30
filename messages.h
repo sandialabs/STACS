@@ -24,8 +24,13 @@
 #define RPCSYNC_SYNCING    1
 #define RPCSYNC_SYNCED     2
 
-#define EVENT_DUMMY        0
-#define EVENT_SPIKE        1
+#define EVENT_EXTERNAL     1
+#define EVENT_LOCALEDG     2
+#define EVENT_LOCALVTX     4
+
+#define EVTYPE_TOTAL       2
+#define EVTYPE_RECORD      0
+#define EVTYPE_SPIKE       1
 
 #define RECORD_STATE       0
 #define RECORD_STICK       1

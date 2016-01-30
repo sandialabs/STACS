@@ -94,7 +94,7 @@ int Main::WriteDist(bool check) {
   idx_t nevent;
 
   // Open File
-  sprintf(csrfile, "%s.dist%s", filebase.c_str(), (check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s.dist%s", filebase.c_str(), fileout.c_str());//(check ? ".check" : fileout.c_str()));
   pDist = fopen(csrfile,"w");
   if (pDist == NULL) {
     printf("Error opening file for writing\n");
@@ -311,7 +311,7 @@ void NetData::ReadCSR() {
         oldstr = newstr;
         parts[k]->type[e] = type;
         // data
-        if (type == EVENT_SPIKE) {
+        if (type == EVTYPE_SPIKE) {
           parts[k]->data[e] = 0.0;
         }
         else {
@@ -347,13 +347,13 @@ void NetData::WriteCSR(bool check) {
   char csrfile[100];
 
   // Open files for writing
-  sprintf(csrfile, "%s.coord.%" PRIidx "%s", filebase.c_str(), datidx, (check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s.coord.%" PRIidx "%s", filebase.c_str(), datidx, fileout.c_str());//(check ? ".check" : fileout.c_str()));
   pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s.adjcy.%" PRIidx "%s", filebase.c_str(), datidx, (check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s.adjcy.%" PRIidx "%s", filebase.c_str(), datidx, fileout.c_str());//(check ? ".check" : fileout.c_str()));
   pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s.state.%" PRIidx "%s", filebase.c_str(), datidx, (check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s.state.%" PRIidx "%s", filebase.c_str(), datidx, fileout.c_str());//(check ? ".check" : fileout.c_str()));
   pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s.event.%" PRIidx "%s", filebase.c_str(), datidx, (check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s.event.%" PRIidx "%s", filebase.c_str(), datidx, fileout.c_str());//(check ? ".check" : fileout.c_str()));
   pEvent = fopen(csrfile,"w");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
     CkPrintf("Error opening files for writing %" PRIidx "\n", datidx);
@@ -412,7 +412,7 @@ void NetData::WriteCSR(bool check) {
       fprintf(pEvent, " %" PRIidx "", parts[k]->xevent[i+1] - parts[k]->xevent[i]);
       for (idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
         // event
-        if (parts[k]->type[e] == EVENT_SPIKE) {
+        if (parts[k]->type[e] == EVTYPE_SPIKE) {
           fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx "",
               parts[k]->diffuse[e], parts[k]->target[e], parts[k]->type[e]);
         }

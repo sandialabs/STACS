@@ -90,4 +90,12 @@ struct recentry_t {
   std::vector<idx_t> value;
 };
 
+// Auxiliary state
+//
+struct aux_t {
+  idx_t index;
+  std::vector<idx_t> stateidx;
+  std::vector<idx_t> stickidx;
+};
+
 #endif //__STACS_TYPEDEFS_H__

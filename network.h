@@ -162,24 +162,40 @@ class NetModel {
     virtual ~NetModel() { }
     /* Getters */
     idx_t getModType() const { return modtype; }
-    idx_t getNParam() const { return nparam; }
-    idx_t getNState() const { return nstate; }
-    idx_t getNStick() const { return nstick; }
+    idx_t getNParam() const { return paramlist.size(); }
+    idx_t getNState() const { return statelist.size(); }
+    idx_t getNStick() const { return sticklist.size(); }
     std::vector<real_t> getParam() const { return param; }
     /* Setters */
     void setParam(real_t *p) {
-      param = std::vector<real_t>(p, p+nparam);
+      param = std::vector<real_t>(p, p+paramlist.size());
+    }
+    /* Auxiliary */
+    idx_t getNAux() const { return auxstate.size() + auxstick.size(); }
+    std::vector<std::string> getAuxState() const { return auxstate; }
+    std::vector<std::string> getAuxStick() const { return auxstick; }
+    idx_t getStateIdx(const std::string& name) const {
+      idx_t index = std::find(statelist.begin(), statelist.end(), name) - statelist.begin();
+      return (index < statelist.size() ? index : -1);
+    }
+    idx_t getStickIdx(const std::string& name) const {
+      idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
+      return (index < sticklist.size() ? index : -1);
     }
     /* Abstract Functions */
-    virtual void Step(tick_t tdrift, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
+    virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
+    virtual void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) = 0;
   protected:
     /* Bookkeeping */
     idx_t modtype;
-    idx_t nparam;
-    idx_t nstate;
-    idx_t nstick;
+    std::vector<std::string> paramlist;
+    std::vector<std::string> statelist;
+    std::vector<std::string> sticklist;
     /* Model Data */
     std::vector<real_t> param;
+    /* Auxiliary */
+    std::vector<std::string> auxstate;
+    std::vector<std::string> auxstick;
 };
 
 // Network model template
@@ -243,8 +259,9 @@ const idx_t NetModelTmpl<TYPE, IMPL>::MODELTYPE = NetModelFactory::getNetModel()
 //
 class NoneModel : public NetModelTmpl < 0, NoneModel > {
   public:
-    NoneModel() { nparam = 0; nstate = 0; nstick = 0; }
-    void Step(tick_t tdrift, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) { }
+    NoneModel() { paramlist.resize(0); statelist.resize(0); sticklist.resize(0); auxstate.resize(0); auxstick.resize(0); }
+    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) { return tdiff; }
+    void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) { }
 };
 
 
@@ -385,17 +402,19 @@ class Network : public CBase_Network {
     std::vector<std::vector<std::vector<real_t>>> state;
         // first level is the vertex, second level is the models, third is state data
     std::vector<std::vector<std::vector<tick_t>>> stick;
+    std::vector<std::vector<aux_t>> vtxaux; // auxiliary indices per vertex
+    std::vector<std::vector<std::vector<aux_t>>> edgaux; // per edge model
     /* Network Events */
     std::vector<std::vector<std::vector<event_t>>> event;
         // event queue per vertex per iteration (use as calendar queue)
     std::vector<std::vector<event_t>> evtaux; // spillover event queue
-    std::vector<event_t> evtreaux;  // spillover spillover event queue
     std::vector<event_t> evtlog; // event buffer for generated events
+    std::vector<event_t> evtext; // external events (and extra spillover)
     /* Recording */
     std::vector<record_t> record; // record keeping
     std::vector<recentry_t> recordlist; // what to record
     std::vector<event_t> recevt; // record keeping for events
-    idx_t recevtlist; // types of events to record
+    std::vector<bool> recevtlist; // types of events to record
     /* Timing */
     tick_t tsim;
     idx_t iter;

@@ -14,10 +14,25 @@
 class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
   public:
     /* Constructor */
-    DummyVtx() { nparam = 1; nstate = 2; nstick = 0; }
+    DummyVtx() {
+      // parameters
+      paramlist.resize(1);
+      paramlist[0] = "dp0";
+      // states
+      statelist.resize(2);
+      statelist[0] = "v";
+      statelist[1] = "u";
+      // sticks
+      sticklist.resize(0);
+      // auxiliary states
+      auxstate.resize(0);
+      // auxiliary sticks
+      auxstick.resize(0);
+    }
 
     /* Simulation */
-    void Step(tick_t tdrift, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>&evtlog);
+    tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
+    void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
 };
 
 
@@ -27,10 +42,25 @@ class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
 
 // Simulation step
 //
-void DummyVtx::Step(tick_t tdrift, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
-  usleep(tdrift/1000); // tdrift ms
+tick_t DummyVtx::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
+  tick_t tcomp = tdiff*100/TICKS_PER_MS; // 1ms sleeps for 100us
+  if (tcomp > 1000000) { tcomp = 1000000; }
+  else if (tcomp == 0) { tcomp = 1; }
+  usleep(tcomp);
 
-  evtlog.push_back(evtlog[0]);
-  evtlog.back().diffuse += tdrift/2;
-  evtlog.back().type = EVENT_SPIKE;
+  // generate events
+  event_t evtpre;
+  evtpre.diffuse = tdrift + tdiff/2;
+  evtpre.index = EVENT_EXTERNAL | EVENT_LOCALEDG;
+  evtpre.type = EVTYPE_SPIKE;
+  evtlog.push_back(evtpre);
+
+  return tdiff;
 }
+
+// Simulation jump
+//
+void DummyVtx::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
+  CkPrintf("Jumping Vtx\n");
+}
+

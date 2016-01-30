@@ -23,38 +23,22 @@ extern /*readonly*/ idx_t evtcal;
 mEvent* Network::BuildEvent() {
   // Initialize distribution message
   int msgSize[MSG_Event];
-  msgSize[0] = evtlog.size()-1;     // diffuse
-  msgSize[1] = evtlog.size()-1;     // index
-  msgSize[2] = evtlog.size()-1;     // type
-  msgSize[3] = evtlog.size()-1;     // data
+  msgSize[0] = evtext.size();     // diffuse
+  msgSize[1] = evtext.size();     // index
+  msgSize[2] = evtext.size();     // type
+  msgSize[3] = evtext.size();     // data
   mEvent *mevent = new(msgSize, 0) mEvent;
-  mevent->nevent = evtlog.size()-1;
+  mevent->nevent = evtext.size();
   mevent->iter = iter;
   //mevent->prtidx = prtidx;
   
   // Pack event information (0'th is event template)
-  // Check if recording events
-  if (recevtlist) {
-    for (std::size_t i = 1; i < evtlog.size(); ++i) {
-      // Add event to message
-      mevent->diffuse[i-1] = evtlog[i].diffuse;
-      mevent->index[i-1] = evtlog[i].index;
-      mevent->type[i-1] = evtlog[i].type;
-      mevent->data[i-1] = evtlog[i].data;
-      // Add to record if listed
-      if (evtlog[i].type & recevtlist) {
-        recevt.push_back(evtlog[i]);
-      }
-    }
-  }
-  else {
-    for (std::size_t i = 1; i < evtlog.size(); ++i) {
-      // Add event to message
-      mevent->diffuse[i-1] = evtlog[i].diffuse;
-      mevent->index[i-1] = evtlog[i].index;
-      mevent->type[i-1] = evtlog[i].type;
-      mevent->data[i-1] = evtlog[i].data;
-    }
+  for (std::size_t i = 0; i < evtext.size(); ++i) {
+    // Add event to message
+    mevent->diffuse[i] = evtext[i].diffuse;
+    mevent->index[i] = evtext[i].index;
+    mevent->type[i] = evtext[i].type;
+    mevent->data[i] = evtext[i].data;
   }
 
   return mevent;
@@ -82,7 +66,7 @@ void Network::CommEvent(mEvent *msg) {
     if (targets != adjmap.end()) {
       for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
         evtpre.index = (*target)[1];
-        evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0];
+        evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0]; // delay always first parameter of edge
         // Add to event queue or spillover
         if ((evtpre.diffuse - tsim)/tstep < evtcal) {
           event[(*target)[0]][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
@@ -128,13 +112,13 @@ void Network::RedisEvent() {
         event[i][(evtaux[i][j].diffuse/tstep)%evtcal].push_back(evtaux[i][j]);
       }
       else {
-        evtreaux.push_back(evtaux[i][j]);
+        evtext.push_back(evtaux[i][j]);
       }
     }
     // Copy back spillover
-    if (evtreaux.size()) {
-      evtaux[i] = evtreaux;
-      evtreaux.clear();
+    if (evtext.size()) {
+      evtaux[i] = evtext;
+      evtext.clear();
     }
     else {
       evtaux[i].clear();

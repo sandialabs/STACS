@@ -43,7 +43,7 @@ void Network::StoreRecord() {
       }
     }
   }
-  // Event records are recorded in BuildEvent
+  // Event records are recorded in event handling
 }
 
 // Send Records for writing
@@ -189,20 +189,20 @@ void NetData::WriteRecord() {
     // Loop through events
     for (idx_t e = 0; e < records[k]->nrecevt; ++e) {
       // types lacking data
-      if (records[k]->type[e] == EVENT_SPIKE) {
-        fprintf(pRecord, "%" PRItickhex " %" PRIidx " %" PRIidx "\n",
-            records[k]->diffuse[e], records[k]->type[e], records[k]->index[e]);
+      if (records[k]->type[e] == EVTYPE_SPIKE) {
+        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "\n",
+            records[k]->type[e], records[k]->diffuse[e], records[k]->index[e]);
       }
       // events with data
       else {
-        fprintf(pRecord, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
-            records[k]->diffuse[e], records[k]->type[e], records[k]->index[e], records[k]->data[e]);
+        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIrealfull "\n",
+            records[k]->type[e], records[k]->diffuse[e], records[k]->index[e], records[k]->data[e]);
       }
     }
     // Loop through records
     for (idx_t r = 0; r < records[k]->nrecord; ++r) {
       // 'event type' 0 followed by amount of data
-      fprintf(pRecord, "%" PRItickhex " 0 %" PRIidx "", records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
+      fprintf(pRecord, "0 %" PRItickhex " %" PRIidx "", records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
       // data
       for (idx_t d = records[k]->xdata[r]; d < records[k]->xdata[r+1]; ++d) {
         fprintf(pRecord, " %" PRIrealfull "", records[k]->data[d]);

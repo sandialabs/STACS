@@ -93,6 +93,28 @@ Network::Network(mModel *msg) {
   }
   delete msg;
 
+  // set up auxiliary state
+  edgaux.resize(netmodel.size());
+  for (std::size_t j = 1; j < netmodel.size(); ++j) {
+    if (netmodel[j]->getNAux()) {
+      edgaux[j].resize(netmodel.size());
+      std::vector<std::string> auxstate = netmodel[j]->getAuxState();
+      std::vector<std::string> auxstick = netmodel[j]->getAuxStick();
+      for (std::size_t i = 1; i < netmodel.size(); ++i) {
+        edgaux[j][i].resize(1);
+        edgaux[j][i][0].index = 0;
+        edgaux[j][i][0].stateidx.resize(auxstate.size());
+        for (std::size_t s = 0; s < auxstate.size(); ++s) {
+          edgaux[j][i][0].stateidx[s] = netmodel[i]->getStateIdx(auxstate[s]);
+        }
+        edgaux[j][i][0].stickidx.resize(auxstick.size());
+        for (std::size_t s = 0; s < auxstick.size(); ++s) {
+          edgaux[j][i][0].stickidx[s] = netmodel[i]->getStateIdx(auxstick[s]);
+        }
+      }
+    }
+  }
+
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
 }
@@ -150,17 +172,18 @@ void Network::LoadNetwork(mPart *msg) {
   edgmodidx.resize(msg->nvtx);
   state.resize(msg->nvtx);
   stick.resize(msg->nvtx);
+  vtxaux.resize(msg->nvtx);
   event.resize(msg->nvtx);
   evtaux.resize(msg->nvtx);
-  evtreaux.clear();
   evtlog.clear();
-  evtlog.push_back(event_t());
-  evtlog[0].type = EVENT_DUMMY;
+  evtext.clear();
   record.clear();
   recordlist.clear();
   recevt.clear();
-  recevtlist = EVENT_SPIKE;
-  
+  recevtlist.resize(EVTYPE_TOTAL);
+  // Record spikes
+  recevtlist[EVTYPE_SPIKE] = true;
+
   // Graph distribution information
   for (idx_t i = 0; i < npnet+1; ++i) {
     // vtxdist
@@ -198,7 +221,7 @@ void Network::LoadNetwork(mPart *msg) {
       adjcy[i][j] = msg->adjcy[msg->xadj[i] + j];
       // models
       edgmodidx[i][j] = msg->edgmodidx[jmodidx++];
-      if (edgmodidx[i][j] ) {
+      if (edgmodidx[i][j]) {
         // map of targets (edge model in part)
         adjmap[adjcy[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
       }
@@ -206,6 +229,26 @@ void Network::LoadNetwork(mPart *msg) {
       jstate += netmodel[edgmodidx[i][j]]->getNState();
       stick[i][j+1] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + netmodel[edgmodidx[i][j]]->getNStick());
       jstick += netmodel[edgmodidx[i][j]]->getNStick();
+    }
+    // set up auxiliary state
+    vtxaux[i].clear();
+    if (netmodel[vtxmodidx[i]]->getNAux()) {
+      std::vector<std::string> auxstate = netmodel[vtxmodidx[i]]->getAuxState();
+      std::vector<std::string> auxstick = netmodel[vtxmodidx[i]]->getAuxStick();
+      for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+        if (edgmodidx[i][j]) {
+          vtxaux[i].push_back(aux_t());
+          vtxaux[i].back().index = j+1;
+          vtxaux[i].back().stateidx.resize(auxstate.size());
+          for (std::size_t s = 0; s < auxstate.size(); ++s) {
+            vtxaux[i].back().stateidx[s] = netmodel[edgmodidx[i][j]]->getStateIdx(auxstate[s]);
+          }
+          vtxaux[i].back().stickidx.resize(auxstick.size());
+          for (std::size_t s = 0; s < auxstick.size(); ++s) {
+            vtxaux[i].back().stickidx[s] = netmodel[edgmodidx[i][j]]->getStateIdx(auxstick[s]);
+          }
+        }
+      }
     }
     // copy over event data
     event_t evtpre;
@@ -519,33 +562,132 @@ void Network::Cycle() {
     if (prtidx == 0) {
       CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
     }
+    
+    // Bookkeeping
+    idx_t evtiter = iter%evtcal;
+    tick_t tstop = tsim + tstep;
 
     // Clear event buffer
-    evtlog.resize(1);
-    evtlog[0].diffuse = tsim;
-    evtlog[0].index = vtxdist[prtidx];
+    evtext.clear();
     idx_t nevent = 0;
     // Redistribute any events (on new year)
-    if (iter%evtcal == 0) {
+    if (evtiter == 0) {
       RedisEvent();
     }
 
     // Perform computation
     for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
       // Timing
-      tick_t tstart = 0;
-      tick_t tdrift;
+      tick_t tdrift = tsim;
 
-      // Step through model drift
-      tdrift = tstep - tstart;
-      netmodel[vtxmodidx[i]]->Step(tdrift, state[i][0], stick[i][0], evtlog);
+      // Sort events
+      std::sort(event[i][evtiter].begin(), event[i][evtiter].end());
+      nevent += event[i][evtiter].size();
 
-      nevent += event[i][iter%evtcal].size();
+      // Perform events starting at beginning of step
+      std::vector<event_t>::iterator evt = event[i][evtiter].begin();
+      while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
+        // edge events
+        if (evt->index) {
+          netmodel[edgmodidx[i][evt->index-1]]->Jump(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+        }
+        // vertex events
+        else {
+          netmodel[vtxmodidx[i]]->Jump(*evt, state[i], stick[i], vtxaux[i]);
+        }
+        ++evt;
+      }
+
+      // Computation
+      while (tdrift < tstop) {
+        // Step through model drift (vertex)
+        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], evtlog);
+
+        // Handle generated events (if any)
+        if (evtlog.size()) {
+          for (std::size_t e = 0; e < evtlog.size(); ++e) {
+            // External events
+            if (evtlog[e].index & EVENT_EXTERNAL) {
+              // Check if internal as well
+              if (evtlog[e].index & EVENT_LOCALEDG) {
+                // Jump loop
+                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
+                  if (edgmodidx[i][j]) {
+                    evtlog[e].index = -j-1; // negative target indicates local event
+                    netmodel[edgmodidx[i][j]]->Jump(evtlog[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                  }
+                }
+              }
+              // reindex to global
+              evtlog[e].index = vtxdist[prtidx] + i;
+              // push to communication
+              evtext.push_back(evtlog[e]);
+              // record listed event
+              if (recevtlist[evtlog[e].type]) {
+                recevt.push_back(evtlog[e]);
+              }
+            }
+            // Local edges
+            else if (evtlog[e].index & EVENT_LOCALEDG) {
+              // Check if vertex as well
+              if (evtlog[e].index & EVENT_LOCALVTX) {
+                // vertex to itself
+                evtlog[e].index = 0;
+                if ((evtlog[e].diffuse - tsim - tstep)/tstep < evtcal) {
+                  event[i][(evtlog[e].diffuse/tstep)%evtcal].push_back(evtlog[e]);
+                }
+                else if (evtlog[e].diffuse < tsim + tstep) {
+                  // Jump now
+                  netmodel[vtxmodidx[i]]->Jump(evtlog[e], state[i], stick[i], vtxaux[i]);
+                }
+                else {
+                  evtaux[i].push_back(evtlog[e]);
+                }
+              }
+              // Jump loop
+              for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
+                if (edgmodidx[i][j]) {
+                  evtlog[e].index = -j-1; // negative index indicates local event
+                  netmodel[edgmodidx[i][j]]->Jump(evtlog[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                }
+              }
+            }
+            // Vertex only
+            else if (evtlog[e].index & EVENT_LOCALVTX) {
+              // vertex to itself
+              evtlog[e].index = 0;
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < evtcal) {
+                event[i][(evtlog[e].diffuse/tstep)%evtcal].push_back(evtlog[e]);
+              }
+              else if (evtlog[e].diffuse < tsim + tstep) {
+                // Jump now
+                netmodel[vtxmodidx[i]]->Jump(evtlog[e], state[i], stick[i], vtxaux[i]);
+              }
+              else {
+                evtaux[i].push_back(evtlog[e]);
+              }
+            }
+          }
+          // clear log for next time
+          evtlog.clear();
+        }
+        
+        // Perform events up to tdrift
+        while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
+          // edge events
+          if (evt->index) {
+            netmodel[edgmodidx[i][evt->index-1]]->Jump(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+          }
+          // vertex events
+          else {
+            netmodel[vtxmodidx[i]]->Jump(*evt, state[i], stick[i], vtxaux[i]);
+          }
+          ++evt;
+        }
+      }
 
       // Clear event queue
-      event[i][iter%evtcal].clear();
-      // Update event template
-      ++evtlog[0].index;
+      event[i][evtiter].clear();
     }
     //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
 
