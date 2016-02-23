@@ -1,0 +1,25 @@
+vertex:
+  - modname: izhiex
+    order: 800
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+  - modname: izhiin
+    order: 200
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+
+edge:
+  - source: izhiex
+    target: [izhiex, izhiin]
+    modname: exstdp
+    cutoff: 100.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: izhiin
+    target: [izhiex]
+    modname: instdp
+    cutoff: 100.0
+    connect:
+      - type: uniform
+        prob: 0.125

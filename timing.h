@@ -8,6 +8,7 @@
 #define __STACS_TIMING_H__
 
 #define TMAX_DEFAULT    10000.0 // 10s
+#define TDISP_DEFAULT       1.0 // 1ms
 #define TSTEP_DEFAULT       1.0 // 1ms
 #define TCHECK_DEFAULT     50.0 // 50ms
 #define TRECORD_DEFAULT    25.0 // 25ms

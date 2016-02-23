@@ -130,7 +130,7 @@ void NetData::CheckRecord(mRecord *msg) {
     rprt = 0;
     
     // Write data
-    CkPrintf("  Writing records %" PRIidx "\n", datidx);
+    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
     WriteRecord();
 
     // Cleanup stash
@@ -151,7 +151,7 @@ void NetData::SaveRecord(mRecord *msg) {
     rprt = 0;
     
     // Write data
-    CkPrintf("  Writing records %" PRIidx "\n", datidx);
+    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
     WriteRecord();
 
     // Cleanup stash

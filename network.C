@@ -15,9 +15,11 @@ extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
+extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ idx_t evtcal;
+extern /*readonly*/ idx_t rngseed;
 
 
 /**************************************************************************
@@ -61,6 +63,10 @@ Network::Network(mModel *msg) {
   idx_t datdiv = npnet/npdat;
   idx_t datrem = npnet%npdat;
   datidx = (prtidx-( ((prtidx+1)/(datdiv+1))>datrem ? datrem:((prtidx+1)/(datdiv+1)) ))/datdiv;
+  
+  // Set up random number generator
+  rngine.seed(rngseed+prtidx);
+  unifdist = new std::uniform_real_distribution<real_t> (0.0, 1.0);
 
   // Vertex Models
   for (std::size_t i = 0; i < netmodel.size(); ++i) {
@@ -78,6 +84,7 @@ Network::Network(mModel *msg) {
     CkAssert(netmodel[i]->getNStick() == msg->nstick[i-1]);
     CkAssert(netmodel[i]->getNParam() == msg->xparam[i] - msg->xparam[i-1]);
     netmodel[i]->setParam(msg->param + msg->xparam[i-1]);
+    netmodel[i]->setRandom(unifdist, &rngine);
 
     // Print out model information
     if (prtidx == 0) {
@@ -113,6 +120,22 @@ Network::Network(mModel *msg) {
         }
       }
     }
+  }
+  // set up repeating events
+  repevt.clear();
+  repmodidx.resize(netmodel.size(), false);
+  for (std::size_t i = 1; i < netmodel.size(); ++i) {
+    netmodel[i]->addCycle((idx_t) i, repevt);
+  }
+  if (repevt.size()) {
+    std::sort(repevt.begin(), repevt.end());
+    trep = repevt[0].diffuse;
+    for (std::size_t e = 0; e < repevt.size(); ++e) {
+      repmodidx[repevt[e].index] = true;
+    }
+  }
+  else {
+    trep = TICK_T_MAX;
   }
 
   // Return control to main
@@ -177,6 +200,7 @@ void Network::LoadNetwork(mPart *msg) {
   evtaux.resize(msg->nvtx);
   evtlog.clear();
   evtext.clear();
+  repidx.clear();
   record.clear();
   recordlist.clear();
   recevt.clear();
@@ -216,6 +240,9 @@ void Network::LoadNetwork(mPart *msg) {
     jstate += netmodel[vtxmodidx[i]]->getNState();
     stick[i][0] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + netmodel[vtxmodidx[i]]->getNStick());
     jstick += netmodel[vtxmodidx[i]]->getNStick();
+    if (repmodidx[vtxmodidx[i]]) {
+      repidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
+    }
     // copy over edge data
     for (idx_t j = 0; j < adjcy[i].size(); ++j) {
       adjcy[i][j] = msg->adjcy[msg->xadj[i] + j];
@@ -229,6 +256,9 @@ void Network::LoadNetwork(mPart *msg) {
       jstate += netmodel[edgmodidx[i][j]]->getNState();
       stick[i][j+1] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + netmodel[edgmodidx[i][j]]->getNStick());
       jstick += netmodel[edgmodidx[i][j]]->getNStick();
+      if (repmodidx[edgmodidx[i][j]]) {
+        repidx[edgmodidx[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
+      }
     }
     // set up auxiliary state
     vtxaux[i].clear();
@@ -285,6 +315,7 @@ void Network::LoadNetwork(mPart *msg) {
 
   // Set up timing
   tsim = 0;
+  tdisp = 0;
   iter = 0;
   // Set up coordination
   cadjprt[0] = 0;
@@ -559,8 +590,10 @@ void Network::Cycle() {
   // Simulate next cycle
   else {
     // Display iteration information
-    if (prtidx == 0) {
+    if (tsim >= tdisp && prtidx == 0) {
+      tdisp = tsim + tdisplay;
       CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
+      //CkPrintf("  Simulating time %" PRIreal "\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
     }
     
     // Bookkeeping
@@ -573,6 +606,33 @@ void Network::Cycle() {
     // Redistribute any events (on new year)
     if (evtiter == 0) {
       RedisEvent();
+    }
+    
+    // Check for repeating events
+    if (tsim >= trep) {
+      std::vector<event_t>::iterator evt = repevt.begin();
+      // Compute periodic events
+      while (evt != repevt.end() && evt->diffuse <= tsim) {
+        // Set temporary model index
+        idx_t modidx = evt->index;
+        // Loop through all models
+        for (std::size_t i = 0; i < repidx[modidx].size(); ++i) {
+          evt->index = repidx[modidx][i][1];
+          if (evt->index) {
+            netmodel[modidx]->Jump(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
+          }
+          else {
+            netmodel[modidx]->Jump(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
+          }
+        }
+        // Return model index
+        evt->index = modidx;
+        // Update timing
+        evt->diffuse += ((tick_t) evt->data)* TICKS_PER_MS;
+        ++evt;
+      }
+      std::sort(repevt.begin(), repevt.end());
+      trep = repevt[0].diffuse;
     }
 
     // Perform computation

@@ -19,9 +19,11 @@
 /*readonly*/ idx_t npnet;
 /*readonly*/ tick_t tmax;
 /*readonly*/ tick_t tstep;
+/*readonly*/ tick_t tdisplay;
 /*readonly*/ tick_t tcheck;
 /*readonly*/ tick_t trecord;
 /*readonly*/ idx_t evtcal;
+/*readonly*/ idx_t rngseed;
 /*readonly*/ std::string rpcport;
 
 

@@ -66,12 +66,12 @@ void Network::CommEvent(mEvent *msg) {
     if (targets != adjmap.end()) {
       for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
         evtpre.index = (*target)[1];
-        evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0]; // delay always first parameter of edge
+        evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
         // Add to event queue or spillover
-        if ((evtpre.diffuse - tsim)/tstep < evtcal) {
+        if ((evtpre.diffuse/tstep - msg->iter) < evtcal) {
           event[(*target)[0]][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
         }
-        else if (evtpre.diffuse < tsim) {
+        else if (evtpre.diffuse/tstep < msg->iter) {
           event[(*target)[0]][(msg->iter+1)%evtcal].push_back(evtpre);
         }
         else {

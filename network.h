@@ -8,6 +8,7 @@
 #define __STACS_NETWORK_H__
 #include <algorithm>
 #include <array>
+#include <random>
 #include <string>
 #include <sstream>
 #include <unordered_map>
@@ -170,6 +171,10 @@ class NetModel {
     void setParam(real_t *p) {
       param = std::vector<real_t>(p, p+paramlist.size());
     }
+    void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
+      unifdist = u;
+      rngine = r;
+    }
     /* Auxiliary */
     idx_t getNAux() const { return auxstate.size() + auxstick.size(); }
     std::vector<std::string> getAuxState() const { return auxstate; }
@@ -182,6 +187,8 @@ class NetModel {
       idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
       return (index < sticklist.size() ? index : -1);
     }
+    /* Periodic Events */
+    virtual void addCycle(idx_t modidx, std::vector<event_t>& cyclevt) {};
     /* Abstract Functions */
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
     virtual void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) = 0;
@@ -196,6 +203,9 @@ class NetModel {
     /* Auxiliary */
     std::vector<std::string> auxstate;
     std::vector<std::string> auxstick;
+    /* Random Number Generation */
+    std::mt19937 *rngine;
+    std::uniform_real_distribution<real_t> *unifdist;
 };
 
 // Network model template
@@ -410,13 +420,22 @@ class Network : public CBase_Network {
     std::vector<std::vector<event_t>> evtaux; // spillover event queue
     std::vector<event_t> evtlog; // event buffer for generated events
     std::vector<event_t> evtext; // external events (and extra spillover)
+    /* Repeating Events */
+    std::vector<event_t> repevt; // list of events
+    std::vector<bool> repmodidx; // models with repeating events
+    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> repidx; // index into models
+    tick_t trep; // update indicator
     /* Recording */
     std::vector<record_t> record; // record keeping
     std::vector<recentry_t> recordlist; // what to record
     std::vector<event_t> recevt; // record keeping for events
     std::vector<bool> recevtlist; // types of events to record
+    /* Random Number Generation */
+    std::mt19937 rngine;
+    std::uniform_real_distribution<real_t> *unifdist;
     /* Timing */
     tick_t tsim;
+    tick_t tdisp;
     idx_t iter;
     /* Bookkeeping */
     CProxy_NetData netdata;

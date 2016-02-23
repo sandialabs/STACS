@@ -1,0 +1,10 @@
+npdat: 4
+npnet: 8
+evtcal: 21
+tmax:  60000 # 1 minute
+tdisplay: 1000 # 1 second
+tcheck: 10000 # 10 seconds
+trecord: 1000 # 1 second
+
+filebase: "polynet/polynet"
+rngseed: 2032

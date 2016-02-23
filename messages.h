@@ -28,9 +28,10 @@
 #define EVENT_LOCALEDG     2
 #define EVENT_LOCALVTX     4
 
-#define EVTYPE_TOTAL       2
+#define EVTYPE_TOTAL       3
 #define EVTYPE_RECORD      0
 #define EVTYPE_SPIKE       1
+#define EVTYPE_EDGUP       2
 
 #define RECORD_STATE       0
 #define RECORD_STICK       1

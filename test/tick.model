@@ -3,7 +3,8 @@ type: vertex
 modname: dummyvtx
 modtype: 1
 param:
-  - 3.1
+  - name: dp0
+    value: 3.1
 state:
   - name: v
     type: constant
@@ -18,7 +19,8 @@ type: vertex
 modname: dummyvtx1
 modtype: 1
 param:
-  - 2.4
+  - name: dp0
+    value: 2.4
 state:
   - name: v
     type: constant
@@ -33,8 +35,10 @@ type: edge
 modname: dummyedg
 modtype: 2
 param:
-  - 1.5
-  - 6.6
+  - name: dp0
+    value: 1.5
+  - name: dp1
+    value: 6.6
 state:
   - name: delay
     type: bounded linear

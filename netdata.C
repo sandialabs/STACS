@@ -138,7 +138,7 @@ void NetData::CheckNetwork(mPart *msg) {
     cprt = 0;
 
     // Write data
-    CkPrintf("  Writing network %" PRIidx "\n", datidx);
+    CkPrintf("  Checking network %" PRIidx "\n", datidx);
     WriteCSR(true);
 
     // Cleanup stash

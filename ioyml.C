@@ -23,10 +23,12 @@ extern /*readonly*/ std::string fileout;
 extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
+extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ idx_t evtcal;
+extern /*readonly*/ idx_t rngseed;
 extern /*readonly*/ std::string rpcport;
 
 
@@ -100,6 +102,14 @@ int Main::ParseConfig(std::string configfile) {
     CkPrintf("  tstep not defined, defaulting to: %.2g ms\n", treal);
   }
   tstep = (tick_t)(treal*TICKS_PER_MS);
+  // How often to display the simulation time (in ms)
+  try {
+    treal = config["tdisplay"].as<real_t>();
+  } catch (YAML::RepresentationException& e) {
+    treal = TDISP_DEFAULT;
+    CkPrintf("  tdisplay not defined, defaulting to: %.2g ms\n", treal);
+  }
+  tdisplay = (tick_t)(treal*TICKS_PER_MS);
   // Time between checkpoints (in ms)
   try {
     treal = config["tcheck"].as<real_t>();
@@ -122,6 +132,14 @@ int Main::ParseConfig(std::string configfile) {
   } catch (YAML::RepresentationException& e) {
     evtcal = EVTCAL_DEFAULT;
     CkPrintf("  evtcal not defined, defaulting to: %d iters\n", evtcal);
+  }
+  // Random number seed
+  try {
+     rngseed = config["rngseed"].as<idx_t>();
+  } catch (YAML::RepresentationException& e) {
+    std::random_device rd;
+    rngseed = rd();
+    CkPrintf("  rngseed not defined, seeding with: %" PRIidx "\n", rngseed);
   }
   // RPC port
   try {
@@ -172,12 +190,19 @@ int Main::ReadModel() {
       CkPrintf("  modtype: %s\n", e.what());
       return 1;
     }
-    try {
-      // param
-      models[i].param = modfile[i]["param"].as<std::vector<real_t>>();
-    } catch (YAML::RepresentationException& e) {
-      CkPrintf("  param: %s\n", e.what());
-      return 1;
+    // Params are their own 'node'
+    YAML::Node param = modfile[i]["param"];
+    if (param.size() == 0) {
+      CkPrintf("  warning: %s has no parameters\n", models[i].modname.c_str());
+    }
+    models[i].param.resize(param.size());
+    for (std::size_t j = 0; j < param.size(); ++j) {
+      try {
+        models[i].param[j] = param[j]["value"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  param: %s\n", e.what());
+        return 1;
+      }
     }
     
     // States are their own 'node'
