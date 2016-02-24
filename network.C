@@ -559,7 +559,7 @@ void Network::Cycle() {
 
     // Display synchronization information
     if (prtidx == 0) {
-      CkPrintf("  Synchronized at iteration %" PRIidx "\n", iter);
+      CkPrintf("Synchronized at iteration %" PRIidx "\n", iter);
     }
 
     // move control to sychronization callback
@@ -592,8 +592,8 @@ void Network::Cycle() {
     // Display iteration information
     if (tsim >= tdisp && prtidx == 0) {
       tdisp = tsim + tdisplay;
-      CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
-      //CkPrintf("  Simulating time %" PRIreal "\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
+      CkPrintf("    Simulating iteration %" PRIidx "\n", iter);
+      //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
     }
     
     // Bookkeeping

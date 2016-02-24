@@ -150,9 +150,12 @@ void Main::StartSim() {
   CkPrintf("Starting simulation\n");
 
   // Start simulation
-  CkCallback *cb = new CkCallback(CkReductionTarget(Main, SaveSim), mainProxy);
+  CkCallback *cb = new CkCallback(CkReductionTarget(Main, StopSim), mainProxy);
   network.ckSetReductionClient(cb);
   network.Cycle();
+
+  // Start timer
+  tstart = std::chrono::system_clock::now();
 }
 
 
@@ -163,7 +166,7 @@ void Main::StartSim() {
 // Coordination for checkpointing simulation
 //
 void Main::CheckSim(CkReductionMsg *msg) {
-  CkPrintf("Checkpointing simulation\n");
+  //CkPrintf("Checkpointing simulation\n");
   
   // Save network part distribution to local
   netdist.clear();
@@ -173,6 +176,7 @@ void Main::CheckSim(CkReductionMsg *msg) {
   delete msg;
 
   // Write distribution
+  CkPrintf("  Checking network distribution\n");
   if (WriteDist(true)) {
     CkPrintf("Error writing distribution...\n");
     CkExit();
@@ -185,8 +189,14 @@ void Main::CheckSim(CkReductionMsg *msg) {
 
 // Coordination for stopping simulation
 //
-void Main::SaveSim() {
-  CkPrintf("Saving simulation\n");
+void Main::StopSim() {
+  CkPrintf("Stopping simulation\n");
+  
+  // Stop timer
+  tfinish = std::chrono::system_clock::now();
+  // Print timing
+  std::chrono::duration<real_t> tduration = std::chrono::duration_cast<std::chrono::milliseconds>(tfinish - tstart);
+  CkPrintf("Elapsed time (wall clock): %" PRIrealsec " seconds\n", tduration.count());
 
   // Save data from network parts to output files
   chalt = nhalt = 0;
@@ -196,15 +206,15 @@ void Main::SaveSim() {
   ++nhalt;
   
   // Set callback for halting
-  CkCallback *cb = new CkCallback(CkReductionTarget(Main, Halt), mainProxy);
+  CkCallback *cb = new CkCallback(CkReductionTarget(Main, FiniSim), mainProxy);
   netdata.ckSetReductionClient(cb);
 }
 
 // Coordination for file output
 //
-void Main::FiniSim(CkReductionMsg *msg) {
-  CkPrintf("Stopping simulation\n");
-
+void Main::SaveSim(CkReductionMsg *msg) {
+  //CkPrintf("Stopping simulation\n");
+  
   // Save network part distribution to local
   netdist.clear();
   for (std::size_t i = 0; i < (msg->getSize())/sizeof(dist_t); ++i) {
@@ -213,18 +223,19 @@ void Main::FiniSim(CkReductionMsg *msg) {
   delete msg;
 
   // Write distribution
+  CkPrintf("  Writing network distribution\n");
   if (WriteDist()) {
     CkPrintf("Error writing distribution...\n");
     CkExit();
   }
 
   // Finished
-  thisProxy.Halt();
+  thisProxy.FiniSim();
 }
 
-// Halt
+// Finish
 //
-void Main::Halt() {
+void Main::FiniSim() {
   // Everything checks back to here
   if (++chalt == nhalt) {
 #ifdef STACS_WITH_YARP

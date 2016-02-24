@@ -4,7 +4,6 @@
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
 
-#include <unistd.h>
 #include "network.h"
 
 
@@ -43,10 +42,10 @@ class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
 // Simulation step
 //
 tick_t DummyVtx::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
-  tick_t tcomp = tdiff*100/TICKS_PER_MS; // 1ms sleeps for 100us
+  idx_t tcomp = ((idx_t) tdiff)*100/TICKS_PER_MS; // 1ms sleeps for 100us
   if (tcomp > 1000000) { tcomp = 1000000; }
   else if (tcomp == 0) { tcomp = 1; }
-  usleep(tcomp);
+  std::this_thread::sleep_for(std::chrono::microseconds(tcomp));
 
   // generate events
   event_t evtpre;

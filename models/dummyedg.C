@@ -4,7 +4,6 @@
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
 
-#include <unistd.h>
 #include "network.h"
 
 /**************************************************************************
@@ -52,6 +51,6 @@ tick_t DummyEdg::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, s
 //
 void DummyEdg::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
   //CkPrintf("Jumping Edg\n");
-  usleep(1); // Jump time
+  std::this_thread::sleep_for(std::chrono::microseconds(10));
 }
 

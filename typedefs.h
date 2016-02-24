@@ -33,6 +33,8 @@ typedef real8 real_t;
 #define PRItick PRIu64
 #define PRItickhex PRIx64
 #define PRIreal ".2g"
+#define PRIrealms ".1f"
+#define PRIrealsec ".3f"
 #define PRIrealfull " .7e"
 
 // Some limits

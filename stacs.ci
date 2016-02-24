@@ -27,9 +27,9 @@ mainmodule stacs {
     entry [reductiontarget] void InitSim();
     entry [reductiontarget] void StartSim();
     entry void CheckSim(CkReductionMsg *msg);
-    entry [reductiontarget] void SaveSim();
-    entry void FiniSim(CkReductionMsg *msg);
-    entry [reductiontarget] void Halt();
+    entry void SaveSim(CkReductionMsg *msg);
+    entry [reductiontarget] void StopSim();
+    entry [reductiontarget] void FiniSim();
   };
   
   chare StreamRPC {

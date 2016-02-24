@@ -138,7 +138,7 @@ void NetData::CheckNetwork(mPart *msg) {
     cprt = 0;
 
     // Write data
-    CkPrintf("  Checking network %" PRIidx "\n", datidx);
+    CkPrintf("  Checking network data %" PRIidx "\n", datidx);
     WriteCSR(true);
 
     // Cleanup stash
@@ -163,7 +163,7 @@ void NetData::SaveNetwork(mPart *msg) {
     cprt = 0;
 
     // Write data
-    CkPrintf("  Writing network %" PRIidx "\n", datidx);
+    CkPrintf("  Writing network data %" PRIidx "\n", datidx);
     WriteCSR();
 
     // Cleanup stash
@@ -172,7 +172,7 @@ void NetData::SaveNetwork(mPart *msg) {
     }
 
     // Return control to main
-    CkCallback *cb = new CkCallback(CkIndex_Main::FiniSim(NULL), mainProxy);
+    CkCallback *cb = new CkCallback(CkIndex_Main::SaveSim(NULL), mainProxy);
     contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
   }
 }

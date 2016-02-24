@@ -105,7 +105,6 @@ int Main::WriteDist(bool check) {
   std::sort(netdist.begin(), netdist.end());
 
   // Write to file
-  CkPrintf("  Writing network distribution\n");
   nvtx = nedg = nstate = nstick = nevent = 0;
   fprintf(pDist, "%" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx "\n", nvtx, nedg, nstate, nstick, nevent);
   for (std::size_t i = 0; i < netdist.size(); ++i) {

@@ -6,6 +6,8 @@
 
 #ifndef __STACS_TIMING_H__
 #define __STACS_TIMING_H__
+#include <chrono>
+#include <thread>
 
 #define TMAX_DEFAULT    10000.0 // 10s
 #define TDISP_DEFAULT       1.0 // 1ms

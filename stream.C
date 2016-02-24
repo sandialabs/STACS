@@ -59,7 +59,7 @@ void StreamRPC::Open(CProxy_Network cpnet) {
   // Test port
   if (this->where().getPort() > 0) {
     // Setup callback
-    cbmain = new CkCallback(CkReductionTarget(Main, SaveSim), mainProxy);
+    cbmain = new CkCallback(CkReductionTarget(Main, StopSim), mainProxy);
     CkCallback *cbp = new CkCallback(CkReductionTarget(StreamRPC, RPCPause), thisProxy);
     CkCallback *cbs = new CkCallback(CkReductionTarget(StreamRPC, RPCSync), thisProxy);
     // Set RPC reader
@@ -173,7 +173,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
 
       // Stop while paused
       CkPrintf("RPC Command: Stopping Simulation\n");
-      mainProxy.SaveSim();
+      mainProxy.StopSim();
     }
     out.add("received command: stop");
   }
@@ -225,7 +225,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
         step = (real_t) (tstep/TICKS_PER_MS);
       }
       // Get step
-      CkPrintf("RPC Command: Stepping Simulation for %" PRIreal "ms\n", step);
+      CkPrintf("RPC Command: Stepping Simulation for %" PRIrealms " ms\n", step);
       
       // Modify reduction client
       network.ckSetReductionClient(&cbpause);

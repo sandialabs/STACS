@@ -78,9 +78,9 @@ class Main : public CBase_Main {
     void InitSim();
     void StartSim();
     void CheckSim(CkReductionMsg *msg);
-    void SaveSim();
-    void FiniSim(CkReductionMsg *msg);
-    void Halt();
+    void SaveSim(CkReductionMsg *msg);
+    void StopSim();
+    void FiniSim();
 
   private:
     /* Persistence */
@@ -89,6 +89,8 @@ class Main : public CBase_Main {
     /* Chare Arrays */
     CProxy_NetData netdata;
     CProxy_Network network;
+    /* Timing */
+    std::chrono::system_clock::time_point tstart, tfinish;
 #ifdef STACS_WITH_YARP
     /* YARP */
     CProxy_StreamRPC streamrpc;
