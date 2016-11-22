@@ -125,7 +125,7 @@ Network::Network(mModel *msg) {
   repevt.clear();
   repmodidx.resize(netmodel.size(), false);
   for (std::size_t i = 1; i < netmodel.size(); ++i) {
-    netmodel[i]->addCycle((idx_t) i, repevt);
+    netmodel[i]->addRepeat((idx_t) i, repevt);
   }
   if (repevt.size()) {
     std::sort(repevt.begin(), repevt.end());
@@ -188,6 +188,7 @@ void Network::LoadNetwork(mPart *msg) {
   // Setup data vectors
   vtxdist.resize(npnet+1);
   vtxidx.resize(msg->nvtx);
+  vtxmap.clear();
   vtxmodidx.resize(msg->nvtx);
   xyz.resize(msg->nvtx*3);
   adjcy.resize(msg->nvtx);
@@ -224,6 +225,7 @@ void Network::LoadNetwork(mPart *msg) {
   // Get adjacency matrix
   for (idx_t i = 0; i < adjcy.size(); ++i) {
     vtxidx[i] = vtxdist[prtidx] + i;
+    vtxmap[vtxdist[prtidx] + i] = i;
     vtxmodidx[i] = msg->vtxmodidx[i];
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
@@ -330,6 +332,11 @@ void Network::LoadNetwork(mPart *msg) {
 #ifdef STACS_WITH_YARP
   // Set up synchronization
   synciter = IDX_T_MAX;
+  // Open ports
+  CkPrintf("  Opening network ports on %" PRIidx "\n", prtidx);
+  for (std::size_t i = 1; i < netmodel.size(); ++i) {
+    netmodel[i]->OpenPorts(prtidx);
+  }
 #endif
 
   // Return control to main
@@ -514,6 +521,14 @@ void Network::SaveNetwork() {
   }
   else {
     netdata(datidx).SaveNetwork(part);
+
+#ifdef STACS_WITH_YARP
+    // Close ports
+    CkPrintf("  Closing network ports on %" PRIidx "\n", prtidx);
+    for (std::size_t i = 1; i < netmodel.size(); ++i) {
+      netmodel[i]->ClosePorts();
+    }
+#endif
   }
 }
 
@@ -559,7 +574,7 @@ void Network::Cycle() {
 
     // Display synchronization information
     if (prtidx == 0) {
-      CkPrintf("Synchronized at iteration %" PRIidx "\n", iter);
+      CkPrintf("  Synchronized at iteration %" PRIidx "\n", iter);
     }
 
     // move control to sychronization callback
@@ -634,7 +649,7 @@ void Network::Cycle() {
       std::sort(repevt.begin(), repevt.end());
       trep = repevt[0].diffuse;
     }
-
+    
     // Perform computation
     for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
       // Timing
@@ -679,7 +694,7 @@ void Network::Cycle() {
                 }
               }
               // reindex to global
-              evtlog[e].index = vtxdist[prtidx] + i;
+              evtlog[e].index = vtxidx[i];
               // push to communication
               evtext.push_back(evtlog[e]);
               // record listed event
@@ -747,6 +762,7 @@ void Network::Cycle() {
       }
 
       // Clear event queue
+      //CkAssert(evt == event[i][evtiter].end());
       event[i][evtiter].clear();
     }
     //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
@@ -754,10 +770,15 @@ void Network::Cycle() {
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();
     netgroup.CommEvent(mevent);
-    // Simple go-ahead method (if no events)
-    // mGo *go = new mGo(iter);
-    // netgroup.GoAhead(go);
 
+    // Input Devices
+    /*
+    for (std::size_t i = 0; i < devmodel.size(); ++i) {
+      devmodel[i]->Step();
+    }
+    */
+    
+    // Output devices
 #ifdef STACS_WITH_YARP
     // Send messages to streams (yarp)
 #endif

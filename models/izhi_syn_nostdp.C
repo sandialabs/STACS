@@ -26,6 +26,8 @@ class IzhiSynNoSTDP : public NetModelTmpl < 13, IzhiSynNoSTDP > {
       auxstate[0] = "I";
       // auxiliary sticks
       auxstick.resize(0);
+      // ports
+      portlist.resize(0);
     }
     
     /* Simulation */

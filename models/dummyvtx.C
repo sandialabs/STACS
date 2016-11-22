@@ -27,6 +27,8 @@ class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
       auxstate.resize(0);
       // auxiliary sticks
       auxstick.resize(0);
+      // ports
+      portlist.resize(0);
     }
 
     /* Simulation */

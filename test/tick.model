@@ -31,6 +31,15 @@ state:
 ...
 
 ---
+type: vertex
+modname: dummydev
+modtype: 3
+param:
+  - name: dp0
+    value: 22.4
+...
+
+---
 type: edge
 modname: dummyedg
 modtype: 2

@@ -97,6 +97,11 @@ NetData::NetData(mDist *msg) {
   CkPrintf("  Loading input %" PRIidx "\n", datidx);
   ReadCSR();
 
+#ifdef STACS_WITH_YARP
+  // Open yarp
+  yarp.init();
+#endif
+
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
 }
@@ -170,6 +175,11 @@ void NetData::SaveNetwork(mPart *msg) {
     for (idx_t i = 0; i < nprt; ++i) {
       delete parts[i];
     }
+
+#ifdef STACS_WITH_YARP
+    // Finalize YARP
+    yarp.fini();
+#endif
 
     // Return control to main
     CkCallback *cb = new CkCallback(CkIndex_Main::SaveSim(NULL), mainProxy);

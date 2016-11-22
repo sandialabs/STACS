@@ -303,7 +303,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       // Modify reduction client
       network.ckSetReductionClient(&cbpause);
     }
-    out.add("received command: open");
+    out.add("received command: close");
   }
   else {
     CkPrintf("RPC Message: %s\n", in.toString().c_str());

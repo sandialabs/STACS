@@ -19,6 +19,9 @@
 #include "ckmulticast.h"
 #include "network.decl.h"
 
+#ifdef STACS_WITH_YARP
+#include <yarp/os/all.h>
+#endif
 
 /**************************************************************************
 * Charm++ Init Nodes
@@ -167,6 +170,7 @@ class NetModel {
     idx_t getNState() const { return statelist.size(); }
     idx_t getNStick() const { return sticklist.size(); }
     std::vector<real_t> getParam() const { return param; }
+    idx_t getNPorts() const { return portlist.size(); }
     /* Setters */
     void setParam(real_t *p) {
       param = std::vector<real_t>(p, p+paramlist.size());
@@ -187,15 +191,19 @@ class NetModel {
       idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
       return (index < sticklist.size() ? index : -1);
     }
-    /* Periodic Events */
-    virtual void addCycle(idx_t modidx, std::vector<event_t>& cyclevt) {};
+    /* Repeating Events */
+    virtual void addRepeat(idx_t modidx, std::vector<event_t>& repevt) {};
     /* Abstract Functions */
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
     virtual void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) = 0;
+    /* Protocol Functions */
+    virtual void OpenPorts(idx_t prtidx) {};
+    virtual void ClosePorts() {};
   protected:
     /* Bookkeeping */
     idx_t modtype;
     std::vector<std::string> paramlist;
+    std::vector<std::string> portlist;
     std::vector<std::string> statelist;
     std::vector<std::string> sticklist;
     /* Model Data */
@@ -269,7 +277,7 @@ const idx_t NetModelTmpl<TYPE, IMPL>::MODELTYPE = NetModelFactory::getNetModel()
 //
 class NoneModel : public NetModelTmpl < 0, NoneModel > {
   public:
-    NoneModel() { paramlist.resize(0); statelist.resize(0); sticklist.resize(0); auxstate.resize(0); auxstick.resize(0); }
+    NoneModel() { paramlist.resize(0); portlist.resize(0); statelist.resize(0); sticklist.resize(0); auxstate.resize(0); auxstick.resize(0); }
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) { return tdiff; }
     void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) { }
 };
@@ -350,6 +358,10 @@ class NetData : public CBase_NetData {
     idx_t datidx;
     idx_t cprt, rprt;
     idx_t nprt, xprt;
+#ifdef STACS_WITH_YARP
+    /* YARP */
+    yarp::os::Network yarp;
+#endif
 };
 
 // Network partitions
@@ -400,6 +412,7 @@ class Network : public CBase_Network {
     /* Network Adjacency */
     std::vector<idx_t> vtxdist;             // vertex distribution per part
     std::vector<idx_t> vtxidx;              // local vertex index to global index
+    std::unordered_map<idx_t, idx_t> vtxmap;  // global vertex index to local index
     std::vector<idx_t> vtxmodidx; // vertex model index into netmodel
     std::vector<std::vector<idx_t>> adjcy;  // local vertex adjacency to global index
     std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> adjmap;

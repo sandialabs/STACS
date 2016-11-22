@@ -32,10 +32,12 @@ class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
       auxstate[0] = "I";
       // auxiliary sticks
       auxstick.resize(0);
+      // ports
+      portlist.resize(0);
     }
     
     /* Periodic events */
-    void addCycle(idx_t modidx, std::vector<event_t>& cyclevt);
+    void addRepeat(idx_t modidx, std::vector<event_t>& repevt);
 
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
@@ -48,13 +50,13 @@ class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
 
 // Periodic events
 //
-void IzhiSynSTDP::addCycle(idx_t modidx, std::vector<event_t>& cyclevt) {
+void IzhiSynSTDP::addRepeat(idx_t modidx, std::vector<event_t>& repevt) {
   event_t evtpre;
   evtpre.diffuse = 0;
   evtpre.index = modidx;
   evtpre.type = EVTYPE_EDGUP;
   evtpre.data = param[2];
-  cyclevt.push_back(evtpre);
+  repevt.push_back(evtpre);
 }
 
 

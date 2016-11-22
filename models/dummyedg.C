@@ -29,6 +29,8 @@ class DummyEdg : public NetModelTmpl < 2, DummyEdg > {
       auxstate[0] = "v";
       // auxiliary sticks
       auxstick.resize(0);
+      // ports
+      portlist.resize(0);
     }
     
     /* Simulation */

@@ -7,6 +7,10 @@ vertex:
     order: 20
     shape: circle  # uniform circle
     radius: 100.0  # of radius 100
+  - modname: dummydev
+    order: 1
+    shape: circle
+    radius: 1.0
 
 edge:
   - source: dummyvtx
@@ -23,9 +27,27 @@ edge:
         midpoint: 37.0
         slope: 0.03
   - source: dummyvtx1
-    target: [dummyvtx, dummyvtx1]
+    target: [dummyvtx]
     modname: dummyedg
     cutoff: 50.0
     connect:
       - type: uniform
         prob: 0.3
+  - source: dummyvtx1
+    target: [dummyvtx1]
+    modname: dummyedg
+    cutoff: 200.0
+    connect:
+      - type: index
+        srcmul: 1
+        srcoff: 1
+      - type: index
+        srcmul: 1
+        srcoff: -1
+  - source: dummydev
+    target: [dummyvtx, dummyvtx1]
+    modname: dummyedg
+    cutoff: 50.0
+    connect:
+      - type: uniform
+        prob: 0.1

@@ -89,11 +89,6 @@ Main::Main(CkArgMsg *msg) {
   cinit = 0;
   ninit = 0;
 
-#ifdef STACS_WITH_YARP
-  // Initialize YARP
-  yarp.init();
-#endif
-
   // Setup chare arrays
   CkCallback *cb = new CkCallback(CkReductionTarget(Main, InitSim), mainProxy);
   // netdata
@@ -198,6 +193,11 @@ void Main::StopSim() {
   std::chrono::duration<real_t> tduration = std::chrono::duration_cast<std::chrono::milliseconds>(tfinish - tstart);
   CkPrintf("Elapsed time (wall clock): %" PRIrealsec " seconds\n", tduration.count());
 
+#ifdef STACS_WITH_YARP
+    // Close RPC port
+    streamrpc.Close();
+#endif
+
   // Save data from network parts to output files
   chalt = nhalt = 0;
   network.SaveNetwork();
@@ -238,13 +238,6 @@ void Main::SaveSim(CkReductionMsg *msg) {
 void Main::FiniSim() {
   // Everything checks back to here
   if (++chalt == nhalt) {
-#ifdef STACS_WITH_YARP
-    // Close RPC port
-    streamrpc.Close();
-
-    // Finalize YARP
-    yarp.fini();
-#endif
   
     // Simulation complete
     CkExit();
