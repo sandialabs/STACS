@@ -17,5 +17,6 @@
 #define TICKS_PER_MS    1000000 // 1 million
 
 #define EVTCAL_DEFAULT       20 // Days per year
+#define SIMPAUSE_DEFAULT      0 // Start paused
 
 #endif //__STACS_TIMING_H__

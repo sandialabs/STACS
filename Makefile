@@ -4,7 +4,7 @@ OUT    := stacs
 SRC_CI := $(wildcard *.ci)
 SRC_C  := $(wildcard *.C) \
           $(wildcard models/*.C)
-INC    := -I./ -I./models 
+INC    := -I./ -I./models
 
 DECL   := $(SRC_CI:.ci=.decl.h)
 DEF    := $(SRC_CI:.ci=.def.h)

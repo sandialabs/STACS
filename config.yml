@@ -4,3 +4,4 @@ tmax:  100
 evtcal: 20
 
 filebase: "test/tick"
+simpause: 1

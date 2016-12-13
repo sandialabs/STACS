@@ -24,6 +24,8 @@ module network {
     idx_t nstick[];
     idx_t xparam[];
     real_t param[];
+    idx_t xport[];
+    char port[];
     idx_t nmodel;
   };
 

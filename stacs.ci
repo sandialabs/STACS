@@ -16,6 +16,7 @@ mainmodule stacs {
   readonly idx_t evtcal;
   readonly idx_t rngseed;
   readonly std::string rpcport;
+  readonly idx_t simpause;
   
   message mVtxDist {
     idx_t vtxdist[];

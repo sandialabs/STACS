@@ -81,11 +81,16 @@ mDist* Main::BuildDist() {
 mModel* Main::BuildModel() {
   /* Bookkeeping */
   idx_t nparam;
+  idx_t nport;
 
   // Get total size of param
   nparam = 0;
+  nport = 0;
   for (std::size_t i = 0; i < models.size(); ++i) {
     nparam += models[i].param.size();
+    for (std::size_t j = 0; j < models[i].port.size(); ++j) {
+      nport += models[i].port[j].size() + 1;
+    }
   }
 
   // Initialize model message
@@ -95,12 +100,15 @@ mModel* Main::BuildModel() {
   msgSize[2] = models.size();     //stick
   msgSize[3] = models.size()+1;   //xparam
   msgSize[4] = nparam;            //param
+  msgSize[5] = models.size()+1;   //xport
+  msgSize[6] = nport;             //port
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = models.size();
 
   // Prefixes starts with zero
   mmodel->xparam[0] = 0;
+  mmodel->xport[0] = 0;
   
   // Copy over model information
   for (std::size_t i = 0; i < models.size(); ++i) {
@@ -116,6 +124,18 @@ mModel* Main::BuildModel() {
       // vtxparam
       mmodel->param[mmodel->xparam[i]+j] = models[i].param[j];
     }
+    // xport
+    mmodel->xport[i+1] = mmodel->xport[i];
+    for (std::size_t j = 0; j < models[i].port.size(); ++j) {
+      // port
+      for (std::size_t c = 0; c < models[i].port[j].size(); ++c) {
+        mmodel->port[mmodel->xport[i+1]+c] = models[i].port[j][c];
+      }
+      mmodel->port[mmodel->xport[i+1]+models[i].port[j].size()] = '\0';
+      // xport
+      mmodel->xport[i+1] += models[i].port[j].size() + 1;
+    }
+
   }
 
   // Return model

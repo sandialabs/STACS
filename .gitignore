@@ -44,3 +44,5 @@ charmrun
 # Temporary Files
 *.swp
 
+
+.DS_Store

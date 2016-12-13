@@ -44,6 +44,7 @@ struct model_t {
   idx_t nstate;
   idx_t nstick;
   std::vector<real_t> param;
+  std::vector<std::string> port;
 };
 
 

@@ -30,6 +30,7 @@ extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ idx_t evtcal;
 extern /*readonly*/ idx_t rngseed;
 extern /*readonly*/ std::string rpcport;
+extern /*readonly*/ idx_t simpause;
 
 
 /**************************************************************************
@@ -148,6 +149,13 @@ int Main::ParseConfig(std::string configfile) {
     rpcport = RPCPORT_DEFAULT;
     CkPrintf("  rpcport not defined, defaulting to: %s\n", rpcport.c_str());
   }
+  // Simulation startup
+  try {
+    simpause = config["simpause"].as<idx_t>();
+  } catch (YAML::RepresentationException& e) {
+    simpause = SIMPAUSE_DEFAULT;
+    CkPrintf("  simpause not defined, defaulting to: %" PRIidx "\n", simpause);
+  }
 
   // Return success
   return 0;
@@ -190,6 +198,7 @@ int Main::ReadModel() {
       CkPrintf("  modtype: %s\n", e.what());
       return 1;
     }
+    
     // Params are their own 'node'
     YAML::Node param = modfile[i]["param"];
     if (param.size() == 0) {
@@ -226,6 +235,21 @@ int Main::ReadModel() {
       }
       else {
         ++models[i].nstate;
+      }
+    }
+
+    // Ports are their own 'node'
+    YAML::Node port = modfile[i]["port"];
+    if (port.size() == 0) {
+      CkPrintf("  warning: %s has no ports\n", models[i].modname.c_str());
+    }
+    models[i].port.resize(port.size());
+    for (std::size_t j = 0; j < port.size(); ++j) {
+      try {
+        models[i].port[j] = port[j]["value"].as<std::string>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  port: %s\n", e.what());
+        return 1;
       }
     }
   }

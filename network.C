@@ -84,6 +84,7 @@ Network::Network(mModel *msg) {
     CkAssert(netmodel[i]->getNStick() == msg->nstick[i-1]);
     CkAssert(netmodel[i]->getNParam() == msg->xparam[i] - msg->xparam[i-1]);
     netmodel[i]->setParam(msg->param + msg->xparam[i-1]);
+    netmodel[i]->setPort(msg->port + msg->xport[i-1]);
     netmodel[i]->setRandom(unifdist, &rngine);
 
     // Print out model information
@@ -298,6 +299,10 @@ void Network::LoadNetwork(mPart *msg) {
       }
       ++nevent;
     }
+    // open ports if needed
+    if (netmodel[vtxmodidx[i]]->getNPort()) {
+      netmodel[vtxmodidx[i]]->OpenPorts();
+    }
   }
   CkAssert(msg->nedg == nadjcy);
   CkAssert(msg->nedg == jmodidx);
@@ -332,11 +337,6 @@ void Network::LoadNetwork(mPart *msg) {
 #ifdef STACS_WITH_YARP
   // Set up synchronization
   synciter = IDX_T_MAX;
-  // Open ports
-  CkPrintf("  Opening network ports on %" PRIidx "\n", prtidx);
-  for (std::size_t i = 1; i < netmodel.size(); ++i) {
-    netmodel[i]->OpenPorts(prtidx);
-  }
 #endif
 
   // Return control to main
@@ -520,15 +520,13 @@ void Network::SaveNetwork() {
     thisProxy(prtidx).Cycle();
   }
   else {
-    netdata(datidx).SaveNetwork(part);
-
-#ifdef STACS_WITH_YARP
-    // Close ports
-    CkPrintf("  Closing network ports on %" PRIidx "\n", prtidx);
-    for (std::size_t i = 1; i < netmodel.size(); ++i) {
-      netmodel[i]->ClosePorts();
+    for (std::size_t i = 0; i < adjcy.size(); ++i) {
+      // close ports if needed
+      if (netmodel[vtxmodidx[i]]->getNPort()) {
+        netmodel[vtxmodidx[i]]->ClosePorts();
+      }
     }
-#endif
+    netdata(datidx).SaveNetwork(part);
   }
 }
 
@@ -771,18 +769,6 @@ void Network::Cycle() {
     mEvent *mevent = BuildEvent();
     netgroup.CommEvent(mevent);
 
-    // Input Devices
-    /*
-    for (std::size_t i = 0; i < devmodel.size(); ++i) {
-      devmodel[i]->Step();
-    }
-    */
-    
-    // Output devices
-#ifdef STACS_WITH_YARP
-    // Send messages to streams (yarp)
-#endif
-    
     // Increment simulated time
     tsim += tstep;
 

@@ -25,6 +25,7 @@
 /*readonly*/ idx_t evtcal;
 /*readonly*/ idx_t rngseed;
 /*readonly*/ std::string rpcport;
+/*readonly*/ idx_t simpause;
 
 
 /**************************************************************************
@@ -142,12 +143,23 @@ void Main::InitSim() {
 // Coordination for starting simulation, network partition setup
 //
 void Main::StartSim() {
-  CkPrintf("Starting simulation\n");
-
   // Start simulation
   CkCallback *cb = new CkCallback(CkReductionTarget(Main, StopSim), mainProxy);
   network.ckSetReductionClient(cb);
+
+#ifdef STACS_WITH_YARP
+  if (simpause) {
+    // Start paused
+    CkPrintf("Starting simulation (paused)\n");
+  }
+  else {
+    CkPrintf("Starting simulation\n");
+    network.Cycle();
+  }
+#else
+  CkPrintf("Starting simulation\n");
   network.Cycle();
+#endif
 
   // Start timer
   tstart = std::chrono::system_clock::now();

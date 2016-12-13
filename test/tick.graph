@@ -1,16 +1,23 @@
+stream:
+  - modname: yarpaudio
+    coord: [0.0, 0.0, 0.0]
+
 vertex:
   - modname: dummyvtx
     order: 80
     shape: circle  # uniform circle
     radius: 100.0  # of radius 100
+    coord: [0.0, 0.0, 0.0]
   - modname: dummyvtx1
     order: 20
     shape: circle  # uniform circle
     radius: 100.0  # of radius 100
-  - modname: dummydev
-    order: 1
+    coord: [0.0, 0.0, 0.0]
+  - modname: izhiaudio
+    order: 10
     shape: circle
-    radius: 1.0
+    radius: 100.0
+    coord: [0.0, 0.0, 0.0]
 
 edge:
   - source: dummyvtx
@@ -44,10 +51,16 @@ edge:
       - type: index
         srcmul: 1
         srcoff: -1
-  - source: dummydev
+  - source: izhiaudio
     target: [dummyvtx, dummyvtx1]
     modname: dummyedg
     cutoff: 50.0
     connect:
       - type: uniform
-        prob: 0.1
+        prob: 0.2
+  - source: yarpaudio
+    target: [izhiaudio]
+    modname: dummyedg
+    connect:
+      - type: uniform
+        prob: 1.0

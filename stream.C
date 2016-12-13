@@ -16,6 +16,7 @@ extern /*readonly*/ CProxy_Main mainProxy;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ std::string rpcport;
+extern /*readonly*/ idx_t simpause;
 
 
 /**************************************************************************
@@ -66,7 +67,16 @@ void StreamRPC::Open(CProxy_Network cpnet) {
     rpcreader = new RPCReader(network, vtxdist, *cbp, *cbs, *cbmain);
     if (rpcreader != NULL) {
       this->setReader(*rpcreader);
+#ifdef STACS_WITH_YARP
+      if (simpause) {
+        rpcreader->SetSyncFlag(RPCSYNC_SYNCED);
+      }
+      else {
+        rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
+      }
+#else
       rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
+#endif
     }
     else {
       CkPrintf("  rpcreader failed to initialize\n");

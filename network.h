@@ -47,7 +47,7 @@ CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs);
 class mGo : public CkMcastBaseMsg, public CMessage_mGo {
   public:
     /* Constructors */
-    mGo(idx_t i) : iter(i) {}
+    mGo(idx_t i) : iter(i) { }
     /* Bookkeeping */
     idx_t iter;
 };
@@ -70,7 +70,7 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 5
+#define MSG_Model 7
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;
@@ -78,6 +78,8 @@ class mModel : public CMessage_mModel {
     idx_t *nstick;
     idx_t *xparam;
     real_t *param;
+    idx_t *xport;
+    char *port;
     idx_t nmodel;
 };
 
@@ -169,11 +171,18 @@ class NetModel {
     idx_t getNParam() const { return paramlist.size(); }
     idx_t getNState() const { return statelist.size(); }
     idx_t getNStick() const { return sticklist.size(); }
+    idx_t getNPort() const { return portlist.size(); }
     std::vector<real_t> getParam() const { return param; }
-    idx_t getNPorts() const { return portlist.size(); }
     /* Setters */
     void setParam(real_t *p) {
       param = std::vector<real_t>(p, p+paramlist.size());
+    }
+    void setPort(char *p) {
+      portname.resize(portlist.size());
+      for (std::size_t i = 0; i < portlist.size(); ++i) {
+        portname[i] = std::string(p);
+        p += portname[i].size() + 1;
+      }
     }
     void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
       unifdist = u;
@@ -191,26 +200,28 @@ class NetModel {
       idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
       return (index < sticklist.size() ? index : -1);
     }
+    /* Protocol Functions */
+    virtual void OpenPorts() { }
+    virtual void ClosePorts() { }
     /* Repeating Events */
-    virtual void addRepeat(idx_t modidx, std::vector<event_t>& repevt) {};
+    virtual void addRepeat(idx_t modidx, std::vector<event_t>& repevt) { }
     /* Abstract Functions */
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
     virtual void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) = 0;
-    /* Protocol Functions */
-    virtual void OpenPorts(idx_t prtidx) {};
-    virtual void ClosePorts() {};
   protected:
     /* Bookkeeping */
     idx_t modtype;
     std::vector<std::string> paramlist;
-    std::vector<std::string> portlist;
     std::vector<std::string> statelist;
     std::vector<std::string> sticklist;
+    std::vector<std::string> portlist;
     /* Model Data */
     std::vector<real_t> param;
     /* Auxiliary */
     std::vector<std::string> auxstate;
     std::vector<std::string> auxstick;
+    /* Protocol */
+    std::vector<std::string> portname;
     /* Random Number Generation */
     std::mt19937 *rngine;
     std::uniform_real_distribution<real_t> *unifdist;
@@ -259,10 +270,10 @@ class NetModelFactory {
 
   private:
     /* Empty */
-    NetModelFactory() { };
-    ~NetModelFactory() { };
+    NetModelFactory() { }
+    ~NetModelFactory() { }
     /* Prevent copies */
-    NetModelFactory(NetModelFactory const&) { };
+    NetModelFactory(NetModelFactory const&) { }
     NetModelFactory& operator=(NetModelFactory const&);
 };
 
@@ -277,7 +288,7 @@ const idx_t NetModelTmpl<TYPE, IMPL>::MODELTYPE = NetModelFactory::getNetModel()
 //
 class NoneModel : public NetModelTmpl < 0, NoneModel > {
   public:
-    NoneModel() { paramlist.resize(0); portlist.resize(0); statelist.resize(0); sticklist.resize(0); auxstate.resize(0); auxstick.resize(0); }
+    NoneModel() { paramlist.resize(0); statelist.resize(0); sticklist.resize(0); auxstate.resize(0); auxstick.resize(0); portlist.resize(0); }
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) { return tdiff; }
     void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) { }
 };
