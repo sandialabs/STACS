@@ -152,7 +152,7 @@ void NetData::CheckNetwork(mPart *msg) {
     }
 
     // Return control to main
-    CkCallback *cb = new CkCallback(CkIndex_Main::CheckSim(NULL), mainProxy);
+    CkCallback *cb = new CkCallback(CkIndex_Main::CheckNetwork(NULL), mainProxy);
     contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
   }
 }
@@ -182,7 +182,7 @@ void NetData::SaveNetwork(mPart *msg) {
 #endif
 
     // Return control to main
-    CkCallback *cb = new CkCallback(CkIndex_Main::SaveSim(NULL), mainProxy);
+    CkCallback *cb = new CkCallback(CkIndex_Main::SaveNetwork(NULL), mainProxy);
     contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
   }
 }

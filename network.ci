@@ -95,6 +95,7 @@ module network {
 
     entry void LoadNetwork(CProxy_NetData cpdat);
     entry void LoadNetwork(mPart *msg);
+    entry void CheckNetwork();
     entry void SaveNetwork();
 
     entry void CommEvent(mEvent *msg);
@@ -102,6 +103,7 @@ module network {
     entry void GoAhead(mGo *msg);
     entry void Cycle();
     
+    entry void CheckRecord();
     entry void SaveRecord();
 
     entry void RPCMsg(mRPC *msg);

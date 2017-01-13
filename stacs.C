@@ -172,7 +172,7 @@ void Main::StartSim() {
 
 // Coordination for checkpointing simulation
 //
-void Main::CheckSim(CkReductionMsg *msg) {
+void Main::CheckNetwork(CkReductionMsg *msg) {
   //CkPrintf("Checkpointing simulation\n");
   
   // Save network part distribution to local
@@ -206,8 +206,8 @@ void Main::StopSim() {
   CkPrintf("Elapsed time (wall clock): %" PRIrealsec " seconds\n", tduration.count());
 
 #ifdef STACS_WITH_YARP
-    // Close RPC port
-    streamrpc.Close();
+  // Close RPC port
+  streamrpc.Close();
 #endif
 
   // Save data from network parts to output files
@@ -224,9 +224,7 @@ void Main::StopSim() {
 
 // Coordination for file output
 //
-void Main::SaveSim(CkReductionMsg *msg) {
-  //CkPrintf("Stopping simulation\n");
-  
+void Main::SaveNetwork(CkReductionMsg *msg) {
   // Save network part distribution to local
   netdist.clear();
   for (std::size_t i = 0; i < (msg->getSize())/sizeof(dist_t); ++i) {

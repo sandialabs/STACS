@@ -46,8 +46,7 @@ void Network::RPCMsg(mRPC *msg) {
     // Coordinate the synchronization iteration
     synciter = iter;
     // Perform checkpointing
-    cpflag = true;
-    thisProxy(prtidx).SaveNetwork();
+    thisProxy(prtidx).CheckNetwork();
   }
   else if (msg->command == RPCCOMMAND_STEP) {
     if (msg->nrpcdata == 0) {

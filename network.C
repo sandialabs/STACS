@@ -329,10 +329,8 @@ void Network::LoadNetwork(mPart *msg) {
   cadjprt[1] = 0;
   prtiter = 0;
   // Set up checkpointing
-  cpflag = false;
   checkiter = (idx_t) (tcheck/tstep);
   // Set up recordning
-  recflag = false;
   reciter = (idx_t) (trecord/tstep);
 #ifdef STACS_WITH_YARP
   // Set up synchronization
@@ -394,9 +392,9 @@ void Network::CreateGroup() {
 * Network Save Data
 **************************************************************************/
 
-// Send network partition to NetData chare array
+// Build part message
 //
-void Network::SaveNetwork() {
+mPart* Network::BuildPart() {
   /* Bookkeeping */
   idx_t nadjcy;
   idx_t nstate;
@@ -435,99 +433,109 @@ void Network::SaveNetwork() {
   msgSize[10] = nevent;       // target
   msgSize[11] = nevent;       // type
   msgSize[12] = nevent;       // data
-  mPart *part = new(msgSize, 0) mPart;
+  mPart *mpart = new(msgSize, 0) mPart;
 
   // Data sizes
-  part->nvtx = adjcy.size();
-  part->nedg = nadjcy;
-  part->nstate = nstate;
-  part->nstick = nstick;
-  part->nevent = nevent;
-  part->prtidx = prtidx;
+  mpart->nvtx = adjcy.size();
+  mpart->nedg = nadjcy;
+  mpart->nstate = nstate;
+  mpart->nstick = nstick;
+  mpart->nevent = nevent;
+  mpart->prtidx = prtidx;
 
   // Graph Information
   for (idx_t i = 0; i < npnet+1; ++i) {
     // vtxdist
-    part->vtxdist[i] = vtxdist[i];
+    mpart->vtxdist[i] = vtxdist[i];
   }
 
   // Vertex and Edge Information
   idx_t jstate = 0;
   idx_t jstick = 0;
   idx_t jevent = 0;
-  part->xadj[0] = 0;
-  part->xevent[0] = 0;
+  mpart->xadj[0] = 0;
+  mpart->xevent[0] = 0;
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
     // vtxmodidx
-    part->vtxmodidx[i] = vtxmodidx[i];
+    mpart->vtxmodidx[i] = vtxmodidx[i];
     // xyz
-    part->xyz[i*3+0] = xyz[i*3+0];
-    part->xyz[i*3+1] = xyz[i*3+1];
-    part->xyz[i*3+2] = xyz[i*3+2];
+    mpart->xyz[i*3+0] = xyz[i*3+0];
+    mpart->xyz[i*3+1] = xyz[i*3+1];
+    mpart->xyz[i*3+2] = xyz[i*3+2];
     // vertex state
     for (std::size_t s = 0; s < state[i][0].size(); ++s) {
-      part->state[jstate++] = state[i][0][s];
+      mpart->state[jstate++] = state[i][0][s];
     }
     for (std::size_t s = 0; s < stick[i][0].size(); ++s) {
-      part->stick[jstick++] = stick[i][0][s];
+      mpart->stick[jstick++] = stick[i][0][s];
     }
 
     // xadj
-    part->xadj[i+1] = part->xadj[i] + adjcy[i].size();
+    mpart->xadj[i+1] = mpart->xadj[i] + adjcy[i].size();
     for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
       // adjcy
-      part->adjcy[part->xadj[i] + j] = adjcy[i][j];
+      mpart->adjcy[mpart->xadj[i] + j] = adjcy[i][j];
       // edgmodidx
-      part->edgmodidx[part->xadj[i] + j] = edgmodidx[i][j];
+      mpart->edgmodidx[mpart->xadj[i] + j] = edgmodidx[i][j];
       // state
       for (std::size_t s = 0; s < state[i][j+1].size(); ++s) {
-        part->state[jstate++] = state[i][j+1][s];
+        mpart->state[jstate++] = state[i][j+1][s];
       }
       for (std::size_t s = 0; s < stick[i][j+1].size(); ++s) {
-        part->stick[jstick++] = stick[i][j+1][s];
+        mpart->stick[jstick++] = stick[i][j+1][s];
       }
     }
 
     // events
     for (std::size_t j = 0; j < event[i].size(); ++j) {
       for (std::size_t e = 0; e < event[i][j].size(); ++e) {
-        part->diffuse[jevent] = event[i][j][e].diffuse - tsim;
-        part->target[jevent] = event[i][j][e].index;
-        part->type[jevent] = event[i][j][e].type;
-        part->data[jevent++] = event[i][j][e].data;
+        mpart->diffuse[jevent] = event[i][j][e].diffuse - tsim;
+        mpart->target[jevent] = event[i][j][e].index;
+        mpart->type[jevent] = event[i][j][e].type;
+        mpart->data[jevent++] = event[i][j][e].data;
       }
     }
     // events spillover
     for (std::size_t e = 0; e < evtaux[i].size(); ++e) {
-      part->diffuse[jevent] = evtaux[i][e].diffuse - tsim;
-      part->target[jevent] = evtaux[i][e].index;
-      part->type[jevent] = evtaux[i][e].type;
-      part->data[jevent++] = evtaux[i][e].data;
+      mpart->diffuse[jevent] = evtaux[i][e].diffuse - tsim;
+      mpart->target[jevent] = evtaux[i][e].index;
+      mpart->type[jevent] = evtaux[i][e].type;
+      mpart->data[jevent++] = evtaux[i][e].data;
     }
     // xevent
-    part->xevent[i+1] = jevent;
+    mpart->xevent[i+1] = jevent;
   }
   CkAssert(jstate == nstate);
   CkAssert(jstick == nstick);
   CkAssert(jevent == nevent);
 
-  // Send network part to output file
-  if (cpflag) {
-    cpflag = false;
-    netdata(datidx).CheckNetwork(part);
+  return mpart;
+}
+
+// Send network partition to NetData chare array (checkpointing)
+//
+void Network::CheckNetwork() {
+  // Build network part message for saving
+  mPart *mpart = BuildPart();
+  netdata(datidx).CheckNetwork(mpart);
     
-    // Start a new cycle (checked data sent)
-    thisProxy(prtidx).Cycle();
-  }
-  else {
-    for (std::size_t i = 0; i < adjcy.size(); ++i) {
-      // close ports if needed
-      if (netmodel[vtxmodidx[i]]->getNPort()) {
-        netmodel[vtxmodidx[i]]->ClosePorts();
-      }
+  // Start a new cycle (checked data sent)
+  thisProxy(prtidx).Cycle();
+}
+
+// Send network partition to NetData chare array
+//
+void Network::SaveNetwork() {
+  // Close ports as needed
+  for (std::size_t i = 0; i < adjcy.size(); ++i) {
+    if (netmodel[vtxmodidx[i]]->getNPort()) {
+      netmodel[vtxmodidx[i]]->ClosePorts();
     }
-    netdata(datidx).SaveNetwork(part);
   }
+
+  // Build network part message for saving
+  mPart *mpart = BuildPart();
+  netdata(datidx).SaveNetwork(mpart);
 }
 
 
@@ -576,9 +584,6 @@ void Network::Cycle() {
     }
 
     // move control to sychronization callback
-    if (cpflag) {
-      thisProxy(prtidx).SaveNetwork();
-    }
     contribute(0, NULL, CkReduction::nop);
   }
 #endif
@@ -588,8 +593,7 @@ void Network::Cycle() {
     checkiter = checkiter + (idx_t) (tcheck/tstep);
 
     // Checkpoint
-    cpflag = true;
-    thisProxy(prtidx).SaveNetwork();
+    thisProxy(prtidx).CheckNetwork();
   }
   // Recording
   else if (iter == reciter) {
@@ -597,8 +601,7 @@ void Network::Cycle() {
     reciter = reciter + (idx_t) (trecord/tstep);
 
     // Send records
-    recflag = true;
-    thisProxy(prtidx).SaveRecord();
+    thisProxy(prtidx).CheckRecord();
   }
   // Simulate next cycle
   else {

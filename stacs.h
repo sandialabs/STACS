@@ -62,11 +62,8 @@ class Main : public CBase_Main {
 
     /* Configuration */
     int ParseConfig(std::string configfile);
-
-    /* Persistence */
     int ReadDist();
     int ReadModel();
-    int WriteDist(bool check = false);
 
     /* Chare Messages */
     mDist* BuildDist();
@@ -78,10 +75,13 @@ class Main : public CBase_Main {
     /* Simulation */
     void InitSim();
     void StartSim();
-    void CheckSim(CkReductionMsg *msg);
-    void SaveSim(CkReductionMsg *msg);
     void StopSim();
     void FiniSim();
+    
+    /* Persistence */
+    int WriteDist(bool check = false);
+    void CheckNetwork(CkReductionMsg *msg);
+    void SaveNetwork(CkReductionMsg *msg);
 
   private:
     /* Persistence */

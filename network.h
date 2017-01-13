@@ -388,12 +388,16 @@ class Network : public CBase_Network {
     void CreateGroup();
 
     /* Persistence */
+    mPart* BuildPart();
     void LoadNetwork(CProxy_NetData cpdat);
     void LoadNetwork(mPart *msg);
+    void CheckNetwork();
     void SaveNetwork();
 
     /* Recording */
+    mRecord* BuildRecord();
     void StoreRecord();
+    void CheckRecord();
     void SaveRecord();
 
     /* Computation */
@@ -468,9 +472,7 @@ class Network : public CBase_Network {
     idx_t nadjprt;
     idx_t cadjprt[2], prtiter;
     /* Checkpointing */
-    bool cpflag;
     idx_t checkiter;
-    bool recflag;
     idx_t reciter;
 #ifdef STACS_WITH_YARP
     /* RPC Control */

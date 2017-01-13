@@ -46,9 +46,9 @@ void Network::StoreRecord() {
   // Event records are recorded in event handling
 }
 
-// Send Records for writing
+// Build record message for writing
 //
-void Network::SaveRecord() {
+mRecord* Network::BuildRecord() {
   /* Bookkeeping */
   idx_t ndata = 0;
 
@@ -96,22 +96,30 @@ void Network::SaveRecord() {
   }
   CkAssert(jdata == recevt.size() + ndata);
   
+  // Clear records
+  record.clear();
+  recevt.clear();
 
-  if (recflag) {
-    recflag = false;
-    netdata(datidx).CheckRecord(mrecord);
-    record.clear();
-    recevt.clear();
-    
-    // Start a new cycle (checked data sent)
-    thisProxy(prtidx).Cycle();
-  }
-  else {
-    // Final records
-    netdata(datidx).SaveRecord(mrecord);
-    record.clear();
-    recevt.clear();
-  }
+  return mrecord;
+}
+
+// Send Records for writing (checking)
+//
+void Network::CheckRecord() {
+  // Build record message for saving
+  mRecord* mrecord = BuildRecord();
+  netdata(datidx).CheckRecord(mrecord);
+  
+  // Start a new cycle (checked data sent)
+  thisProxy(prtidx).Cycle();
+}
+
+// Send Records for writing
+//
+void Network::SaveRecord() {
+  // Build record message for saving
+  mRecord* mrecord = BuildRecord();
+  netdata(datidx).SaveRecord(mrecord);
 }
 
 
