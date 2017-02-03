@@ -5,6 +5,8 @@ tmax: 60000 # 1 minute
 tdisplay: 1000 # 1 second
 tcheck: 10000 # 10 seconds
 trecord: 1000 # 1 second
+simpause: 1 # start paused
 
 filebase: "polynet/polynet"
+recbase: "polynet/record/polynet"
 rngseed: 2032

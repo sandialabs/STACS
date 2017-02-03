@@ -9,7 +9,7 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ std::string filebase;
+extern /*readonly*/ std::string recbase;
 
 
 /**************************************************************************
@@ -185,7 +185,7 @@ void NetData::WriteRecord() {
   char recfile[100];
 
   // Open File
-  sprintf(recfile, "%s.record.%" PRIidx ".%" PRIidx "", filebase.c_str(), datidx, records[0]->iter);
+  sprintf(recfile, "%s.record.%" PRIidx ".%" PRIidx "", recbase.c_str(), datidx, records[0]->iter);
   pRecord = fopen(recfile,"w");
   if (pRecord == NULL) {
     CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);

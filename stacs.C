@@ -15,6 +15,7 @@
 /*readonly*/ std::string filebase;
 /*readonly*/ std::string filein;
 /*readonly*/ std::string fileout;
+/*readonly*/ std::string recbase;
 /*readonly*/ idx_t npdat;
 /*readonly*/ idx_t npnet;
 /*readonly*/ tick_t tmax;

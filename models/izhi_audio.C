@@ -68,8 +68,8 @@ tick_t IzhiAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
   tick_t tickstep = (tdiff > TICKS_PER_MS ? TICKS_PER_MS : tdiff);
   real_t tstep = ((real_t) tickstep)/TICKS_PER_MS;
   // update state
-  state[0] = state[0] + (tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2] + state[3]);
-  state[0] = state[0] + (tstep-tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2] + state[3]);
+  state[0] = state[0] + (tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2]);
+  state[0] = state[0] + (tstep-tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2]);
   state[1] = state[1] + tstep*param[0]*(0.2*state[0] - state[1]);
 
   return tickstep;
@@ -79,4 +79,8 @@ tick_t IzhiAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
 //
 void IzhiAudio::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
   //CkPrintf("Jumping Vtx\n");
+  if (evt.type == EVTYPE_STIM) {
+    // Add stim to applied current
+    state[0][2] += evt.data;
+  }
 }

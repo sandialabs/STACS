@@ -1,4 +1,12 @@
 ---
+type: stream
+modname: yarpaudio
+modtype: 101
+port:
+  - name: in
+    value: /stacs/audio
+...
+---
 type: vertex
 modname: izhiex
 modtype: 11
@@ -11,8 +19,6 @@ param:
     value: -65
   - name: d
     value: 8
-  - name: rng
-    value: 1000
 state:
   - name: v
     type: constant
@@ -21,9 +27,6 @@ state:
     type: constant
     value: -13.0
   - name: I
-    type: constant
-    value: 0.0
-  - name: Iapp
     type: constant
     value: 0.0
 ...
@@ -41,8 +44,6 @@ param:
     value: -65
   - name: d
     value: 2
-  - name: rng
-    value: 1000
 state:
   - name: v
     type: constant
@@ -53,7 +54,29 @@ state:
   - name: I
     type: constant
     value: 0.0
-  - name: Iapp
+...
+
+---
+type: vertex
+modname: izhiaudio
+modtype: 15
+param:
+  - name: a
+    value: 0.02
+  - name: b
+    value: 0.2
+  - name: c
+    value: -65
+  - name: d
+    value: 8
+state:
+  - name: v
+    type: constant
+    value: -65.0
+  - name: u
+    type: constant
+    value: -13.0
+  - name: I
     type: constant
     value: 0.0
 ...
@@ -104,4 +127,36 @@ state:
   - name: weight
     type: constant
     value: -5.0
+...
+
+---
+type: edge
+modname: exnostdp
+modtype: 13
+param:
+state:
+  - name: delay
+    type: uniform interval
+    rep: tick
+    min: 1.0
+    max: 20.0
+    int: 1.0
+  - name: weight
+    type: constant
+    value: 12.0
+...
+
+---
+type: edge
+modname: audionostdp
+modtype: 13
+param:
+state:
+  - name: delay
+    type: constant
+    rep: tick
+    value: 1.0
+  - name: weight
+    type: constant
+    value: 10.0
 ...

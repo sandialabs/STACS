@@ -1,12 +1,23 @@
+stream:
+  - modname: yarpaudio
+    coord: [0.0, 0.0, 0.0]
+
 vertex:
   - modname: izhiex
     order: 800
     shape: circle  # uniform circle
     radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
   - modname: izhiin
     order: 200
     shape: circle  # uniform circle
     radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+  - modname: izhiaudio
+    order: 30
+    shape: circle
+    radius: 50.0
+    coord: [0.0, 0.0, 0.0]
 
 edge:
   - source: izhiex
@@ -23,3 +34,17 @@ edge:
     connect:
       - type: uniform
         prob: 0.125
+  - source: izhiaudio
+    target: [izhiex, izhiin]
+    modname: exnostdp
+    cutoff: 100.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: yarpaudio
+    target: [izhiaudio]
+    modname: audionostdp
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0

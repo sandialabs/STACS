@@ -20,6 +20,7 @@
 extern /*readonly*/ std::string filebase;
 extern /*readonly*/ std::string filein;
 extern /*readonly*/ std::string fileout;
+extern /*readonly*/ std::string recbase;
 extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
@@ -71,6 +72,13 @@ int Main::ParseConfig(std::string configfile) {
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  fileout not defined, defaulting to: \".o\"\n");
     fileout = std::string(".o");
+  }
+  // record output base
+  try {
+    recbase = config["recbase"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  recbase not defined, defaulting to: \"%s\"\n", filebase.c_str());
+    recbase = filebase;
   }
   // Number of data files
   try {

@@ -14,18 +14,16 @@ class IzhiNeuron : public NetModelTmpl < 11, IzhiNeuron > {
     /* Constructor */
     IzhiNeuron() {
       // parameters
-      paramlist.resize(5);
+      paramlist.resize(4);
       paramlist[0] = "a";
       paramlist[1] = "b";
       paramlist[2] = "c";
       paramlist[3] = "d";
-      paramlist[4] = "rng";
       // states
-      statelist.resize(4);
+      statelist.resize(3);
       statelist[0] = "v";
       statelist[1] = "u";
       statelist[2] = "I";
-      statelist[3] = "Iapp";
       // sticks
       sticklist.resize(0);
       // auxiliary states
@@ -64,20 +62,20 @@ tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
   }
   
   // Random thalamic input (to transient current)
-  if (param[4] > 0 && std::floor(param[4]*(*unifdist)(*rngine)) == 0) {
-    state[2] += 20;
-  }
+  //if (param[4] > 0 && std::floor(param[4]*(*unifdist)(*rngine)) == 0) {
+  //  state[2] += 20;
+  //}
 
   // for numerical stability, use timestep (at most) = 1ms
   tick_t tickstep = (tdiff > TICKS_PER_MS ? TICKS_PER_MS : tdiff);
   real_t tstep = ((real_t) tickstep)/TICKS_PER_MS;
   // update state
-  state[0] = state[0] + (tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2] + state[3]);
-  state[0] = state[0] + (tstep-tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2] + state[3]);
+  state[0] = state[0] + (tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2]);
+  state[0] = state[0] + (tstep-tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2]);
   state[1] = state[1] + tstep*param[0]*(0.2*state[0] - state[1]);
 
   // Clear transient current for next time
-  state[2] = 0;
+  //state[2] = 0;
 
   return tickstep;
 }
@@ -88,7 +86,7 @@ void IzhiNeuron::Jump(const event_t& evt, std::vector<std::vector<real_t>>& stat
   //CkPrintf("Jumping Vtx\n");
   if (evt.type == EVTYPE_STIM) {
     // Add stim to applied current
-    state[0][3] += evt.data;
+    state[0][2] += evt.data;
   }
 }
 
