@@ -15,9 +15,11 @@ CHARMFLAGS = -module CkMulticast -language charm++
 PROJFLAGS  = -tracemode projections -tracemode summary
 YARPFLAGS  = -DSTACS_WITH_YARP
 
-LIB        = 
+LIB        = -std=c++11
 LDLIB      = -lm -lyaml-cpp
-YARPLDLIB  = 
+YARPLDLIB  = -lYARP_init -lyarpcar -lYARP_OS \
+             -lYARP_sig -lYARP_math -lYARP_dev \
+             -lYARP_name -lACE
 
 .PHONY: all projections clean
 
@@ -47,21 +49,5 @@ endif
 # OS related
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
-  LIB += -std=c++11 -stdlib=libc++ -mmacosx-version-min=10.7
-  YARPLDLIB += -lYARP_init -lyarpcar -lYARP_OS \
-               -lYARP_sig -lYARP_math -lYARP_dev \
-               -lYARP_name -lACE
-endif
-
-ifeq ($(UNAME_S),Linux)
-  # GCC version
-  GCC11 := $(shell expr `gcc -dumpversion | cut -f1-2 -d.` \>= 4.8)
-  ifeq ($(GCC11),1)
-    LIB += -std=c++11
-  else
-    LIB += -std=c++0x
-  endif
-  YARPLDLIB += -lYARP_init -lyarpcar -lbayer_carrier -lYARP_OS \
-               -lYARP_sig -lYARP_math -lYARP_dev \
-               -lYARP_name -lACE
+  LIB += -stdlib=libc++ -mmacosx-version-min=10.7
 endif
