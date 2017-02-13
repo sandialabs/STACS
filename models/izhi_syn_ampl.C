@@ -9,15 +9,14 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiSynNoSTDP : public NetModelTmpl < 13, IzhiSynNoSTDP > {
+class IzhiSynAmpl : public NetModelTmpl < 11, IzhiSynAmpl > {
   public:
     /* Constructor */
-    IzhiSynNoSTDP() {
+    IzhiSynAmpl() {
       // parameters
       paramlist.resize(0);
       // states
-      statelist.resize(1);
-      statelist[0] = "weight";
+      statelist.resize(0);
       // sticks
       sticklist.resize(1);
       sticklist[0] = "delay";
@@ -29,11 +28,12 @@ class IzhiSynNoSTDP : public NetModelTmpl < 13, IzhiSynNoSTDP > {
       // ports
       portlist.resize(0);
     }
-    
+
     /* Simulation */
-    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
+    tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
     void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
 };
+
 
 /**************************************************************************
 * Class methods
@@ -41,17 +41,16 @@ class IzhiSynNoSTDP : public NetModelTmpl < 13, IzhiSynNoSTDP > {
 
 // Simulation step
 //
-tick_t IzhiSynNoSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
-  CkPrintf("Stepping Edg\n");
+tick_t IzhiSynAmpl::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
   return tdiff;
 }
 
 // Simulation jump
 //
-void IzhiSynNoSTDP::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
-  // External spike event
-  if (evt.type == EVTYPE_SPIKE && evt.index > 0) {
-    // Apply effect to neuron (vertex)
-    state[0][aux[0].stateidx[0]] += state[evt.index][0];
+void IzhiSynAmpl::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
+  // External stim event
+  if (evt.type == EVTYPE_STIM && evt.index > 0) {
+    // Add stim to applied current
+    state[0][aux[0].stateidx[0]] += evt.data;
   }
 }

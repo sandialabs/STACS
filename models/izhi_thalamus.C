@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiThalamus : public NetModelTmpl < 14, IzhiThalamus > {
+class IzhiThalamus : public NetModelTmpl < 100, IzhiThalamus > {
   public:
     /* Constructor */
     IzhiThalamus() {
@@ -48,7 +48,7 @@ tick_t IzhiThalamus::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
     event_t evtpre;
     evtpre.diffuse = tdrift;
     evtpre.index = std::floor(param[0]*(*unifdist)(*rngine));
-    evtpre.type = EVTYPE_SPIKE;
+    evtpre.type = EVTYPE_STIM;
     evtpre.data = param[1];
     evtlog.push_back(evtpre);
   }

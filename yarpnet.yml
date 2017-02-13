@@ -7,6 +7,6 @@ tcheck: 10000 # 10 seconds
 trecord: 1000 # 1 second
 simpause: 0 # start paused
 
-filebase: "polynet/polynet"
-recbase: "polynet/record/polynet"
+filebase: "yarpnet/yarpnet"
+recbase: "yarpnet/record/yarpnet"
 rngseed: 2032

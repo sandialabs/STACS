@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DummyStr : public NetModelTmpl < 1, DummyStr > {
+class DummyStr : public NetModelTmpl < 3, DummyStr > {
   public:
     /* Constructor */
     DummyStr() {
@@ -56,7 +56,7 @@ class DummyStr : public NetModelTmpl < 1, DummyStr > {
 void DummyStr::OpenPorts() {
 #ifdef STACS_WITH_YARP
   for (std::size_t p = 0; p < portlist.size(); ++p) {
-    port[p].open(portname[0].c_str());
+    port[p].open(portname[p].c_str());
   }
 #endif
 }

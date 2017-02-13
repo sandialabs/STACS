@@ -1,10 +1,13 @@
 ---
 type: stream
-modname: yarpaudio
-modtype: 101
+modname: dummystr
+modtype: 3
+param:
+  - name: dp0
+    value: 5.6
 port:
-  - name: in
-    value: /stacs/audio
+  - name: dport
+    value: /stacs/dummystr
 ...
 
 ---
@@ -37,31 +40,6 @@ state:
   - name: u
     type: constant
     value: -9.0
-...
-
----
-type: vertex
-modname: izhiaudio
-modtype: 15
-param:
-  - name: a
-    value: 0.02
-  - name: b
-    value: 0.2
-  - name: c
-    value: -65
-  - name: d
-    value: 8
-state:
-  - name: v
-    type: constant
-    value: -65.0
-  - name: u
-    type: constant
-    value: -13.0
-  - name: I
-    type: constant
-    value: 0.0
 ...
 
 ---

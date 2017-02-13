@@ -3,5 +3,5 @@ npnet: 4
 tmax:  100
 evtcal: 20
 
-filebase: "test/tick"
+filebase: "testnet/testnet"
 simpause: 1
