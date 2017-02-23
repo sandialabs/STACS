@@ -183,9 +183,10 @@ void NetData::ReadCSR() {
     msgSize[7] = nstick;        // stick
     msgSize[8] = nvtx+1;        // xevent
     msgSize[9] = nevent;        // diffuse
-    msgSize[10] = nevent;       // target
-    msgSize[11] = nevent;       // type
-    msgSize[12] = nevent;       // data
+    msgSize[10] = nevent;       // type
+    msgSize[11] = nevent;       // source
+    msgSize[12] = nevent;       // index
+    msgSize[13] = nevent;       // data
     parts[k] = new(msgSize, 0) mPart;
     
     // Data sizes
@@ -302,18 +303,24 @@ void NetData::ReadCSR() {
         // diffuse
         parts[k]->diffuse[e] = strtotick(oldstr, &newstr, 16);
         oldstr = newstr;
-        // target
-        parts[k]->target[e] = strtoidx(oldstr, &newstr, 10);
-        oldstr = newstr;
         // type
         idx_t type = strtoidx(oldstr, &newstr, 10);
         oldstr = newstr;
         parts[k]->type[e] = type;
-        // data
-        if (type == EVTYPE_SPIKE) {
+        // source
+        parts[k]->source[e] = strtoidx(oldstr, &newstr, 10);
+        oldstr = newstr;
+        // index
+        parts[k]->index[e] = strtoidx(oldstr, &newstr, 10);
+        oldstr = newstr;
+        // event types lacking data
+        if (type == EVENT_SPIKE) {
+          // data
           parts[k]->data[e] = 0.0;
         }
+        // event types with data
         else {
+          // data
           parts[k]->data[e] = strtoreal(oldstr, &newstr);
           oldstr = newstr;
         }
@@ -411,13 +418,13 @@ void NetData::WriteCSR(bool check) {
       fprintf(pEvent, " %" PRIidx "", parts[k]->xevent[i+1] - parts[k]->xevent[i]);
       for (idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
         // event
-        if (parts[k]->type[e] == EVTYPE_SPIKE) {
-          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx "",
-              parts[k]->diffuse[e], parts[k]->target[e], parts[k]->type[e]);
+        if (parts[k]->type[e] == EVENT_SPIKE) {
+          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx "",
+              parts[k]->diffuse[e], parts[k]->type[e], parts[k]->source[e], parts[k]->index[e]);
         }
         else {
-          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "",
-              parts[k]->diffuse[e], parts[k]->target[e], parts[k]->type[e], parts[k]->data[e]);
+          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx " %" PRIrealfull "",
+              parts[k]->diffuse[e], parts[k]->type[e], parts[k]->source[e], parts[k]->index[e], parts[k]->data[e]);
         }
       }
 

@@ -42,7 +42,6 @@ class IzhiSynNoSTDP : public NetModelTmpl < 13, IzhiSynNoSTDP > {
 // Simulation step
 //
 tick_t IzhiSynNoSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
-  CkPrintf("Stepping Edg\n");
   return tdiff;
 }
 
@@ -50,7 +49,7 @@ tick_t IzhiSynNoSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
 //
 void IzhiSynNoSTDP::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
   // External spike event
-  if (evt.type == EVTYPE_SPIKE && evt.index > 0) {
+  if (evt.type == EVENT_SPIKE && evt.source >= 0) {
     // Apply effect to neuron (vertex)
     state[0][aux[0].stateidx[0]] += state[evt.index][0];
   }

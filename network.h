@@ -8,6 +8,7 @@
 #define __STACS_NETWORK_H__
 #include <algorithm>
 #include <array>
+#include <deque>
 #include <random>
 #include <string>
 #include <sstream>
@@ -85,7 +86,7 @@ class mModel : public CMessage_mModel {
 
 // Network partition data
 //
-#define MSG_Part 13
+#define MSG_Part 14
 class mPart : public CMessage_mPart {
   public:
     /* Data */
@@ -100,8 +101,9 @@ class mPart : public CMessage_mPart {
     /* Events */
     idx_t *xevent;
     tick_t *diffuse;
-    idx_t *target;
     idx_t *type;
+    idx_t *source;
+    idx_t *index;
     real_t *data;
     /* Sizes */
     idx_t nvtx;
@@ -115,13 +117,14 @@ class mPart : public CMessage_mPart {
 
 // Network event data
 //
-#define MSG_Event 4
+#define MSG_Event 5
 class mEvent : public CkMcastBaseMsg, public CMessage_mEvent {
   public:
     /* Data */
     tick_t *diffuse;
-    idx_t *index;
     idx_t *type;
+    idx_t *source;
+    idx_t *index;
     real_t *data;
     /* Bookkeeping */
     idx_t iter;
@@ -130,12 +133,13 @@ class mEvent : public CkMcastBaseMsg, public CMessage_mEvent {
 
 // Network record data
 //
-#define MSG_Record 6
+#define MSG_Record 7
 class mRecord : public CMessage_mRecord {
   public:
     tick_t *diffuse;
-    idx_t *index;
     idx_t *type;
+    idx_t *source;
+    idx_t *index;
     real_t *data;
     tick_t *drift;
     idx_t *xdata;

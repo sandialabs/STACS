@@ -18,6 +18,10 @@ vertex:
     shape: circle
     radius: 50.0
     coord: [0.0, 0.0, 0.0]
+  - modname: izhithal
+    order: 1
+    shape: point
+    coord: [0.0, 0.0, 0.0]
 
 edge:
   - source: izhiex
@@ -44,6 +48,13 @@ edge:
   - source: yarpaudio
     target: [izhiaudio]
     modname: audioampl
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
+  - source: izhithal
+    target: [izhiex, izhiin]
+    modname: thampl
     cutoff: 0.0
     connect:
       - type: uniform

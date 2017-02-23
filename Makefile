@@ -16,7 +16,7 @@ PROJFLAGS  = -tracemode projections -tracemode summary
 YARPFLAGS  = -DSTACS_WITH_YARP
 
 LIB        = -std=c++11
-LDLIB      = -lm -lyaml-cpp
+LDLIB      = -lm -lyaml-cpp -lfftw3
 YARPLDLIB  = -lYARP_init -lyarpcar -lYARP_OS \
              -lYARP_sig -lYARP_math -lYARP_dev \
              -lYARP_name -lACE

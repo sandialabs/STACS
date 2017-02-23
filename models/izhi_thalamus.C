@@ -47,9 +47,13 @@ tick_t IzhiThalamus::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
     // generate events
     event_t evtpre;
     evtpre.diffuse = tdrift;
+    evtpre.type = EVENT_STIM;
+    evtpre.source = REMOTE_EDGE;
     evtpre.index = std::floor(param[0]*(*unifdist)(*rngine));
-    evtpre.type = EVTYPE_STIM;
     evtpre.data = param[1];
+    evtlog.push_back(evtpre);
+    evtpre.diffuse = tdrift + TICKS_PER_MS;
+    evtpre.data = -param[1];
     evtlog.push_back(evtpre);
   }
   return tdiff;

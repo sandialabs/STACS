@@ -51,8 +51,10 @@ tick_t DummyVtx::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, s
   // generate events
   event_t evtpre;
   evtpre.diffuse = tdrift + tdiff/2;
-  evtpre.index = EVENT_EXTERNAL | EVENT_LOCALEDG;
-  evtpre.type = EVTYPE_SPIKE;
+  evtpre.type = EVENT_SPIKE;
+  evtpre.source = REMOTE_EDGES | LOCAL_EDGES;
+  evtpre.index = 0;
+  evtpre.data = 0.0;
   evtlog.push_back(evtpre);
 
   return tdiff;

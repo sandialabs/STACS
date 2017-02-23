@@ -2,6 +2,9 @@
 type: stream
 modname: yarpaudio
 modtype: 101
+param:
+  - name: nmel
+    value: 30
 port:
   - name: in
     value: /stacs/audio
@@ -92,6 +95,17 @@ state:
 ...
 
 ---
+type: vertex
+modname: izhithal
+modtype: 100
+param:
+  - name: rng
+    value: 1000
+  - name: ampl
+    value: 18
+...
+
+---
 type: edge
 modname: exstdp
 modtype: 12
@@ -159,6 +173,18 @@ state:
 ---
 type: edge
 modname: audioampl
+modtype: 11
+param:
+state:
+  - name: delay
+    type: constant
+    rep: tick
+    value: 1.0
+...
+
+---
+type: edge
+modname: thampl
 modtype: 11
 param:
 state:

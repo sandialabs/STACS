@@ -22,7 +22,7 @@ class IzhiSynAmpl : public NetModelTmpl < 11, IzhiSynAmpl > {
       sticklist[0] = "delay";
       // auxiliary states
       auxstate.resize(1);
-      auxstate[0] = "I";
+      auxstate[0] = "I_app";
       // auxiliary sticks
       auxstick.resize(0);
       // ports
@@ -49,7 +49,7 @@ tick_t IzhiSynAmpl::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state
 //
 void IzhiSynAmpl::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
   // External stim event
-  if (evt.type == EVTYPE_STIM && evt.index > 0) {
+  if (evt.type == EVENT_STIM && evt.source >= 0) {
     // Add stim to applied current
     state[0][aux[0].stateidx[0]] += evt.data;
   }

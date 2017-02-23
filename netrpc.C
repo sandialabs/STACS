@@ -84,10 +84,12 @@ void Network::RPCMsg(mRPC *msg) {
         for (idx_t i = 0; i < pulses; ++i) {
           evtpre[i*2  ].diffuse = ((tick_t) synciter*tstep) + ((tick_t) msg->rpcdata[3+numvtx+i*3]*TICKS_PER_MS);
           evtpre[i*2+1].diffuse = evtpre[i*2].diffuse + ((tick_t) msg->rpcdata[3+numvtx+i*3+1]*TICKS_PER_MS);
+          evtpre[i*2  ].type = EVENT_STIM;
+          evtpre[i*2+1].type = EVENT_STIM;
+          evtpre[i*2  ].source = -1;
+          evtpre[i*2+1].source = -1;
           evtpre[i*2  ].index = 0;
           evtpre[i*2+1].index = 0;
-          evtpre[i*2  ].type = EVTYPE_STIM;
-          evtpre[i*2+1].type = EVTYPE_STIM;
           evtpre[i*2  ].data = msg->rpcdata[3+numvtx+i*3+2];
           evtpre[i*2+1].data = -msg->rpcdata[3+numvtx+i*3+2];
         }
@@ -96,6 +98,7 @@ void Network::RPCMsg(mRPC *msg) {
           std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find((idx_t) msg->rpcdata[i]);
           if (target != vtxmap.end()) {
             for (size_t e = 0; e < evtpre.size(); ++e) {
+              evtpre[e].source -= (idx_t) msg->rpcdata[i];
               if ((evtpre[e].diffuse/tstep - synciter) < evtcal) {
                 event[target->second][(evtpre[e].diffuse/tstep)%evtcal].push_back(evtpre[e]);
               }

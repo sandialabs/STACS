@@ -57,8 +57,10 @@ tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
     // generate events
     event_t evtpre;
     evtpre.diffuse = tdrift;
-    evtpre.index = EVENT_EXTERNAL | EVENT_LOCALEDG;
-    evtpre.type = EVTYPE_SPIKE;
+    evtpre.type = EVENT_SPIKE;
+    evtpre.source = REMOTE_EDGES | LOCAL_EDGES;
+    evtpre.index = 0;
+    evtpre.data = 0.0;
     evtlog.push_back(evtpre);
   }
   
@@ -80,7 +82,7 @@ tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
 //
 void IzhiNeuron::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
   //CkPrintf("Jumping Vtx\n");
-  if (evt.type == EVTYPE_STIM) {
+  if (evt.type == EVENT_STIM) {
     // Add stim to applied current
     state[0][3] += evt.data;
   }

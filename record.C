@@ -60,11 +60,12 @@ mRecord* Network::BuildRecord() {
   // Initialize distribution message
   int msgSize[MSG_Record];
   msgSize[0] = recevt.size();       // diffuse
-  msgSize[1] = recevt.size();       // index
-  msgSize[2] = recevt.size();       // type
-  msgSize[3] = recevt.size()+ndata; // data
-  msgSize[4] = record.size();       // drift
-  msgSize[5] = record.size()+1;     // xdata
+  msgSize[1] = recevt.size();       // type
+  msgSize[2] = recevt.size();       // source
+  msgSize[3] = recevt.size();       // index
+  msgSize[4] = recevt.size()+ndata; // data
+  msgSize[5] = record.size();       // drift
+  msgSize[6] = record.size()+1;     // xdata
   mRecord *mrecord = new(msgSize, 0) mRecord;
   mrecord->nrecevt = recevt.size();
   mrecord->nrecord = record.size();
@@ -74,8 +75,9 @@ mRecord* Network::BuildRecord() {
   // Pack event information
   for (std::size_t i = 0; i < recevt.size(); ++i) {
     mrecord->diffuse[i] = recevt[i].diffuse;
-    mrecord->index[i] = recevt[i].index;
     mrecord->type[i] = recevt[i].type;
+    mrecord->source[i] = recevt[i].source;
+    mrecord->index[i] = recevt[i].index;
     mrecord->data[i] = recevt[i].data;
   }
   
@@ -192,25 +194,27 @@ void NetData::WriteRecord() {
     CkExit();
   }
 
+  // TODO: Store records indexed by time and then by type
   // Loop through parts
   for (idx_t k = 0; k < nprt; ++k) {
     // Loop through events
     for (idx_t e = 0; e < records[k]->nrecevt; ++e) {
-      // types lacking data
-      if (records[k]->type[e] == EVTYPE_SPIKE) {
+      // event types lacking data
+      if (records[k]->type[e] == EVENT_SPIKE) {
         fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "\n",
-            records[k]->type[e], records[k]->diffuse[e], records[k]->index[e]);
+            records[k]->type[e], records[k]->diffuse[e], records[k]->source[e]);
       }
-      // events with data
+      // event types with data
       else {
-        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIrealfull "\n",
-            records[k]->type[e], records[k]->diffuse[e], records[k]->index[e], records[k]->data[e]);
+        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
+            records[k]->type[e], records[k]->diffuse[e], records[k]->source[e], records[k]->index[e], records[k]->data[e]);
       }
     }
     // Loop through records
     for (idx_t r = 0; r < records[k]->nrecord; ++r) {
-      // 'event type' 0 followed by amount of data
-      fprintf(pRecord, "0 %" PRItickhex " %" PRIidx "", records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
+      // record 'event type' followed by number of data entries
+      fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "",
+          EVENT_RECORD, records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
       // data
       for (idx_t d = records[k]->xdata[r]; d < records[k]->xdata[r+1]; ++d) {
         fprintf(pRecord, " %" PRIrealfull "", records[k]->data[d]);

@@ -53,8 +53,9 @@ class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
 void IzhiSynSTDP::addRepeat(idx_t modidx, std::vector<event_t>& repevt) {
   event_t evtpre;
   evtpre.diffuse = 0;
+  evtpre.source = 0;
   evtpre.index = modidx;
-  evtpre.type = EVTYPE_EDGUP;
+  evtpre.type = EVENT_EDGUP;
   evtpre.data = param[2];
   repevt.push_back(evtpre);
 }
@@ -69,9 +70,9 @@ tick_t IzhiSynSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state
 // Simulation jump
 //
 void IzhiSynSTDP::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
-  if (evt.type == EVTYPE_SPIKE) {
+  if (evt.type == EVENT_SPIKE) {
     // External spike event
-    if (evt.index > 0) {
+    if (evt.source >= 0) {
       idx_t e = evt.index;
       // Apply effect to neuron (vertex)
       state[0][aux[0].stateidx[0]] += state[e][0];
@@ -83,8 +84,8 @@ void IzhiSynSTDP::Jump(const event_t& evt, std::vector<std::vector<real_t>>& sta
       stick[e][1] = evt.diffuse;
     }
     // Internal spike event
-    else if (evt.index < 0) {
-      idx_t e = -evt.index;
+    else if (evt.source < 0) {
+      idx_t e = evt.index;
       // Compute trace value
       state[e][2] = state[e][2]*exp(-((real_t) (evt.diffuse - stick[e][1])/TICKS_PER_MS)/param[1]);
       // Facilitate weight
@@ -95,7 +96,7 @@ void IzhiSynSTDP::Jump(const event_t& evt, std::vector<std::vector<real_t>>& sta
       stick[e][1] = evt.diffuse;
     }
   }
-  else if (evt.type == EVTYPE_EDGUP) {
+  else if (evt.type == EVENT_EDGUP) {
     idx_t e = evt.index;
     // Update weight only every second
     state[e][0] += 0.01 + state[e][1];

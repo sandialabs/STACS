@@ -20,6 +20,7 @@ typedef uint64_t uidx_t;
 typedef uint64_t tick_t;
 typedef uint16_t flag_t;
 typedef real8 real_t;
+typedef int16_t sample_t;
 
 // Reading from file
 #define strtoidx strtoll
@@ -65,8 +66,9 @@ struct dist_t {
 //
 struct event_t {
   tick_t diffuse;
-  idx_t index;
   idx_t type;
+  idx_t source;
+  idx_t index;
   real_t data;
   
   bool operator<(const event_t& event) const {

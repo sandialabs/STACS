@@ -29,15 +29,17 @@
 #define RPCSTIM_CIRCLE      2
 #define RPCSTIM_SPHERE      3
 
-#define EVENT_EXTERNAL      1
-#define EVENT_LOCALEDG      2
-#define EVENT_LOCALVTX      4
+#define REMOTE_EDGES        0x00001
+#define REMOTE_EDGE         0x00010
+#define REMOTE_VERTEX       0x00100
+#define LOCAL_EDGES         0x01000
+#define LOCAL_VERTEX        0x10000
 
-#define EVTYPE_TOTAL        4
-#define EVTYPE_RECORD       0
-#define EVTYPE_SPIKE        1
-#define EVTYPE_EDGUP        2
-#define EVTYPE_STIM         3
+#define EVENT_TOTAL         4
+#define EVENT_RECORD        0
+#define EVENT_SPIKE         1
+#define EVENT_EDGUP         2
+#define EVENT_STIM          3
 
 #define RECORD_STATE        0
 #define RECORD_STICK        1
