@@ -195,6 +195,7 @@ class YarpAudio : public NetModelTmpl < 101, YarpAudio > {
 // Simulation step
 //
 tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
+#ifdef STACS_WITH_YARP
   // Check every 32 ms
   // TODO: move to parameters
   // Grab data from port if available
@@ -218,6 +219,7 @@ tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
     }
   }
   tsample += tdiff;
+#endif
   return tdiff;
 }
 
