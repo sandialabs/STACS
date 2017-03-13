@@ -169,7 +169,7 @@ class YarpAudio : public NetModelTmpl < 101, YarpAudio > {
       portlist[0] = "in";
 
       // Local variables
-      tsample = 32 * TICKS_PER_MS;
+      tsample = 16 * TICKS_PER_MS;
     }
 
     /* Simulation */
@@ -183,6 +183,7 @@ class YarpAudio : public NetModelTmpl < 101, YarpAudio > {
   private:
 #ifdef STACS_WITH_YARP
     YarpAudioPort* port;
+    yarp::os::BufferedPort<yarp::os::Bottle>* preq;
 #endif
     tick_t tsample;
 };
@@ -196,10 +197,10 @@ class YarpAudio : public NetModelTmpl < 101, YarpAudio > {
 //
 tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
 #ifdef STACS_WITH_YARP
-  // Check every 32 ms
+  // Check every 16 ms
   // TODO: move to parameters
   // Grab data from port if available
-  if ((tsample >= 32 * TICKS_PER_MS) && port->mels.size()) {
+  if ((tsample >= 16 * TICKS_PER_MS) && port->mels.size()) {
     tsample = 0;
     std::vector<real_t> mel = port->mels.front();
     port->mels.pop_front();
@@ -208,15 +209,36 @@ tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
     event_t evtpre;
     evtpre.type = EVENT_STIM;
     evtpre.source = REMOTE_EDGE;
+    // overlap of 16ms
+    // total time of 32ms
     for (idx_t i = 0; i < (idx_t) param[0]; ++i) {
       evtpre.index = i;
       evtpre.diffuse = tdrift;
-      evtpre.data = (mel[i] + 16.0)/2;
+      evtpre.data = (mel[i] + 16.0)/8;
+      evtlog.push_back(evtpre);
+      evtpre.diffuse = tdrift + 8 * TICKS_PER_MS;
+      evtpre.data = (mel[i] + 16.0)/8;
+      evtlog.push_back(evtpre);
+      evtpre.diffuse = tdrift + 12 * TICKS_PER_MS;
+      evtpre.data = (mel[i] + 16.0)/4;
+      evtlog.push_back(evtpre);
+      evtpre.diffuse = tdrift + 20 * TICKS_PER_MS;
+      evtpre.data = -(mel[i] + 16.0)/4;
+      evtlog.push_back(evtpre);
+      evtpre.diffuse = tdrift + 24 * TICKS_PER_MS;
+      evtpre.data = -(mel[i] + 16.0)/8;
       evtlog.push_back(evtpre);
       evtpre.diffuse = tdrift + 32 * TICKS_PER_MS;
-      evtpre.data = -(mel[i] + 16.0)/2;
+      evtpre.data = -(mel[i] + 16.0)/8;
       evtlog.push_back(evtpre);
     }
+  }
+  // Check if enough mels available
+  if (port->mels.size() < 8) {
+    yarp::os::Bottle& b = preq->prepare();
+    b.clear();
+    b.addInt((int) port->mels.size());
+    preq->write();
   }
   tsample += tdiff;
 #endif
@@ -227,10 +249,16 @@ tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
 //
 void YarpAudio::OpenPorts() {
 #ifdef STACS_WITH_YARP
+  std::string recv = portname[0] + "/recv";
+  std::string request = portname[0] + "/request";
   port = new YarpAudioPort((int) param[0]);
+  port->setStrict(); // try not to drop input
   port->useCallback();
-  port->open(portname[0].c_str());
-  CkPrintf("Receiving audio samples on %s\n", portname[0].c_str());
+  port->open(recv.c_str());
+  CkPrintf("Receiving audio samples on %s\n", recv.c_str());
+  preq = new yarp::os::BufferedPort<yarp::os::Bottle>();
+  preq->open(request.c_str());
+  CkPrintf("Requesting audio samples from %s\n", request.c_str());
 #endif
 }
 
@@ -239,6 +267,11 @@ void YarpAudio::OpenPorts() {
 void YarpAudio::ClosePorts() {
 #ifdef STACS_WITH_YARP
   port->close();
+  yarp::os::Bottle& b = preq->prepare();
+  b.clear();
+  b.addInt(-1);
+  preq->write();
+  preq->close();
 #endif
 }
 
