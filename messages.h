@@ -29,6 +29,10 @@
 #define RPCSTIM_CIRCLE      2
 #define RPCSTIM_SPHERE      3
 
+#define MODFLAG_DEFAULT     0x00
+#define MODFLAG_ACTIVE      0x01
+#define MODFLAG_PNGMOD      0x10
+
 #define REMOTE_EDGES        0x00001
 #define REMOTE_EDGE         0x00010
 #define REMOTE_VERTEX       0x00100

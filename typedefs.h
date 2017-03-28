@@ -102,4 +102,15 @@ struct aux_t {
   std::vector<idx_t> stickidx;
 };
 
+// PNGs
+//
+struct png_t {
+  tick_t diffuse;
+  idx_t source;
+
+  bool operator<(const png_t& png) const {
+    return diffuse < png.diffuse;
+  }
+};
+
 #endif //__STACS_TYPEDEFS_H__

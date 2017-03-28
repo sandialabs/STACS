@@ -12,21 +12,22 @@
 **************************************************************************/
 /*readonly*/ CProxy_Main mainProxy;
 /*readonly*/ CkGroupID mCastGrpId;
+/*readonly*/ idx_t npdat;
+/*readonly*/ idx_t npnet;
 /*readonly*/ std::string filebase;
 /*readonly*/ std::string filein;
 /*readonly*/ std::string fileout;
 /*readonly*/ std::string recbase;
-/*readonly*/ idx_t npdat;
-/*readonly*/ idx_t npnet;
 /*readonly*/ tick_t tmax;
 /*readonly*/ tick_t tstep;
-/*readonly*/ tick_t tdisplay;
 /*readonly*/ tick_t tcheck;
 /*readonly*/ tick_t trecord;
+/*readonly*/ tick_t tdisplay;
 /*readonly*/ idx_t evtcal;
+/*readonly*/ bool simpause;
 /*readonly*/ idx_t rngseed;
 /*readonly*/ std::string rpcport;
-/*readonly*/ idx_t simpause;
+/*readonly*/ idx_t runmode;
 
 
 /**************************************************************************
@@ -60,16 +61,37 @@ Main::Main(CkArgMsg *msg) {
   if (netpe < 1) { netpe = 1; }
 
   // Display configuration information
-  CkPrintf("Loaded config from %s\n"
-           "  Data Files (npdat):     %" PRIidx "\n"
-           "  Network Parts (npnet):  %" PRIidx "\n"
-           "  Processing Elements:    %d\n"
-           "  Network Parts per PE:   %.2g\n"
-           "  Total Simulation Time (tmax): %" PRItick "\n"
-           "  Simulation Time Step (tstep): %" PRItick "\n"
-           "  Checkpoint Interval (tcheck): %" PRItick "\n",
-           configfile.c_str(), npdat, npnet,
-           CkNumPes(), netpe, tmax, tstep, tcheck);
+  if (runmode == RUNMODE_SIM) {
+    CkPrintf("Loaded config from %s\n"
+             "  Data Files (npdat):     %" PRIidx "\n"
+             "  Network Parts (npnet):  %" PRIidx "\n"
+             "  Processing Elements:    %d\n"
+             "  Network Parts per PE:   %.2g\n"
+             "  Simulation run mode:    sim\n"
+             "  Total Simulation Time (tmax): %" PRItick "\n"
+             "  Simulation Time Step (tstep): %" PRItick "\n"
+             "  Checkpoint Interval (tcheck): %" PRItick "\n",
+             configfile.c_str(), npdat, npnet,
+             CkNumPes(), netpe, tmax, tstep, tcheck);
+  }
+  else if (runmode == RUNMODE_PNG) {
+    std::string pngmodstr;
+    // collect active models
+    for (std::size_t i = 0; i < pngmods.size(); ++i) {
+      std::ostringstream pngmod;
+      pngmod << " " << pngmods[i];
+      pngmodstr.append(pngmod.str());
+    }
+    CkPrintf("Loaded config from %s\n"
+             "  Data Files (npdat):     %" PRIidx "\n"
+             "  Network Parts (npnet):  %" PRIidx "\n"
+             "  Processing Elements:    %d\n"
+             "  Network Parts per PE:   %.2g\n"
+             "  Simulation run mode:    png\n"
+             "  Polychronizing models: %s\n",
+             configfile.c_str(), npdat, npnet,
+             CkNumPes(), netpe, pngmodstr.c_str());
+  }
 
   // Read vertex distribution
   CkPrintf("Initializing simulation\n");
@@ -148,19 +170,25 @@ void Main::StartSim() {
   CkCallback *cb = new CkCallback(CkReductionTarget(Main, StopSim), mainProxy);
   network.ckSetReductionClient(cb);
 
+  if (runmode == RUNMODE_SIM) {
 #ifdef STACS_WITH_YARP
-  if (simpause) {
-    // Start paused
-    CkPrintf("Starting simulation (paused)\n");
-  }
-  else {
+    if (simpause) {
+      // Start paused
+      CkPrintf("Starting simulation (paused)\n");
+    }
+    else {
+      CkPrintf("Starting simulation\n");
+      network.Cycle();
+    }
+#else
     CkPrintf("Starting simulation\n");
     network.Cycle();
-  }
-#else
-  CkPrintf("Starting simulation\n");
-  network.Cycle();
 #endif
+  }
+  else if (runmode == RUNMODE_PNG) {
+    CkPrintf("Finding polychronous neuronal groups\n");
+    network.FindPNG();
+  }
 
   // Start timer
   tstart = std::chrono::system_clock::now();
@@ -168,7 +196,7 @@ void Main::StartSim() {
 
 
 /**************************************************************************
-* Simulation Checkpointing
+* Simulation Coordination
 **************************************************************************/
 
 // Coordination for checkpointing simulation
@@ -213,10 +241,16 @@ void Main::StopSim() {
 
   // Save data from network parts to output files
   chalt = nhalt = 0;
-  network.SaveNetwork();
-  ++nhalt;
-  network.SaveRecord();
-  ++nhalt;
+  if (runmode == RUNMODE_SIM) {
+    network.SaveNetwork();
+    ++nhalt;
+    network.SaveRecord();
+    ++nhalt;
+  }
+  else if (runmode == RUNMODE_PNG) {
+    network.CloseNetwork();
+    ++nhalt;
+  }
   
   // Set callback for halting
   CkCallback *cb = new CkCallback(CkReductionTarget(Main, FiniSim), mainProxy);

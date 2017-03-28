@@ -186,3 +186,20 @@ void NetData::SaveNetwork(mPart *msg) {
     contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
   }
 }
+
+// Receive data from network partition
+//
+void NetData::CloseNetwork() {
+  // Wait for all parts
+  if (++cprt == nprt) {
+    cprt = 0;
+
+#ifdef STACS_WITH_YARP
+    // Finalize YARP
+    yarp.fini();
+#endif
+
+    // Return control to main
+    contribute(0, NULL, CkReduction::nop);
+  }
+}

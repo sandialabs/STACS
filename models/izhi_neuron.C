@@ -38,6 +38,9 @@ class IzhiNeuron : public NetModelTmpl < 10, IzhiNeuron > {
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
     void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
+    
+    /* Protocol */
+    void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick);
 };
 
 
@@ -45,13 +48,22 @@ class IzhiNeuron : public NetModelTmpl < 10, IzhiNeuron > {
 * Class methods
 **************************************************************************/
 
+// Reset model
+//
+void IzhiNeuron::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+    state[0] = -70.0;
+    state[1] = param[1] * -70.0;
+    state[2] = 0;
+    state[3] = 0;
+}
+
 // Simulation step
 //
 tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
   // if spike occured, generate event
-  if (state[0] > 30) {
+  if (state[0] >= 30) {
     // reset
-    state[0] = -65;
+    state[0] = param[2];
     state[1] = state[1] + param[3];
 
     // generate events

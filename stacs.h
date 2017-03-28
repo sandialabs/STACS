@@ -41,6 +41,7 @@ class mVtxDist : public CMessage_mVtxDist {
 struct model_t {
   std::string modname;
   idx_t modtype;
+  flag_t modflag;
   idx_t nstate;
   idx_t nstick;
   std::vector<real_t> param;
@@ -83,10 +84,15 @@ class Main : public CBase_Main {
     void CheckNetwork(CkReductionMsg *msg);
     void SaveNetwork(CkReductionMsg *msg);
 
+    /* Polychronization */
+    void ResetPNG();
+
   private:
     /* Persistence */
     std::vector<dist_t> netdist;
     std::vector<model_t> models;
+    std::vector<std::string> actives;
+    std::vector<std::string> pngmods;
     /* Chare Arrays */
     CProxy_NetData netdata;
     CProxy_Network network;

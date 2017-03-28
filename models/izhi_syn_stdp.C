@@ -42,6 +42,7 @@ class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
     void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
+    void Hop(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
 };
 
 /**************************************************************************
@@ -103,11 +104,20 @@ void IzhiSynSTDP::Jump(const event_t& evt, std::vector<std::vector<real_t>>& sta
     if (state[e][0] < 0) {
       state[e][0] = 0;
     }
-    else if (state[e][0] > param[1]) {
-      state[e][0] = param[1];
+    else if (state[e][0] > param[0]) {
+      state[e][0] = param[0];
     }
     // Filter the change in weight
     state[e][1] *= 0.9;
+  }
+}
+
+// Simulation hop
+//
+void IzhiSynSTDP::Hop(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
+  if (evt.type == EVENT_SPIKE && evt.source >= 0) {
+    // Apply effect to neuron (vertex)
+    state[0][aux[0].stateidx[0]] += state[evt.index][0];
   }
 }
 

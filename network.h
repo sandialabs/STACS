@@ -71,10 +71,11 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 7
+#define MSG_Model 8
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;
+    flag_t *modflag;
     idx_t *nstate;
     idx_t *nstick;
     idx_t *xparam;
@@ -172,6 +173,9 @@ class NetModel {
     virtual ~NetModel() { }
     /* Getters */
     idx_t getModType() const { return modtype; }
+    flag_t getModFlag() const { return modflag; }
+    bool getActive() const { return ((modflag & MODFLAG_ACTIVE) != 0); }
+    bool getPNGMod() const { return ((modflag & MODFLAG_PNGMOD) != 0); }
     idx_t getNParam() const { return paramlist.size(); }
     idx_t getNState() const { return statelist.size(); }
     idx_t getNStick() const { return sticklist.size(); }
@@ -191,6 +195,15 @@ class NetModel {
     void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
       unifdist = u;
       rngine = r;
+    }
+    void setModFlag(flag_t flag) {
+      modflag = flag;
+    }
+    void setActive(bool active) {
+      modflag = active ? (modflag | MODFLAG_ACTIVE) : (modflag & ~MODFLAG_ACTIVE);
+    }
+    void setPNGMod(bool pngmod) {
+      modflag = pngmod ? (modflag | MODFLAG_PNGMOD) : (modflag & ~MODFLAG_PNGMOD);
     }
     /* Auxiliary */
     idx_t getNAux() const { return auxstate.size() + auxstick.size(); }
@@ -212,9 +225,12 @@ class NetModel {
     /* Abstract Functions */
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
     virtual void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) = 0;
+    virtual void Hop(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) { }
+    virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
   protected:
     /* Bookkeeping */
     idx_t modtype;
+    flag_t modflag;
     std::vector<std::string> paramlist;
     std::vector<std::string> statelist;
     std::vector<std::string> sticklist;
@@ -316,6 +332,7 @@ class NetData : public CBase_NetData {
     void ReadCSR();
     void CheckNetwork(mPart *msg);
     void SaveNetwork(mPart *msg);
+    void CloseNetwork();
     void WriteCSR(bool check = false);
 
     /* Recording */
@@ -397,15 +414,14 @@ class Network : public CBase_Network {
     void LoadNetwork(mPart *msg);
     void CheckNetwork();
     void SaveNetwork();
+    void CloseNetwork();
+    void ResetNetwork();
 
     /* Recording */
     mRecord* BuildRecord();
     void StoreRecord();
     void CheckRecord();
     void SaveRecord();
-
-    /* Computation */
-    void LoadNetModel();
 
     /* Communication */
     mEvent* BuildEvent();
@@ -415,6 +431,15 @@ class Network : public CBase_Network {
     /* Simulation */
     void GoAhead(mGo *msg);
     void Cycle();
+
+    /* Polychronization */
+    void FindPNG();
+    void ComputePNG(idx_t npngseeds);
+    void ComputePNG();
+    mEvent* BuildPNGSeed(std::vector<event_t>& pngseed);
+    void SeedPNG(mEvent *msg);
+    void CyclePNG();
+    void CommPNGEvent(mEvent *msg);
 
 #ifdef STACS_WITH_YARP
     /* RPC Control */
@@ -446,6 +471,10 @@ class Network : public CBase_Network {
     std::vector<std::vector<std::vector<tick_t>>> stick;
     std::vector<std::vector<aux_t>> vtxaux; // auxiliary indices per vertex
     std::vector<std::vector<std::vector<aux_t>>> edgaux; // per edge model
+    /* Polychronization */
+    std::vector<std::vector<std::vector<png_t>>> pngs; // PNGs of the vertex (if applicable)
+    std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex
+    std::vector<png_t> pngcan; // Candidate PNG
     /* Network Events */
     std::vector<std::vector<std::vector<event_t>>> event;
         // event queue per vertex per iteration (use as calendar queue)
@@ -472,6 +501,10 @@ class Network : public CBase_Network {
     /* Bookkeeping */
     CProxy_NetData netdata;
     idx_t prtidx, datidx;
+    /* Computation */
+    idx_t compidx;
+    idx_t ncomp, ccomp;
+    tick_t tcomp;
     /* Coordination */
     idx_t nadjprt;
     idx_t cadjprt[2], prtiter;

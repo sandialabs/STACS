@@ -16,7 +16,7 @@ extern /*readonly*/ CProxy_Main mainProxy;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ std::string rpcport;
-extern /*readonly*/ idx_t simpause;
+extern /*readonly*/ bool simpause;
 
 
 /**************************************************************************
@@ -124,6 +124,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
 
   // Process message, with callbacks
   // TODO: return a clean help page
+  // TODO: p - pause/play
   if (command == "help") {
     CkPrintf("RPC Command: Help\n");
     out.addVocab(yarp::os::Vocab::encode("many"));

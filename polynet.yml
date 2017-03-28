@@ -1,12 +1,22 @@
-npdat: 4
-npnet: 8
-evtcal: 21
-tmax: 60000 # 1 minute
-tdisplay: 1000 # 1 second
-tcheck: 10000 # 10 seconds
-trecord: 1000 # 1 second
-simpause: 0 # start paused
+npdat: 4 # 4 data files
+npnet: 8 # 8 network partitions
 
 filebase: "polynet/polynet"
 recbase: "polynet/record/polynet"
+
+tmax: 180000    # 3 minutes
+tstep: 1       # 1 millisecond
+tcheck: 10000  # 10 seconds
+trecord: 1000  # 1 second
+tdisplay: 1000 # 1 second
+evtcal: 21     # 21 milliseconds
+simpause: true # start paused
+
 rngseed: 2032
+runmode: png
+active:
+  - izhiex
+  - izhiin
+pngmod:
+  - izhiex
+  - exstdp

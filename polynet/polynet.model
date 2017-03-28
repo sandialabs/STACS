@@ -62,7 +62,7 @@ param:
   - name: rng
     value: 1000
   - name: ampl
-    value: 18
+    value: 20
 ...
 
 ---

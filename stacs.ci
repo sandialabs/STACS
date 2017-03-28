@@ -3,21 +3,22 @@ mainmodule stacs {
 
   readonly CProxy_Main mainProxy;
   readonly CkGroupID mCastGrpId;
+  readonly idx_t npdat;
+  readonly idx_t npnet;
   readonly std::string filebase;
   readonly std::string filein;
   readonly std::string fileout;
   readonly std::string recbase;
-  readonly idx_t npdat;
-  readonly idx_t npnet;
   readonly tick_t tmax;
   readonly tick_t tstep;
-  readonly tick_t tdisplay;
   readonly tick_t tcheck;
   readonly tick_t trecord;
+  readonly tick_t tdisplay;
   readonly idx_t evtcal;
+  readonly bool simpause;
   readonly idx_t rngseed;
   readonly std::string rpcport;
-  readonly idx_t simpause;
+  readonly idx_t runmode;
   
   message mVtxDist {
     idx_t vtxdist[];
@@ -33,6 +34,8 @@ mainmodule stacs {
     
     entry void CheckNetwork(CkReductionMsg *msg);
     entry void SaveNetwork(CkReductionMsg *msg);
+
+    entry [reductiontarget] void ResetPNG();
   };
   
   chare StreamRPC {

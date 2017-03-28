@@ -17,21 +17,22 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
+extern /*readonly*/ idx_t npdat;
+extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ std::string filebase;
 extern /*readonly*/ std::string filein;
 extern /*readonly*/ std::string fileout;
 extern /*readonly*/ std::string recbase;
-extern /*readonly*/ idx_t npdat;
-extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
-extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
+extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t evtcal;
+extern /*readonly*/ bool simpause;
 extern /*readonly*/ idx_t rngseed;
 extern /*readonly*/ std::string rpcport;
-extern /*readonly*/ idx_t simpause;
+extern /*readonly*/ idx_t runmode;
 
 
 /**************************************************************************
@@ -52,6 +53,20 @@ int Main::ParseConfig(std::string configfile) {
   }
 
   // Get configuration
+  // Number of data files
+  try {
+    npdat = config["npdat"].as<idx_t>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  npdat: %s\n", e.what());
+    return 1;
+  }
+  // Number of network parts
+  try {
+    npnet = config["npnet"].as<idx_t>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  npnet: %s\n", e.what());
+    return 1;
+  }
   // Network data file
   try {
     filebase = config["filebase"].as<std::string>();
@@ -80,20 +95,6 @@ int Main::ParseConfig(std::string configfile) {
     CkPrintf("  recbase not defined, defaulting to: \"%s\"\n", filebase.c_str());
     recbase = filebase;
   }
-  // Number of data files
-  try {
-    npdat = config["npdat"].as<idx_t>();
-  } catch (YAML::RepresentationException& e) {
-    CkPrintf("  npdat: %s\n", e.what());
-    return 1;
-  }
-  // Number of network parts
-  try {
-    npnet = config["npnet"].as<idx_t>();
-  } catch (YAML::RepresentationException& e) {
-    CkPrintf("  npnet: %s\n", e.what());
-    return 1;
-  }
   // Maximum simulation time (in ms)
   real_t treal;
   try {
@@ -111,14 +112,6 @@ int Main::ParseConfig(std::string configfile) {
     CkPrintf("  tstep not defined, defaulting to: %.2g ms\n", treal);
   }
   tstep = (tick_t)(treal*TICKS_PER_MS);
-  // How often to display the simulation time (in ms)
-  try {
-    treal = config["tdisplay"].as<real_t>();
-  } catch (YAML::RepresentationException& e) {
-    treal = TDISP_DEFAULT;
-    CkPrintf("  tdisplay not defined, defaulting to: %.2g ms\n", treal);
-  }
-  tdisplay = (tick_t)(treal*TICKS_PER_MS);
   // Time between checkpoints (in ms)
   try {
     treal = config["tcheck"].as<real_t>();
@@ -135,12 +128,27 @@ int Main::ParseConfig(std::string configfile) {
     CkPrintf("  trecord not defined, defaulting to: %.2g ms\n", treal);
   }
   trecord = (tick_t)(treal*TICKS_PER_MS);
+  // How often to display the simulation time (in ms)
+  try {
+    treal = config["tdisplay"].as<real_t>();
+  } catch (YAML::RepresentationException& e) {
+    treal = TDISP_DEFAULT;
+    CkPrintf("  tdisplay not defined, defaulting to: %.2g ms\n", treal);
+  }
+  tdisplay = (tick_t)(treal*TICKS_PER_MS);
   // Event queue calendar days per year
   try {
     evtcal = config["evtcal"].as<idx_t>();
   } catch (YAML::RepresentationException& e) {
     evtcal = EVTCAL_DEFAULT;
     CkPrintf("  evtcal not defined, defaulting to: %d iters\n", evtcal);
+  }
+  // Simulation startup
+  try {
+    simpause = config["simpause"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    simpause = SIMPAUSE_DEFAULT;
+    CkPrintf("  simpause not defined, defaulting to: %s\n", (simpause ? "true" : "false"));
   }
   // Random number seed
   try {
@@ -157,12 +165,53 @@ int Main::ParseConfig(std::string configfile) {
     rpcport = RPCPORT_DEFAULT;
     CkPrintf("  rpcport not defined, defaulting to: %s\n", rpcport.c_str());
   }
-  // Simulation startup
+  // Run mode
+  std::string modestring;
   try {
-    simpause = config["simpause"].as<idx_t>();
+    modestring = config["runmode"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    simpause = SIMPAUSE_DEFAULT;
-    CkPrintf("  simpause not defined, defaulting to: %" PRIidx "\n", simpause);
+    modestring = std::string("sim");
+    CkPrintf("  runmode not defined, defaulting to: %s\n", modestring.c_str());
+  }
+  if (modestring == "sim") {
+    runmode = RUNMODE_SIM;
+  } else if (modestring == "png") {
+    runmode = RUNMODE_PNG;
+  } else {
+    CkPrintf("  runmode is invalid, defaulting to: sim\n");
+    runmode = RUNMODE_SIM;
+  }
+  // Active models
+  actives.clear();
+  // Identifiers are their own 'node'
+  YAML::Node active = config["active"];
+  if (active.size() == 0) {
+    CkPrintf("  warning: network has no active models\n");
+  }
+  actives.resize(active.size());
+  for (std::size_t i = 0; i < active.size(); ++i) {
+    try {
+      actives[i] = active[i].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  active: %s\n", e.what());
+      return 1;
+    }
+  }
+  // PNG models
+  pngmods.clear();
+  // Identifiers are their own 'node'
+  YAML::Node pngmod = config["pngmod"];
+  if (pngmod.size() == 0) {
+    CkPrintf("  warning: network has no png models\n");
+  }
+  pngmods.resize(pngmod.size());
+  for (std::size_t i = 0; i < pngmod.size(); ++i) {
+    try {
+      pngmods[i] = pngmod[i].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  pngmod: %s\n", e.what());
+      return 1;
+    }
   }
 
   // Return success
@@ -258,6 +307,31 @@ int Main::ReadModel() {
       } catch (YAML::RepresentationException& e) {
         CkPrintf("  port: %s\n", e.what());
         return 1;
+      }
+    }
+
+    // Flags
+    models[i].modflag = MODFLAG_DEFAULT;
+
+    // Active models
+    if (actives.size()) {
+      for (std::size_t j = 0; j < actives.size(); ++j) {
+        if (models[i].modname == actives[j]) {
+          models[i].modflag |= MODFLAG_ACTIVE;
+          break;
+        }
+      }
+    } else {
+      models[i].modflag |= MODFLAG_ACTIVE;
+    }
+    
+    // PNG models
+    if (pngmods.size()) {
+      for (std::size_t j = 0; j < pngmods.size(); ++j) {
+        if (models[i].modname == pngmods[j]) {
+          models[i].modflag |= MODFLAG_PNGMOD;
+          break;
+        }
       }
     }
   }

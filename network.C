@@ -15,9 +15,9 @@ extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
+extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t evtcal;
 extern /*readonly*/ idx_t rngseed;
 
@@ -76,6 +76,7 @@ Network::Network(mModel *msg) {
   netmodel.clear();
   // "none" model
   netmodel.push_back(NetModelFactory::getNetModel()->Create(0));
+  netmodel[0]->setModFlag(MODFLAG_DEFAULT);
   // User defined models
   for (idx_t i = 1; i < msg->nmodel+1; ++i) {
     // Create model object
@@ -86,6 +87,7 @@ Network::Network(mModel *msg) {
     netmodel[i]->setParam(msg->param + msg->xparam[i-1]);
     netmodel[i]->setPort(msg->port + msg->xport[i-1]);
     netmodel[i]->setRandom(unifdist, &rngine);
+    netmodel[i]->setModFlag(msg->modflag[i-1]);
 
     // Print out model information
     if (prtidx == 0) {
@@ -192,6 +194,7 @@ void Network::LoadNetwork(mPart *msg) {
   vtxmap.clear();
   vtxmodidx.resize(msg->nvtx);
   xyz.resize(msg->nvtx*3);
+  pngs.resize(msg->nvtx);
   adjcy.resize(msg->nvtx);
   adjmap.clear();
   edgmodidx.resize(msg->nvtx);
@@ -231,6 +234,7 @@ void Network::LoadNetwork(mPart *msg) {
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
     xyz[i*3+2] = msg->xyz[i*3+2];
+    pngs[i].clear();
     // preallocate sizes
     adjcy[i].resize(msg->xadj[i+1] - msg->xadj[i]);
     edgmodidx[i].resize(msg->xadj[i+1] - msg->xadj[i]);
@@ -324,6 +328,7 @@ void Network::LoadNetwork(mPart *msg) {
   // Set up timing
   tsim = 0;
   tdisp = 0;
+  tcomp = 0;
   iter = 0;
   // Set up coordination
   cadjprt[0] = 0;
@@ -337,6 +342,8 @@ void Network::LoadNetwork(mPart *msg) {
   // Set up synchronization
   synciter = IDX_T_MAX;
 #endif
+  // Set up computation
+  compidx = 0;
 
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
@@ -540,6 +547,34 @@ void Network::SaveNetwork() {
   // Build network part message for saving
   mPart *mpart = BuildPart();
   netdata(datidx).SaveNetwork(mpart);
+}
+
+// Clean up Network chare array
+//
+void Network::CloseNetwork() {
+  // Close ports as needed
+  for (std::size_t i = 0; i < adjcy.size(); ++i) {
+    if (netmodel[vtxmodidx[i]]->getNPort()) {
+      netmodel[vtxmodidx[i]]->ClosePorts();
+    }
+  }
+
+  // Move to cleanup of netdata
+  netdata(datidx).CloseNetwork();
+}
+
+// Reset Network chare array (e.g. to quiesence)
+//
+void Network::ResetNetwork() {
+  for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
+    // Clear events
+    for (idx_t j = 0; j < evtcal; ++j) {
+      event[i][j].clear();
+    }
+    evtaux[i].clear();
+    // Reset vertex models
+    netmodel[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
+  }
 }
 
 
