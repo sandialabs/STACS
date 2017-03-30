@@ -14,7 +14,7 @@
 **************************************************************************/
 extern /*readonly*/ CProxy_Main mainProxy;
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ idx_t evtcal;
+extern /*readonly*/ idx_t equeue;
 
 
 /**************************************************************************
@@ -40,7 +40,8 @@ void Network::RPCMsg(mRPC *msg) {
   }
   else if (msg->command == RPCCOMMAND_UNPAUSE) {
     // Resume simulation
-    thisProxy(prtidx).Cycle();
+    //thisProxy(prtidx).CycleNetwork();
+    cbcycle.send();
   }
   else if (msg->command == RPCCOMMAND_CHECK) {
     // Coordinate the synchronization iteration
@@ -58,7 +59,8 @@ void Network::RPCMsg(mRPC *msg) {
       synciter = iter + (idx_t) (((tick_t) (msg->rpcdata[0]*TICKS_PER_MS))/tstep);
     }
     // Resume simulation until synchronization point
-    thisProxy(prtidx).Cycle();
+    //thisProxy(prtidx).CycleNetwork();
+    cbcycle.send();
   }
 
   // Stimulation
@@ -99,8 +101,8 @@ void Network::RPCMsg(mRPC *msg) {
           if (target != vtxmap.end()) {
             for (size_t e = 0; e < evtpre.size(); ++e) {
               evtpre[e].source -= (idx_t) msg->rpcdata[i];
-              if ((evtpre[e].diffuse/tstep - synciter) < evtcal) {
-                event[target->second][(evtpre[e].diffuse/tstep)%evtcal].push_back(evtpre[e]);
+              if ((evtpre[e].diffuse/tstep - synciter) < equeue) {
+                event[target->second][(evtpre[e].diffuse/tstep)%equeue].push_back(evtpre[e]);
               }
               else {
                 evtaux[target->second].push_back(evtpre[e]);
@@ -117,7 +119,8 @@ void Network::RPCMsg(mRPC *msg) {
     }
     // Resync if necessary
     if (msg->command == RPCCOMMAND_PSTIM) {
-      thisProxy(prtidx).Cycle();
+      //thisProxy(prtidx).CycleNetwork();
+      cbcycle.send();
     }
   }
 
@@ -127,13 +130,15 @@ void Network::RPCMsg(mRPC *msg) {
     // Coordinate the syncronization iteration
     synciter = iter;
     // Resync
-    thisProxy(prtidx).Cycle();
+    //thisProxy(prtidx).CycleNetwork();
+    cbcycle.send();
   }
   else if (msg->command == RPCCOMMAND_CLOSE) {
     // Coordinate the syncronization iteration
     synciter = iter;
     // Resync
-    thisProxy(prtidx).Cycle();
+    //thisProxy(prtidx).CycleNetwork();
+    cbcycle.send();
   }
 
   // cleanup
@@ -230,7 +235,7 @@ mRPC* RPCReader::BuildRPCMsg(idx_t command, yarp::os::Bottle message) {
 
 // Network callback (continue)
 //
-void StreamRPC::RPCSync() {
+void StreamRPC::Sync() {
   // Display some information
   CkPrintf("  Simulation Synced\n");
 
@@ -241,12 +246,12 @@ void StreamRPC::RPCSync() {
   network.ckSetReductionClient(cbmain);
 
   // Restart network
-  network.Cycle();
+  network.CycleNetwork();
 }
 
 // Network callback (paused)
 //
-void StreamRPC::RPCPause() {
+void StreamRPC::Pause() {
   // Display some information
   CkPrintf("  Simulation Paused\n");
 

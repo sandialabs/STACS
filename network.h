@@ -16,13 +16,74 @@
 #include <vector>
 #include "typedefs.h"
 #include "timing.h"
-#include "messages.h"
+#include "event.h"
+#include "stream.h"
 #include "ckmulticast.h"
 #include "network.decl.h"
 
 #ifdef STACS_WITH_YARP
 #include <yarp/os/all.h>
 #endif
+
+
+/**************************************************************************
+* Data structures
+**************************************************************************/
+
+// Events
+//
+struct event_t {
+  tick_t diffuse;
+  idx_t type;
+  idx_t source;
+  idx_t index;
+  real_t data;
+  
+  bool operator<(const event_t& event) const {
+    return diffuse < event.diffuse;
+  }
+};
+
+// Records
+//
+struct record_t {
+  tick_t drift;
+  std::vector<real_t> data;
+};
+
+// Record list
+//
+struct recentry_t {
+  tick_t trec;
+  tick_t tfreq;
+  std::vector<idx_t> type;
+  std::vector<idx_t> index;
+  std::vector<idx_t> model;
+  std::vector<idx_t> value;
+};
+
+// Auxiliary state
+//
+struct aux_t {
+  idx_t index;
+  std::vector<idx_t> stateidx;
+  std::vector<idx_t> stickidx;
+};
+
+// PNGs
+//
+struct png_t {
+  tick_t diffuse;
+  idx_t source;
+  std::vector<idx_t> presource;
+  std::vector<tick_t> prediffuse;
+  std::vector<tick_t> postdiffuse;
+
+  bool operator<(const png_t& png) const {
+    return diffuse < png.diffuse;
+  }
+};
+
 
 /**************************************************************************
 * Charm++ Init Nodes
@@ -165,6 +226,10 @@ class mRPC : public CMessage_mRPC {
 /**************************************************************************
 * Network Models (abstract factory pattern)
 **************************************************************************/
+
+#define MODFLAG_DEFAULT     0x00
+#define MODFLAG_ACTIVE      0x01
+#define MODFLAG_PNGMOD      0x10
 
 // Network Model
 //
@@ -430,7 +495,7 @@ class Network : public CBase_Network {
 
     /* Simulation */
     void GoAhead(mGo *msg);
-    void Cycle();
+    void CycleNetwork();
 
     /* Polychronization */
     void FindPNG();
@@ -439,7 +504,6 @@ class Network : public CBase_Network {
     mEvent* BuildPNGSeed(std::vector<event_t>& pngseed);
     void SeedPNG(mEvent *msg);
     void CyclePNG();
-    void CommPNGEvent(mEvent *msg);
 
 #ifdef STACS_WITH_YARP
     /* RPC Control */
@@ -478,7 +542,7 @@ class Network : public CBase_Network {
     /* Network Events */
     std::vector<std::vector<std::vector<event_t>>> event;
         // event queue per vertex per iteration (use as calendar queue)
-    std::vector<std::vector<event_t>> evtaux; // spillover event queue
+    std::vector<std::vector<event_t>> evtaux; // overflow event queue
     std::vector<event_t> evtlog; // event buffer for generated events
     std::vector<event_t> evtext; // external events (and extra spillover)
     /* Repeating Events */
@@ -500,6 +564,7 @@ class Network : public CBase_Network {
     idx_t iter;
     /* Bookkeeping */
     CProxy_NetData netdata;
+    CkCallback cbcycle;
     idx_t prtidx, datidx;
     /* Computation */
     idx_t compidx;

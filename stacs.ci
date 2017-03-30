@@ -5,17 +5,17 @@ mainmodule stacs {
   readonly CkGroupID mCastGrpId;
   readonly idx_t npdat;
   readonly idx_t npnet;
+  readonly std::string netdir;
+  readonly std::string recdir;
   readonly std::string filebase;
-  readonly std::string filein;
   readonly std::string fileout;
-  readonly std::string recbase;
   readonly tick_t tmax;
   readonly tick_t tstep;
+  readonly tick_t tqueue;
   readonly tick_t tcheck;
   readonly tick_t trecord;
   readonly tick_t tdisplay;
-  readonly idx_t evtcal;
-  readonly bool simpause;
+  readonly idx_t equeue;
   readonly idx_t rngseed;
   readonly std::string rpcport;
   readonly idx_t runmode;
@@ -26,11 +26,10 @@ mainmodule stacs {
   
   mainchare Main {
     entry Main(CkArgMsg *msg);
-
-    entry [reductiontarget] void InitSim();
-    entry [reductiontarget] void StartSim();
-    entry [reductiontarget] void StopSim();
-    entry [reductiontarget] void FiniSim();
+    entry [reductiontarget] void Init();
+    entry [reductiontarget] void Start();
+    entry [reductiontarget] void Stop();
+    entry [reductiontarget] void Halt();
     
     entry void CheckNetwork(CkReductionMsg *msg);
     entry void SaveNetwork(CkReductionMsg *msg);
@@ -40,10 +39,10 @@ mainmodule stacs {
   
   chare StreamRPC {
     entry StreamRPC(mVtxDist *msg);
-    entry void Open(CProxy_Network cpnet);
+    entry void Open(CProxy_Network cpnet, bool startpaused);
     entry void Close();
 
-    entry [reductiontarget] void RPCSync();
-    entry [reductiontarget] void RPCPause();
+    entry [reductiontarget] void Sync();
+    entry [reductiontarget] void Pause();
   };
 };

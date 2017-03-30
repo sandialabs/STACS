@@ -9,17 +9,17 @@
 #include <chrono>
 #include <thread>
 
+#define TICKS_PER_MS    1000000 // 1 million
 #define TMAX_DEFAULT    10000.0 // 10s
-#define TDISP_DEFAULT       1.0 // 1ms
 #define TSTEP_DEFAULT       1.0 // 1ms
+#define TQUEUE_DEFAULT     20.0 // 20ms
 #define TCHECK_DEFAULT     50.0 // 50ms
 #define TRECORD_DEFAULT    25.0 // 25ms
-#define TICKS_PER_MS    1000000 // 1 million
-#define EVTCAL_DEFAULT       20 // Days per year
-#define SIMPAUSE_DEFAULT  false // Start unpaused
+#define TDISPLAY_DEFAULT    1.0 // 1ms
 
-#define RUNMODE_DEFAULT       0
-#define RUNMODE_SIM           0
-#define RUNMODE_PNG           1
+#define RUNMODE_TOTAL   2
+#define RUNMODE_SIM     0
+#define RUNMODE_PNG     1
+#define RUNMODE_DEFAULT 0
 
 #endif //__STACS_TIMING_H__

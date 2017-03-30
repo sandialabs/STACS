@@ -18,8 +18,9 @@ extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
-extern /*readonly*/ idx_t evtcal;
+extern /*readonly*/ idx_t equeue;
 extern /*readonly*/ idx_t rngseed;
+extern /*readonly*/ idx_t runmode;
 
 
 /**************************************************************************
@@ -195,6 +196,7 @@ void Network::LoadNetwork(mPart *msg) {
   vtxmodidx.resize(msg->nvtx);
   xyz.resize(msg->nvtx*3);
   pngs.resize(msg->nvtx);
+  pngcan.clear();
   adjcy.resize(msg->nvtx);
   adjmap.clear();
   edgmodidx.resize(msg->nvtx);
@@ -240,7 +242,7 @@ void Network::LoadNetwork(mPart *msg) {
     edgmodidx[i].resize(msg->xadj[i+1] - msg->xadj[i]);
     state[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
     stick[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
-    event[i].resize(evtcal);
+    event[i].resize(equeue);
     nadjcy += adjcy[i].size();
     // copy over vertex data
     state[i][0] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + netmodel[vtxmodidx[i]]->getNState());
@@ -296,8 +298,8 @@ void Network::LoadNetwork(mPart *msg) {
       evtpre.index = msg->index[e];
       evtpre.data = msg->data[e];
       // Add to event queue or spillover
-      if (evtpre.diffuse/tstep < evtcal) {
-        event[i][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
+      if (evtpre.diffuse/tstep < equeue) {
+        event[i][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
       }
       else {
         evtaux[i].push_back(evtpre);
@@ -328,12 +330,18 @@ void Network::LoadNetwork(mPart *msg) {
   // Set up timing
   tsim = 0;
   tdisp = 0;
-  tcomp = 0;
   iter = 0;
   // Set up coordination
   cadjprt[0] = 0;
   cadjprt[1] = 0;
   prtiter = 0;
+  if (runmode == RUNMODE_SIM) {
+    cbcycle = CkCallback(CkIndex_Network::CycleNetwork(), prtidx, thisProxy);
+  }
+  else if (runmode == RUNMODE_PNG) {
+    cbcycle = CkCallback(CkIndex_Network::CyclePNG(), prtidx, thisProxy);
+  }
+
   // Set up checkpointing
   checkiter = (idx_t) (tcheck/tstep);
   // Set up recordning
@@ -344,6 +352,9 @@ void Network::LoadNetwork(mPart *msg) {
 #endif
   // Set up computation
   compidx = 0;
+  ccomp = 0;
+  ncomp = 0;
+  tcomp = 0;
 
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
@@ -531,7 +542,7 @@ void Network::CheckNetwork() {
   netdata(datidx).CheckNetwork(mpart);
     
   // Start a new cycle (checked data sent)
-  thisProxy(prtidx).Cycle();
+  thisProxy(prtidx).CycleNetwork();
 }
 
 // Send network partition to NetData chare array
@@ -568,7 +579,7 @@ void Network::CloseNetwork() {
 void Network::ResetNetwork() {
   for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
     // Clear events
-    for (idx_t j = 0; j < evtcal; ++j) {
+    for (idx_t j = 0; j < equeue; ++j) {
       event[i][j].clear();
     }
     evtaux[i].clear();
@@ -599,13 +610,13 @@ void Network::GoAhead(mGo *msg) {
     ++iter;
 
     // Start a new cycle
-    thisProxy(prtidx).Cycle();
+    thisProxy(prtidx).CycleNetwork();
   }
 }
 
 // Network Simulation Cycle (control flow)
 //
-void Network::Cycle() {
+void Network::CycleNetwork() {
   // Check if simulation time is complete
   if (tsim >= tmax) {
     // return control to main
@@ -652,7 +663,7 @@ void Network::Cycle() {
     }
     
     // Bookkeeping
-    idx_t evtiter = iter%evtcal;
+    idx_t evtiter = iter%equeue;
     tick_t tstop = tsim + tstep;
 
     // Clear event buffer
@@ -755,11 +766,11 @@ void Network::Cycle() {
             if (target & LOCAL_EDGES) {
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               // Jump loops
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < evtcal) {
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
-                    event[i][(evtlog[e].diffuse/tstep)%evtcal].push_back(evtlog[e]);
+                    event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
                   }
                 }
               }
@@ -786,8 +797,8 @@ void Network::Cycle() {
               // vertex to itself
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               evtlog[e].index = 0;
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < evtcal) {
-                event[i][(evtlog[e].diffuse/tstep)%evtcal].push_back(evtlog[e]);
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
+                event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
               }
               else if (evtlog[e].diffuse < tsim + tstep) {
                 // Jump now

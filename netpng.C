@@ -12,17 +12,9 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ CProxy_Main mainProxy;
-extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
-extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ tick_t tcheck;
-extern /*readonly*/ tick_t trecord;
-extern /*readonly*/ tick_t tdisplay;
-extern /*readonly*/ idx_t evtcal;
-extern /*readonly*/ idx_t rngseed;
-extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ idx_t evtcal;
+extern /*readonly*/ idx_t equeue;
 
 
 /**************************************************************************
@@ -147,22 +139,17 @@ void Network::ComputePNG(idx_t npngseeds) {
   // Bookkeeping
   ccomp = 0;
   ncomp = npngseeds;
-
-  // Reset network
-  ResetNetwork();
-  tsim = 0;
-  iter = 0;
-  tcomp = tstep * 100;
+  tcomp = tstep * 150;
   // TODO: make this max png length
 
   // Coordination after reset
-  CkCallback *cb = new CkCallback(CkReductionTarget(Main, ResetPNG), mainProxy);
-  contribute(0, NULL, CkReduction::nop, *cb);
+  thisProxy(prtidx).ComputePNG();
 }
 
 // Coordination for PNG computation
 //
 void Main::ResetPNG() {
+  // TODO: Remove this "barrier"
   // Compute next PNG
   network.ComputePNG();
 }
@@ -214,9 +201,24 @@ void Network::CyclePNG() {
     CkCallback *cb = new CkCallback(CkReductionTarget(Main, ResetPNG), mainProxy);
     contribute(0, NULL, CkReduction::nop, *cb);
   }
+#ifdef STACS_WITH_YARP
+  // Synchronization from RPC
+  else if (iter == synciter) {
+    // Bookkkeeping
+    synciter = IDX_T_MAX;
+
+    // Display synchronization information
+    if (prtidx == 0) {
+      CkPrintf("  Synchronized at iteration %" PRIidx "\n", iter);
+    }
+
+    // move control to sychronization callback
+    contribute(0, NULL, CkReduction::nop);
+  }
+#endif
   else {
     // Bookkeeping
-    idx_t evtiter = iter%evtcal;
+    idx_t evtiter = iter%equeue;
     tick_t tstop = tsim + tstep;
 
     // Clear event buffer
@@ -238,10 +240,10 @@ void Network::CyclePNG() {
         for (std::size_t i = 0; i < repidx[modidx].size(); ++i) {
           evt->index = repidx[modidx][i][1];
           if (evt->index) {
-            netmodel[modidx]->Jump(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
+            netmodel[modidx]->Hop(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
           }
           else {
-            netmodel[modidx]->Jump(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
+            netmodel[modidx]->Hop(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
           }
         }
         // Return model index
@@ -272,11 +274,11 @@ void Network::CyclePNG() {
       while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
         // edge events
         if (evt->index) {
-          netmodel[edgmodidx[i][evt->index-1]]->Jump(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+          netmodel[edgmodidx[i][evt->index-1]]->Hop(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Jump(*evt, state[i], stick[i], vtxaux[i]);
+          netmodel[vtxmodidx[i]]->Hop(*evt, state[i], stick[i], vtxaux[i]);
         }
         ++evt;
       }
@@ -326,11 +328,11 @@ void Network::CyclePNG() {
             if (target & LOCAL_EDGES) {
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               // Jump loops
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < evtcal) {
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
-                    event[i][(evtlog[e].diffuse/tstep)%evtcal].push_back(evtlog[e]);
+                    event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
                   }
                 }
               }
@@ -339,7 +341,7 @@ void Network::CyclePNG() {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Jump(evtlog[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    netmodel[edgmodidx[i][j]]->Hop(evtlog[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
@@ -357,12 +359,12 @@ void Network::CyclePNG() {
               // vertex to itself
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               evtlog[e].index = 0;
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < evtcal) {
-                event[i][(evtlog[e].diffuse/tstep)%evtcal].push_back(evtlog[e]);
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
+                event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
               }
               else if (evtlog[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Jump(evtlog[e], state[i], stick[i], vtxaux[i]);
+                netmodel[vtxmodidx[i]]->Hop(evtlog[e], state[i], stick[i], vtxaux[i]);
               }
               else {
                 evtaux[i].push_back(evtlog[e]);
@@ -377,11 +379,11 @@ void Network::CyclePNG() {
         while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
           // edge events
           if (evt->index) {
-            netmodel[edgmodidx[i][evt->index-1]]->Jump(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+            netmodel[edgmodidx[i][evt->index-1]]->Hop(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Jump(*evt, state[i], stick[i], vtxaux[i]);
+            netmodel[vtxmodidx[i]]->Hop(*evt, state[i], stick[i], vtxaux[i]);
           }
           ++evt;
         }
@@ -393,7 +395,7 @@ void Network::CyclePNG() {
 
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();
-    netgroup.CommPNGEvent(mevent);
+    netgroup.CommEvent(mevent);
     
     // Increment simulated time
     tsim += tstep;
@@ -454,8 +456,8 @@ void Network::SeedPNG(mEvent *msg) {
         evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
         evtpre.index = (*target)[1];
         // Add to event queue or spillover
-        if (evtpre.diffuse/tstep < evtcal) {
-          event[(*target)[0]][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
+        if (evtpre.diffuse/tstep < equeue) {
+          event[(*target)[0]][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
         }
         else {
           evtaux[(*target)[0]].push_back(evtpre);
@@ -468,104 +470,3 @@ void Network::SeedPNG(mEvent *msg) {
   // Start cycle after seeding events
   thisProxy(prtidx).CyclePNG();
 }
-
-// Multicast communication of events during PNG computation
-//
-void Network::CommPNGEvent(mEvent *msg) {
-  // Increment coordination
-  ++cadjprt[(prtiter + (msg->iter - iter))%2];
-  
-  // Event prototype
-  event_t evtpre;
-  tick_t evtdif;
-
-  // Distribute events
-  for (std::size_t i = 0; i < msg->nevent; ++i) {
-    // Fill in prototype
-    evtdif = msg->diffuse[i];
-    evtpre.type = msg->type[i];
-    evtpre.source = msg->source[i];
-    evtpre.data = msg->data[i];
-    // Determine local event target(s)
-    // If index == source (multicast to edges)
-    // If index != source (singlecast to edge)
-    // If index < 0 (singlecast to vertex)
-    if (msg->index[i] == msg->source[i]) {
-      // Find target mapping from source
-      std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = adjmap.find(msg->source[i]);
-      if (targets != adjmap.end()) {
-        for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
-          evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
-          evtpre.index = (*target)[1];
-          // Add to event queue or spillover
-          if ((evtpre.diffuse/tstep - msg->iter) < evtcal) {
-            event[(*target)[0]][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
-          }
-          else if (evtpre.diffuse/tstep < msg->iter) {
-            event[(*target)[0]][(msg->iter+1)%evtcal].push_back(evtpre);
-          }
-          else {
-            evtaux[(*target)[0]].push_back(evtpre);
-          }
-        }
-      }
-    }
-    else if (msg->index[i] < 0) {
-      // Find local target
-      std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find(-(msg->index[i]+1));
-      if (target != vtxmap.end()) {
-        evtpre.diffuse = evtdif; // direct events to vertices have no edge delay
-        evtpre.index = 0;
-        // Add to event queue or spillover
-        if ((evtpre.diffuse/tstep - msg->iter) < evtcal) {
-          event[target->second][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
-        }
-        else if (evtpre.diffuse/tstep < msg->iter) {
-          event[target->second][(msg->iter+1)%evtcal].push_back(evtpre);
-        }
-        else {
-          evtaux[target->second].push_back(evtpre);
-        }
-      }
-    }
-    else {
-      // Find local target
-      std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find(msg->index[i]);
-      if (target != vtxmap.end()) {
-        // Find target mapping from source
-        for (std::size_t j = 0; j < adjcy[target->second].size(); ++j) {
-          if (adjcy[target->second][j] == msg->source[i]) {
-            evtpre.diffuse = evtdif + stick[target->second][j+1][0]; // delay always first stick of edge
-            evtpre.index = j+1; // 0'th entry is vertex
-            // Add to event queue or spillover
-            if ((evtpre.diffuse/tstep - msg->iter) < evtcal) {
-              event[target->second][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
-            }
-            else if (evtpre.diffuse/tstep < msg->iter) {
-              event[target->second][(msg->iter+1)%evtcal].push_back(evtpre);
-            }
-            else {
-              evtaux[target->second].push_back(evtpre);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  delete msg;
-
-  // Start next cycle
-  if (cadjprt[prtiter] == nadjprt) {
-    // Bookkeepping
-    cadjprt[prtiter] = 0;
-    prtiter = (prtiter+1)%2;
-
-    // Increment iteration
-    ++iter;
-
-    // Start a new cycle
-    thisProxy(prtidx).CyclePNG();
-  }
-}
-

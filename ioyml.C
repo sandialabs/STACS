@@ -9,7 +9,6 @@
 
 #include "stacs.h"
 #include "network.h"
-//#include "stream.h"
 
 // Using yaml-cpp (specification version 1.2)
 #include "yaml-cpp/yaml.h"
@@ -19,17 +18,17 @@
 **************************************************************************/
 extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
+extern /*readonly*/ std::string netdir;
+extern /*readonly*/ std::string recdir;
 extern /*readonly*/ std::string filebase;
-extern /*readonly*/ std::string filein;
 extern /*readonly*/ std::string fileout;
-extern /*readonly*/ std::string recbase;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
+extern /*readonly*/ tick_t tqueue;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
-extern /*readonly*/ idx_t evtcal;
-extern /*readonly*/ bool simpause;
+extern /*readonly*/ idx_t equeue;
 extern /*readonly*/ idx_t rngseed;
 extern /*readonly*/ std::string rpcport;
 extern /*readonly*/ idx_t runmode;
@@ -67,19 +66,26 @@ int Main::ParseConfig(std::string configfile) {
     CkPrintf("  npnet: %s\n", e.what());
     return 1;
   }
-  // Network data file
+  // Network data directory
+  try {
+    netdir = config["netdir"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  netdir: %s\n", e.what());
+    return 1;
+  }
+  // Records output directory
+  try {
+    recdir = config["recdir"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  recdir not defined, defaulting to: \"%s\"\n", netdir.c_str());
+    recdir = netdir;
+  }
+  // Network file base name
   try {
     filebase = config["filebase"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  filebase: %s\n", e.what());
     return 1;
-  }
-  // input filename modifications
-  try {
-    filein = config["filein"].as<std::string>();
-  } catch (YAML::RepresentationException& e) {
-    CkPrintf("  filein not defined, defaulting to: \"\"\n");
-    filein = std::string("");
   }
   // output filename modifications
   try {
@@ -87,13 +93,6 @@ int Main::ParseConfig(std::string configfile) {
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  fileout not defined, defaulting to: \".o\"\n");
     fileout = std::string(".o");
-  }
-  // record output base
-  try {
-    recbase = config["recbase"].as<std::string>();
-  } catch (YAML::RepresentationException& e) {
-    CkPrintf("  recbase not defined, defaulting to: \"%s\"\n", filebase.c_str());
-    recbase = filebase;
   }
   // Maximum simulation time (in ms)
   real_t treal;
@@ -112,6 +111,16 @@ int Main::ParseConfig(std::string configfile) {
     CkPrintf("  tstep not defined, defaulting to: %.2g ms\n", treal);
   }
   tstep = (tick_t)(treal*TICKS_PER_MS);
+  // Event queue calendar days per year
+  try {
+    treal = config["tqueue"].as<real_t>();
+  } catch (YAML::RepresentationException& e) {
+    treal = TQUEUE_DEFAULT;
+    CkPrintf("  tqueue not defined, defaulting to: %.2g ms\n", treal);
+    //CkPrintf("  equeue not defined, defaulting to: %d iters\n", equeue);
+  }
+  tqueue = (tick_t)(treal*TICKS_PER_MS);
+  equeue = (tqueue / tstep) + 1;
   // Time between checkpoints (in ms)
   try {
     treal = config["tcheck"].as<real_t>();
@@ -132,23 +141,23 @@ int Main::ParseConfig(std::string configfile) {
   try {
     treal = config["tdisplay"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
-    treal = TDISP_DEFAULT;
+    treal = TDISPLAY_DEFAULT;
     CkPrintf("  tdisplay not defined, defaulting to: %.2g ms\n", treal);
   }
   tdisplay = (tick_t)(treal*TICKS_PER_MS);
-  // Event queue calendar days per year
-  try {
-    evtcal = config["evtcal"].as<idx_t>();
-  } catch (YAML::RepresentationException& e) {
-    evtcal = EVTCAL_DEFAULT;
-    CkPrintf("  evtcal not defined, defaulting to: %d iters\n", evtcal);
-  }
   // Simulation startup
   try {
-    simpause = config["simpause"].as<bool>();
+    startpaused = config["startpaused"].as<bool>();
   } catch (YAML::RepresentationException& e) {
-    simpause = SIMPAUSE_DEFAULT;
-    CkPrintf("  simpause not defined, defaulting to: %s\n", (simpause ? "true" : "false"));
+    startpaused = STARTPAUSED_DEFAULT;
+    CkPrintf("  startpaused not defined, defaulting to: %s\n", (startpaused ? "true" : "false"));
+  }
+  // Network plasticity
+  try {
+    plasticity = config["plasticity"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    plasticity = PLASTICITY_DEFAULT;
+    CkPrintf("  plasticity not defined, defaulting to: %s\n", (plasticity ? "true" : "false"));
   }
   // Random number seed
   try {
@@ -227,10 +236,10 @@ int Main::ParseConfig(std::string configfile) {
 //
 int Main::ReadModel() {
   // Load model file
-  CkPrintf("Loading models from %s.model\n", filebase.c_str());
+  CkPrintf("Loading models from %s/%s.model\n", netdir.c_str(), filebase.c_str());
   YAML::Node modfile;
   try {
-    modfile = YAML::LoadAllFromFile(filebase + ".model");
+    modfile = YAML::LoadAllFromFile(netdir + "/" + filebase + ".model");
   } catch (YAML::BadFile& e) {
     CkPrintf("  %s\n", e.what());
     return 1;

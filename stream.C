@@ -16,7 +16,6 @@ extern /*readonly*/ CProxy_Main mainProxy;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ std::string rpcport;
-extern /*readonly*/ bool simpause;
 
 
 /**************************************************************************
@@ -35,7 +34,7 @@ StreamRPC::StreamRPC(mVtxDist *msg) {
   delete msg;
 
   // Return control to main
-  mainProxy.InitSim();
+  mainProxy.Init();
 }
 
 // StreamRPC migration
@@ -50,7 +49,7 @@ StreamRPC::~StreamRPC() {
 
 // Open RPC port
 //
-void StreamRPC::Open(CProxy_Network cpnet) {
+void StreamRPC::Open(CProxy_Network cpnet, bool startpaused) {
   // Charm++ Coordination
   network = cpnet;
 
@@ -60,15 +59,15 @@ void StreamRPC::Open(CProxy_Network cpnet) {
   // Test port
   if (this->where().getPort() > 0) {
     // Setup callback
-    cbmain = new CkCallback(CkReductionTarget(Main, StopSim), mainProxy);
-    CkCallback *cbp = new CkCallback(CkReductionTarget(StreamRPC, RPCPause), thisProxy);
-    CkCallback *cbs = new CkCallback(CkReductionTarget(StreamRPC, RPCSync), thisProxy);
+    cbmain = new CkCallback(CkReductionTarget(Main, Stop), mainProxy);
+    CkCallback *cbp = new CkCallback(CkReductionTarget(StreamRPC, Pause), thisProxy);
+    CkCallback *cbs = new CkCallback(CkReductionTarget(StreamRPC, Sync), thisProxy);
     // Set RPC reader
     rpcreader = new RPCReader(network, vtxdist, *cbp, *cbs, *cbmain);
     if (rpcreader != NULL) {
       this->setReader(*rpcreader);
 #ifdef STACS_WITH_YARP
-      if (simpause) {
+      if (startpaused) {
         rpcreader->SetSyncFlag(RPCSYNC_SYNCED);
       }
       else {
@@ -184,7 +183,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
 
       // Stop while paused
       CkPrintf("RPC Command: Stopping Simulation\n");
-      mainProxy.StopSim();
+      mainProxy.Stop();
     }
     out.add("received command: stop");
   }

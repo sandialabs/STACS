@@ -1,19 +1,21 @@
 npdat: 4 # 4 data files
 npnet: 8 # 8 network partitions
 
-filebase: "polynet/polynet"
-recbase: "polynet/record/polynet"
+netdir: "polynet"
+recdir: "polynet/record"
+filebase: "polynet"
 
-tmax: 180000    # 3 minutes
-tstep: 1       # 1 millisecond
-tcheck: 10000  # 10 seconds
-trecord: 1000  # 1 second
-tdisplay: 1000 # 1 second
-evtcal: 21     # 21 milliseconds
-simpause: true # start paused
+tmax:   180000  # 3 minutes
+tstep:       1  # 1 millisecond
+tqueue:     20  # 20 milliseconds
+tcheck:  60000  # 1 minute
+trecord:  1000  # 1 second
+tdisplay: 1000  # 1 second
 
 rngseed: 2032
-runmode: png
+runmode: "png"
+startpaused: no
+plasticity: on
 active:
   - izhiex
   - izhiin

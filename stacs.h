@@ -10,7 +10,7 @@
 #include <string>
 #include "typedefs.h"
 #include "timing.h"
-#include "messages.h"
+#include "stream.h"
 #include "ckmulticast.h"
 #include "stacs.decl.h"
 
@@ -18,18 +18,8 @@
 #include <yarp/os/all.h>
 #endif
 
-
-/**************************************************************************
-* Charm++ Messages
-**************************************************************************/
-
-// Graph adjacency distribution (vertex only)
-//
-#define MSG_VtxDist 1
-class mVtxDist : public CMessage_mVtxDist {
-  public:
-    idx_t *vtxdist; // number of vertices in partitions
-};
+#define STARTPAUSED_DEFAULT true // Start paused
+#define PLASTICITY_DEFAULT  true // Plasticity on
 
 
 /**************************************************************************
@@ -46,6 +36,19 @@ struct model_t {
   idx_t nstick;
   std::vector<real_t> param;
   std::vector<std::string> port;
+};
+
+
+/**************************************************************************
+* Charm++ Messages
+**************************************************************************/
+
+// Graph adjacency distribution (vertex only)
+//
+#define MSG_VtxDist 1
+class mVtxDist : public CMessage_mVtxDist {
+  public:
+    idx_t *vtxdist; // number of vertices in partitions
 };
 
 
@@ -73,16 +76,16 @@ class Main : public CBase_Main {
     mVtxDist* BuildVtxDist();
 #endif
 
-    /* Simulation */
-    void InitSim();
-    void StartSim();
-    void StopSim();
-    void FiniSim();
+    /* Stacs */
+    void Init();
+    void Start();
+    void Stop();
+    void Halt();
     
-    /* Persistence */
-    int WriteDist(bool check = false);
+    /* Simulation */
     void CheckNetwork(CkReductionMsg *msg);
     void SaveNetwork(CkReductionMsg *msg);
+    int WriteDist(bool check = false);
 
     /* Polychronization */
     void ResetPNG();
@@ -91,13 +94,17 @@ class Main : public CBase_Main {
     /* Persistence */
     std::vector<dist_t> netdist;
     std::vector<model_t> models;
+    /* Simulation */
+    bool startpaused;
+    bool plasticity;
+    /* Polychronization */
     std::vector<std::string> actives;
     std::vector<std::string> pngmods;
     /* Chare Arrays */
     CProxy_NetData netdata;
     CProxy_Network network;
     /* Timing */
-    std::chrono::system_clock::time_point tstart, tfinish;
+    std::chrono::system_clock::time_point tstart, tstop;
 #ifdef STACS_WITH_YARP
     /* YARP */
     CProxy_StreamRPC streamrpc;
@@ -110,7 +117,7 @@ class Main : public CBase_Main {
 
 
 /**************************************************************************
-* Remote Procedure Call
+* Stream (YARP Remote Procedure Call)
 **************************************************************************/
 
 #ifndef STACS_WITH_YARP
@@ -122,12 +129,11 @@ class StreamRPC : public CBase_StreamRPC {
     StreamRPC(CkMigrateMessage *msg) { delete msg; }
     ~StreamRPC() { }
     /* Stream */
-    void Open(CProxy_Network cpnet) { }
+    void Open(CProxy_Network cpnet, bool startpaused) { }
     void Close() { }
-    void Callback() { }
     /* Synchronization */
-    void RPCSync() { }
-    void RPCPause() { }
+    void Sync() { }
+    void Pause() { }
 };
 #else
 
@@ -170,12 +176,12 @@ class StreamRPC : public yarp::os:: RpcServer, public CBase_StreamRPC {
     ~StreamRPC();
 
     /* Stream */
-    void Open(CProxy_Network cpnet);
+    void Open(CProxy_Network cpnet, bool startpaused);
     void Close();
 
     /* Synchronization */
-    void RPCSync();
-    void RPCPause();
+    void Sync();
+    void Pause();
 
   private:
     /* Network */

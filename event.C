@@ -11,7 +11,7 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ idx_t evtcal;
+extern /*readonly*/ idx_t equeue;
 
 
 /**************************************************************************
@@ -75,11 +75,11 @@ void Network::CommEvent(mEvent *msg) {
           evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
           evtpre.index = (*target)[1];
           // Add to event queue or spillover
-          if ((evtpre.diffuse/tstep - msg->iter) < evtcal) {
-            event[(*target)[0]][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
+          if ((evtpre.diffuse/tstep - msg->iter) < equeue) {
+            event[(*target)[0]][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
           }
           else if (evtpre.diffuse/tstep < msg->iter) {
-            event[(*target)[0]][(msg->iter+1)%evtcal].push_back(evtpre);
+            event[(*target)[0]][(msg->iter+1)%equeue].push_back(evtpre);
           }
           else {
             evtaux[(*target)[0]].push_back(evtpre);
@@ -94,11 +94,11 @@ void Network::CommEvent(mEvent *msg) {
         evtpre.diffuse = evtdif; // direct events to vertices have no edge delay
         evtpre.index = 0;
         // Add to event queue or spillover
-        if ((evtpre.diffuse/tstep - msg->iter) < evtcal) {
-          event[target->second][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
+        if ((evtpre.diffuse/tstep - msg->iter) < equeue) {
+          event[target->second][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
         }
         else if (evtpre.diffuse/tstep < msg->iter) {
-          event[target->second][(msg->iter+1)%evtcal].push_back(evtpre);
+          event[target->second][(msg->iter+1)%equeue].push_back(evtpre);
         }
         else {
           evtaux[target->second].push_back(evtpre);
@@ -115,11 +115,11 @@ void Network::CommEvent(mEvent *msg) {
             evtpre.diffuse = evtdif + stick[target->second][j+1][0]; // delay always first stick of edge
             evtpre.index = j+1; // 0'th entry is vertex
             // Add to event queue or spillover
-            if ((evtpre.diffuse/tstep - msg->iter) < evtcal) {
-              event[target->second][(evtpre.diffuse/tstep)%evtcal].push_back(evtpre);
+            if ((evtpre.diffuse/tstep - msg->iter) < equeue) {
+              event[target->second][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
             }
             else if (evtpre.diffuse/tstep < msg->iter) {
-              event[target->second][(msg->iter+1)%evtcal].push_back(evtpre);
+              event[target->second][(msg->iter+1)%equeue].push_back(evtpre);
             }
             else {
               evtaux[target->second].push_back(evtpre);
@@ -142,7 +142,8 @@ void Network::CommEvent(mEvent *msg) {
     ++iter;
 
     // Start a new cycle
-    thisProxy(prtidx).Cycle();
+    //thisProxy(prtidx).CycleNetwork();
+    cbcycle.send();
   }
 }
 
@@ -157,8 +158,8 @@ void Network::RedisEvent() {
   for (std::size_t i = 0; i < evtaux.size(); ++i) {
     for (std::size_t j = 0; j < evtaux[i].size(); ++j) {
       // Add to event queue or back onto spillover
-      if ((evtaux[i][j].diffuse - tsim)/tstep < evtcal) {
-        event[i][(evtaux[i][j].diffuse/tstep)%evtcal].push_back(evtaux[i][j]);
+      if ((evtaux[i][j].diffuse - tsim)/tstep < equeue) {
+        event[i][(evtaux[i][j].diffuse/tstep)%equeue].push_back(evtaux[i][j]);
       }
       else {
         evtext.push_back(evtaux[i][j]);

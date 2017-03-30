@@ -14,17 +14,17 @@
 /*readonly*/ CkGroupID mCastGrpId;
 /*readonly*/ idx_t npdat;
 /*readonly*/ idx_t npnet;
+/*readonly*/ std::string netdir;
+/*readonly*/ std::string recdir;
 /*readonly*/ std::string filebase;
-/*readonly*/ std::string filein;
 /*readonly*/ std::string fileout;
-/*readonly*/ std::string recbase;
 /*readonly*/ tick_t tmax;
 /*readonly*/ tick_t tstep;
+/*readonly*/ tick_t tqueue;
 /*readonly*/ tick_t tcheck;
 /*readonly*/ tick_t trecord;
 /*readonly*/ tick_t tdisplay;
-/*readonly*/ idx_t evtcal;
-/*readonly*/ bool simpause;
+/*readonly*/ idx_t equeue;
 /*readonly*/ idx_t rngseed;
 /*readonly*/ std::string rpcport;
 /*readonly*/ idx_t runmode;
@@ -114,7 +114,7 @@ Main::Main(CkArgMsg *msg) {
   ninit = 0;
 
   // Setup chare arrays
-  CkCallback *cb = new CkCallback(CkReductionTarget(Main, InitSim), mainProxy);
+  CkCallback *cb = new CkCallback(CkReductionTarget(Main, Init), mainProxy);
   // netdata
   ++ninit;
   mDist *mdist = BuildDist();
@@ -146,48 +146,59 @@ Main::Main(CkMigrateMessage *msg) {
 
 // Coordination for file input, initialized chare arrays
 //
-void Main::InitSim() {
+void Main::Init() {
   // Wait on initialization
   if (++cinit == ninit) {
     CkPrintf("Setting up network parts\n");
 
     // Load data from input files to network parts
-    CkCallback *cb = new CkCallback(CkReductionTarget(Main, StartSim), mainProxy);
+    CkCallback *cb = new CkCallback(CkReductionTarget(Main, Start), mainProxy);
     network.ckSetReductionClient(cb);
     network.LoadNetwork(netdata);
     
 #ifdef STACS_WITH_YARP
     // Open RPC port
-    streamrpc.Open(network);
+    streamrpc.Open(network, startpaused);
 #endif
   }
 }
 
 // Coordination for starting simulation, network partition setup
 //
-void Main::StartSim() {
+void Main::Start() {
   // Start simulation
-  CkCallback *cb = new CkCallback(CkReductionTarget(Main, StopSim), mainProxy);
+  CkCallback *cb = new CkCallback(CkReductionTarget(Main, Stop), mainProxy);
   network.ckSetReductionClient(cb);
 
   if (runmode == RUNMODE_SIM) {
 #ifdef STACS_WITH_YARP
-    if (simpause) {
+    if (startpaused) {
       // Start paused
       CkPrintf("Starting simulation (paused)\n");
     }
     else {
       CkPrintf("Starting simulation\n");
-      network.Cycle();
+      network.CycleNetwork();
     }
 #else
     CkPrintf("Starting simulation\n");
-    network.Cycle();
+    network.CycleNetwork();
 #endif
   }
   else if (runmode == RUNMODE_PNG) {
+#ifdef STACS_WITH_YARP
+    if (startpaused) {
+      // Start paused
+      CkPrintf("Finding polychronous neuronal groups (paused)\n");
+    }
+    else {
+      CkPrintf("Finding polychronous neuronal groups\n");
+      network.CyclePNG();
+    }
+#else
     CkPrintf("Finding polychronous neuronal groups\n");
-    network.FindPNG();
+    network.CyclePNG();
+#endif
   }
 
   // Start timer
@@ -225,13 +236,13 @@ void Main::CheckNetwork(CkReductionMsg *msg) {
 
 // Coordination for stopping simulation
 //
-void Main::StopSim() {
+void Main::Stop() {
   CkPrintf("Stopping simulation\n");
   
   // Stop timer
-  tfinish = std::chrono::system_clock::now();
+  tstop = std::chrono::system_clock::now();
   // Print timing
-  std::chrono::duration<real_t> tduration = std::chrono::duration_cast<std::chrono::milliseconds>(tfinish - tstart);
+  std::chrono::duration<real_t> tduration = std::chrono::duration_cast<std::chrono::milliseconds>(tstop - tstart);
   CkPrintf("Elapsed time (wall clock): %" PRIrealsec " seconds\n", tduration.count());
 
 #ifdef STACS_WITH_YARP
@@ -253,7 +264,7 @@ void Main::StopSim() {
   }
   
   // Set callback for halting
-  CkCallback *cb = new CkCallback(CkReductionTarget(Main, FiniSim), mainProxy);
+  CkCallback *cb = new CkCallback(CkReductionTarget(Main, Halt), mainProxy);
   netdata.ckSetReductionClient(cb);
 }
 
@@ -275,12 +286,12 @@ void Main::SaveNetwork(CkReductionMsg *msg) {
   }
 
   // Finished
-  thisProxy.FiniSim();
+  thisProxy.Halt();
 }
 
 // Finish
 //
-void Main::FiniSim() {
+void Main::Halt() {
   // Everything checks back to here
   if (++chalt == nhalt) {
   

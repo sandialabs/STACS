@@ -17,8 +17,8 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
+extern /*readonly*/ std::string netdir;
 extern /*readonly*/ std::string filebase;
-extern /*readonly*/ std::string filein;
 extern /*readonly*/ std::string fileout;
 extern /*readonly*/ idx_t npnet;
 
@@ -41,7 +41,7 @@ int Main::ReadDist() {
   
   // Open files for reading
   //TODO: change gencsr (how, old me, how?)
-  sprintf(csrfile, "%s.dist%s", filebase.c_str(), filein.c_str());
+  sprintf(csrfile, "%s/%s.dist", netdir.c_str(), filebase.c_str());
   pDist = fopen(csrfile,"r");
   if (pDist == NULL || line == NULL) {
     return 1;
@@ -94,7 +94,7 @@ int Main::WriteDist(bool check) {
   idx_t nevent;
 
   // Open File
-  sprintf(csrfile, "%s.dist%s", filebase.c_str(), fileout.c_str());//(check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s/%s%s.dist", netdir.c_str(), filebase.c_str(), fileout.c_str());//(check ? ".check" : fileout.c_str()));
   pDist = fopen(csrfile,"w");
   if (pDist == NULL) {
     printf("Error opening file for writing\n");
@@ -149,13 +149,13 @@ void NetData::ReadCSR() {
   line = new char[MAXLINE];
   
   // Open files for reading
-  sprintf(csrfile, "%s.coord.%" PRIidx "%s", filebase.c_str(), datidx, filein.c_str());
+  sprintf(csrfile, "%s/%s.coord.%" PRIidx "", netdir.c_str(), filebase.c_str(), datidx);
   pCoord = fopen(csrfile,"r");
-  sprintf(csrfile, "%s.adjcy.%" PRIidx "%s", filebase.c_str(), datidx, filein.c_str());
+  sprintf(csrfile, "%s/%s.adjcy.%" PRIidx "", netdir.c_str(), filebase.c_str(), datidx);
   pAdjcy = fopen(csrfile,"r");
-  sprintf(csrfile, "%s.state.%" PRIidx "%s", filebase.c_str(), datidx, filein.c_str());
+  sprintf(csrfile, "%s/%s.state.%" PRIidx "", netdir.c_str(), filebase.c_str(), datidx);
   pState = fopen(csrfile,"r");
-  sprintf(csrfile, "%s.event.%" PRIidx "%s", filebase.c_str(), datidx, filein.c_str());
+  sprintf(csrfile, "%s/%s.event.%" PRIidx "", netdir.c_str(), filebase.c_str(), datidx);
   pEvent = fopen(csrfile,"r");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL ||
       pEvent == NULL || line == NULL) {
@@ -353,13 +353,13 @@ void NetData::WriteCSR(bool check) {
   char csrfile[100];
 
   // Open files for writing
-  sprintf(csrfile, "%s.coord.%" PRIidx "%s", filebase.c_str(), datidx, fileout.c_str());//(check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s/%s%s.coord.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
   pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s.adjcy.%" PRIidx "%s", filebase.c_str(), datidx, fileout.c_str());//(check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s/%s%s.adjcy.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
   pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s.state.%" PRIidx "%s", filebase.c_str(), datidx, fileout.c_str());//(check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s/%s%s.state.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
   pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s.event.%" PRIidx "%s", filebase.c_str(), datidx, fileout.c_str());//(check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s/%s%s.event.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
   pEvent = fopen(csrfile,"w");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
     CkPrintf("Error opening files for writing %" PRIidx "\n", datidx);

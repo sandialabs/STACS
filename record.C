@@ -9,7 +9,8 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ std::string recbase;
+extern /*readonly*/ std::string recdir;
+extern /*readonly*/ std::string filebase;
 
 
 /**************************************************************************
@@ -113,7 +114,7 @@ void Network::CheckRecord() {
   netdata(datidx).CheckRecord(mrecord);
   
   // Start a new cycle (checked data sent)
-  thisProxy(prtidx).Cycle();
+  thisProxy(prtidx).CycleNetwork();
 }
 
 // Send Records for writing
@@ -187,7 +188,7 @@ void NetData::WriteRecord() {
   char recfile[100];
 
   // Open File
-  sprintf(recfile, "%s.record.%" PRIidx ".%" PRIidx "", recbase.c_str(), datidx, records[0]->iter);
+  sprintf(recfile, "%s/%s.record.%" PRIidx ".%" PRIidx "", recdir.c_str(), filebase.c_str(), datidx, records[0]->iter);
   pRecord = fopen(recfile,"w");
   if (pRecord == NULL) {
     CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
