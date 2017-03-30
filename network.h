@@ -17,7 +17,6 @@
 #include "typedefs.h"
 #include "timing.h"
 #include "event.h"
-#include "stream.h"
 #include "ckmulticast.h"
 #include "network.decl.h"
 
@@ -30,19 +29,9 @@
 * Data structures
 **************************************************************************/
 
-// Events
+// Network Size Distributions
 //
-struct event_t {
-  tick_t diffuse;
-  idx_t type;
-  idx_t source;
-  idx_t index;
-  real_t data;
-  
-  bool operator<(const event_t& event) const {
-    return diffuse < event.diffuse;
-  }
-};
+struct dist_t;
 
 // Records
 //
@@ -75,12 +64,26 @@ struct aux_t {
 struct png_t {
   tick_t diffuse;
   idx_t source;
-  std::vector<idx_t> presource;
-  std::vector<tick_t> prediffuse;
-  std::vector<tick_t> postdiffuse;
+  idx_t presource;
+  tick_t prediffuse;
+  tick_t postdiffuse;
 
   bool operator<(const png_t& png) const {
     return diffuse < png.diffuse;
+  }
+};
+
+// Events
+//
+struct event_t {
+  tick_t diffuse;
+  idx_t type;
+  idx_t source;
+  idx_t index;
+  real_t data;
+  
+  bool operator<(const event_t& event) const {
+    return diffuse < event.diffuse;
   }
 };
 
@@ -99,20 +102,15 @@ CkReductionMsg *minTick(int nMsg, CkReductionMsg **msgs);
 void registerNetDist(void);
 CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs);
 
+// Polychronous Neuronal Group Reduction
+//
+void registerNetPNG(void);
+CkReductionMsg *netPNG(int nMsg, CkReductionMsg **msgs);
+
 
 /**************************************************************************
 * Charm++ Messages
 **************************************************************************/
-
-// Go-ahead
-//
-class mGo : public CkMcastBaseMsg, public CMessage_mGo {
-  public:
-    /* Constructors */
-    mGo(idx_t i) : iter(i) { }
-    /* Bookkeeping */
-    idx_t iter;
-};
 
 // Graph adjacency distribution
 //
@@ -177,22 +175,6 @@ class mPart : public CMessage_mPart {
     idx_t prtidx;
 };
 
-// Network event data
-//
-#define MSG_Event 5
-class mEvent : public CkMcastBaseMsg, public CMessage_mEvent {
-  public:
-    /* Data */
-    tick_t *diffuse;
-    idx_t *type;
-    idx_t *source;
-    idx_t *index;
-    real_t *data;
-    /* Bookkeeping */
-    idx_t iter;
-    idx_t nevent;
-};
-
 // Network record data
 //
 #define MSG_Record 7
@@ -210,6 +192,33 @@ class mRecord : public CMessage_mRecord {
     idx_t iter;
     idx_t nrecevt;
     idx_t nrecord;
+    bool final;
+};
+
+// Go-ahead
+//
+class mGo : public CkMcastBaseMsg, public CMessage_mGo {
+  public:
+    /* Constructors */
+    mGo(idx_t i) : iter(i) { }
+    /* Bookkeeping */
+    idx_t iter;
+};
+
+// Network event data
+//
+#define MSG_Event 5
+class mEvent : public CkMcastBaseMsg, public CMessage_mEvent {
+  public:
+    /* Data */
+    tick_t *diffuse;
+    idx_t *type;
+    idx_t *source;
+    idx_t *index;
+    real_t *data;
+    /* Bookkeeping */
+    idx_t iter;
+    idx_t nevent;
 };
 
 // RPC Command to Network
@@ -385,20 +394,20 @@ class NoneModel : public NetModelTmpl < 0, NoneModel > {
 
 // Network data
 //
-class NetData : public CBase_NetData {
+class Netdata : public CBase_Netdata {
   public:
     /* Constructors and Destructors */
-    NetData(mDist *msg);
-    NetData(CkMigrateMessage *msg);
-    ~NetData();
+    Netdata(mDist *msg);
+    Netdata(CkMigrateMessage *msg);
+    ~Netdata();
 
     /* Persistence */
-    void LoadNetwork(idx_t prtidx, const CkCallback &cb);
-    void ReadCSR();
+    void LoadNetwork(idx_t prtidx, const CkCallback &cbnet);
+    void ReadNetwork();
     void CheckNetwork(mPart *msg);
     void SaveNetwork(mPart *msg);
+    void WriteNetwork();
     void CloseNetwork();
-    void WriteCSR(bool check = false);
 
     /* Recording */
     void CheckRecord(mRecord *msg);
@@ -470,46 +479,46 @@ class Network : public CBase_Network {
     Network(CkMigrateMessage *msg);
     ~Network();
 
-    /* Multicast */
-    void CreateGroup();
-
     /* Persistence */
     mPart* BuildPart();
-    void LoadNetwork(CProxy_NetData cpdat);
     void LoadNetwork(mPart *msg);
     void CheckNetwork();
     void SaveNetwork();
     void CloseNetwork();
     void ResetNetwork();
-
+    
     /* Recording */
     mRecord* BuildRecord();
     void StoreRecord();
     void CheckRecord();
     void SaveRecord();
-
+    
     /* Communication */
+    void CreateGroup();
+    void GoAhead(mGo *msg);
     mEvent* BuildEvent();
     void CommEvent(mEvent *msg);
     void RedisEvent();
-
+    
     /* Simulation */
-    void GoAhead(mGo *msg);
-    void CycleNetwork();
+    void InitSim(CProxy_Netdata cpdat);
+    void CycleSim();
 
     /* Polychronization */
+    void InitPNG(CProxy_Netdata cpdat);
+    void CyclePNG();
     void FindPNG();
-    void ComputePNG(idx_t npngseeds);
+    void EvalPNG(CkReductionMsg *msg);
+    void ComputePNG(idx_t nseeds, idx_t pngidx);
     void ComputePNG();
     mEvent* BuildPNGSeed(std::vector<event_t>& pngseed);
     void SeedPNG(mEvent *msg);
-    void CyclePNG();
 
 #ifdef STACS_WITH_YARP
     /* RPC Control */
-    void RPCMsg(mRPC *msg);
+    void CommRPC(mRPC *msg);
 #else
-    void RPCMsg(mRPC *msg) { delete msg; }
+    void CommRPC(mRPC *msg) { delete msg; }
 #endif
     
   private:
@@ -539,6 +548,7 @@ class Network : public CBase_Network {
     std::vector<std::vector<std::vector<png_t>>> pngs; // PNGs of the vertex (if applicable)
     std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex
     std::vector<png_t> pngcan; // Candidate PNG
+    std::vector<png_t> pngaux; // Additional PNG
     /* Network Events */
     std::vector<std::vector<std::vector<event_t>>> event;
         // event queue per vertex per iteration (use as calendar queue)
@@ -563,11 +573,12 @@ class Network : public CBase_Network {
     tick_t tdisp;
     idx_t iter;
     /* Bookkeeping */
-    CProxy_NetData netdata;
-    CkCallback cbcycle;
+    CProxy_Netdata netdata;
+    CkCallback cbcycleprt;
     idx_t prtidx, datidx;
     /* Computation */
     idx_t compidx;
+    idx_t evalidx;
     idx_t ncomp, ccomp;
     tick_t tcomp;
     /* Coordination */

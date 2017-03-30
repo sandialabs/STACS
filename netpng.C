@@ -4,17 +4,38 @@
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
 
-#include "stacs.h"
 #include "network.h"
 
 
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ CProxy_Main mainProxy;
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t equeue;
+
+
+/**************************************************************************
+* Reduction for PNGs
+**************************************************************************/
+
+CkReduction::reducerType net_png;
+/*initnode*/
+void registerNetPNG(void) {
+  net_png = CkReduction::addReducer(netPNG);
+}
+
+CkReductionMsg *netPNG(int nMsg, CkReductionMsg **msgs) {
+  std::vector<png_t> ret;
+  ret.clear();
+  for (int i = 0; i < nMsg; i++) {
+    for (std::size_t j = 0; j < msgs[i]->getSize()/sizeof(png_t); ++j) {
+      // Extract data and reduce 
+      ret.push_back(*((png_t *)msgs[i]->getData() + j));
+    }
+  }
+  return CkReductionMsg::buildNew(ret.size()*sizeof(png_t), ret.data());
+}
 
 
 /**************************************************************************
@@ -74,7 +95,7 @@ void Network::FindPNG() {
                 evtpre.index = anchor[j2]+1;
                 netmodel[edgmodidx[i][anchor[j2]]]->Hop(evtpre, state[i], stick[i], edgaux[edgmodidx[i][anchor[j2]]][vtxmodidx[i]]);
                 tick_t tdrift = 0;
-                tick_t tstop = tstep * 10; // Strongly spiking triplets only
+                tick_t tstop = tstep * 4; // Strongly spiking triplets only
                 while (tdrift < tstop) {
                   // Step through model drift (vertex)
                   tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], evtlog);
@@ -113,7 +134,7 @@ void Network::FindPNG() {
           ncomp = pngseeds.size();
           // Display computation information
           CkPrintf("    Computing PNGs for vertex %" PRIidx " with %" PRIidx "\n", compidx, ncomp);
-          thisProxy.ComputePNG((ncomp > 10) ? 10 : ncomp);
+          thisProxy.ComputePNG(((ncomp > 10) ? 10 : ncomp), prtidx);
         }
       }
       else {
@@ -135,10 +156,11 @@ void Network::FindPNG() {
 
 // Initial setup for PNG computation
 //
-void Network::ComputePNG(idx_t npngseeds) {
+void Network::ComputePNG(idx_t nseeds, idx_t pngidx) {
   // Bookkeeping
   ccomp = 0;
-  ncomp = npngseeds;
+  ncomp = nseeds;
+  evalidx = pngidx;
   tcomp = tstep * 150;
   // TODO: make this max png length
 
@@ -148,10 +170,19 @@ void Network::ComputePNG(idx_t npngseeds) {
 
 // Coordination for PNG computation
 //
-void Main::ResetPNG() {
-  // TODO: Remove this "barrier"
+void Network::EvalPNG(CkReductionMsg *msg) {
+  // Add to png candidate
+  for (std::size_t i = 0; i < (msg->getSize())/sizeof(png_t); ++i) {
+    pngcan.push_back(*((png_t *)msg->getData()+i));
+  }
+  delete msg;
+
+  //if (pngcan.size() > minpngsize) {
+  //  pngs[i].push_back(pngcan);
+  //}
+    
   // Compute next PNG
-  network.ComputePNG();
+  thisProxy.ComputePNG();
 }
 
 // Compute PNG (vertex control loop)
@@ -160,6 +191,7 @@ void Network::ComputePNG() {
   // Loop through PNG seeds
   if (ccomp < ncomp) {
     pngcan.clear();
+    pngaux.clear();
     if (pngseeds.size()) {
       // Initialize candidate PNG
       pngcan.resize(pngseeds[ccomp].size());
@@ -188,18 +220,16 @@ void Network::ComputePNG() {
 void Network::CyclePNG() {
   // Check if computation is complete
   if (tsim >= tcomp) {
-    //if (pngcan.size() > minpngsize) {
-    //  pngs[i].push_back(pngcan);
-    //}
-    
     // Reset network
     ResetNetwork();
     tsim = 0;
     iter = 0;
     
     // Coordination after reset
-    CkCallback *cb = new CkCallback(CkReductionTarget(Main, ResetPNG), mainProxy);
-    contribute(0, NULL, CkReduction::nop, *cb);
+    // Reduce PNG information
+    CkCallback *cb = new CkCallback(CkIndex_Network::EvalPNG(NULL), evalidx, thisProxy);
+    //contribute(0, NULL, CkReduction::nop, *cb);
+    contribute(sizeof(png_t), pngaux.data(), net_png, *cb);
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Felix Wang
+ * Copyright (C) 2017 Felix Wang
  *
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
@@ -40,25 +40,5 @@ typedef int16_t     sample_t;
 #define IDX_T_MAX   0x7FFFFFFFFFFFFFFF
 #define UIDX_T_MAX  0xFFFFFFFFFFFFFFFF
 #define TICK_T_MAX  0xFFFFFFFFFFFFFFFF
-
-
-/**************************************************************************
-* Data structures
-**************************************************************************/
-
-// Size Distributions
-//
-struct dist_t {
-  idx_t prtidx;
-  idx_t nvtx;
-  idx_t nedg;
-  idx_t nstate;
-  idx_t nstick;
-  idx_t nevent;
-
-  bool operator<(const dist_t& dist) const {
-    return prtidx < dist.prtidx;
-  }
-};
 
 #endif //__STACS_TYPEDEFS_H__

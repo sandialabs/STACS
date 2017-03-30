@@ -17,11 +17,12 @@ mainmodule stacs {
   readonly tick_t tdisplay;
   readonly idx_t equeue;
   readonly idx_t rngseed;
-  readonly std::string rpcport;
   readonly idx_t runmode;
   
-  message mVtxDist {
+  message mVtxs {
     idx_t vtxdist[];
+    char rpcport[];
+    idx_t xrpcport;
   };
   
   mainchare Main {
@@ -31,16 +32,14 @@ mainmodule stacs {
     entry [reductiontarget] void Stop();
     entry [reductiontarget] void Halt();
     
-    entry void CheckNetwork(CkReductionMsg *msg);
-    entry void SaveNetwork(CkReductionMsg *msg);
-
-    entry [reductiontarget] void ResetPNG();
+    entry void CheckDist(CkReductionMsg *msg);
+    entry void SaveDist(CkReductionMsg *msg);
   };
   
-  chare StreamRPC {
-    entry StreamRPC(mVtxDist *msg);
-    entry void Open(CProxy_Network cpnet, bool startpaused);
-    entry void Close();
+  chare Stream {
+    entry Stream(mVtxs *msg);
+    entry void OpenRPC(CProxy_Network cpnet, const CkCallback &cbcyc, bool paused);
+    entry void CloseRPC();
 
     entry [reductiontarget] void Sync();
     entry [reductiontarget] void Pause();

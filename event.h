@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Felix Wang
+ * Copyright (C) 2017 Felix Wang
  *
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
@@ -18,9 +18,5 @@
 #define REMOTE_VERTEX       0x00100
 #define LOCAL_EDGES         0x01000
 #define LOCAL_VERTEX        0x10000
-
-#define RECORD_STATE        0
-#define RECORD_STICK        1
-#define RECORD_COORD        2
 
 #endif //__STACS_EVENT_H__

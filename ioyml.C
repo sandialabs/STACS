@@ -30,7 +30,6 @@ extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t equeue;
 extern /*readonly*/ idx_t rngseed;
-extern /*readonly*/ std::string rpcport;
 extern /*readonly*/ idx_t runmode;
 
 
@@ -167,13 +166,15 @@ int Main::ParseConfig(std::string configfile) {
     rngseed = rd();
     CkPrintf("  rngseed not defined, seeding with: %" PRIidx "\n", rngseed);
   }
+#ifdef STACS_WITH_YARP
   // RPC port
   try {
-    rpcport = config["rpcport"].as<std::string>();
+    rpcport = config["rpcportname"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    rpcport = RPCPORT_DEFAULT;
-    CkPrintf("  rpcport not defined, defaulting to: %s\n", rpcport.c_str());
+    rpcport = RPCPORTNAME_DEFAULT;
+    CkPrintf("  rpcportname not defined, defaulting to: %s\n", rpcport.c_str());
   }
+#endif
   // Run mode
   std::string modestring;
   try {

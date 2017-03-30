@@ -147,19 +147,25 @@ mModel* Main::BuildModel() {
 #ifdef STACS_WITH_YARP
 // Build graph adjacency information (just vertices)
 //
-mVtxDist* Main::BuildVtxDist() {
+mVtxs* Main::BuildVtxs() {
   // Initialize distribution message
-  int msgSize[MSG_VtxDist];
+  int msgSize[MSG_Vtxs];
   msgSize[0] = npnet+1; // vtxdist
-  mVtxDist *mvtxdist = new(msgSize, 0) mVtxDist;
+  msgSize[1] = rpcport.size(); // rpcport
+  mVtxs *mvtxs = new(msgSize, 0) mVtxs;
 
   // Get distribution info
   for (idx_t i = 0; i < npnet+1; ++i) {
     //vtxdist
-    mvtxdist->vtxdist[i] = netdist[i].nvtx;
+    mvtxs->vtxdist[i] = netdist[i].nvtx;
+  }
+  // RPC port
+  mvtxs->xrpcport = rpcport.size();
+  for (std::size_t c = 0; c < rpcport.size(); ++c) {
+    mvtxs->rpcport[c] = rpcport[c];
   }
 
   // Return distribution message
-  return mvtxdist;
+  return mvtxs;
 }
 #endif

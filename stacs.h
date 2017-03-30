@@ -10,7 +10,6 @@
 #include <string>
 #include "typedefs.h"
 #include "timing.h"
-#include "stream.h"
 #include "ckmulticast.h"
 #include "stacs.decl.h"
 
@@ -18,15 +17,35 @@
 #include <yarp/os/all.h>
 #endif
 
+#define RUNMODE_TOTAL   2 
+#define RUNMODE_SIM     0 
+#define RUNMODE_PNG     1 
+#define RUNMODE_DEFAULT 0
+
+#define RPCPORTNAME_DEFAULT "/stacs/rpc"
 #define STARTPAUSED_DEFAULT true // Start paused
 #define PLASTICITY_DEFAULT  true // Plasticity on
-
 
 /**************************************************************************
 * Data structures
 **************************************************************************/
 
-// Model
+// Network Size Distributions
+//
+struct dist_t {
+  idx_t prtidx;
+  idx_t nvtx;
+  idx_t nedg;
+  idx_t nstate;
+  idx_t nstick;
+  idx_t nevent;
+
+  bool operator<(const dist_t& dist) const {
+    return prtidx < dist.prtidx;
+  }
+};
+
+// Network Models
 //
 struct model_t {
   std::string modname;
@@ -45,10 +64,12 @@ struct model_t {
 
 // Graph adjacency distribution (vertex only)
 //
-#define MSG_VtxDist 1
-class mVtxDist : public CMessage_mVtxDist {
+#define MSG_Vtxs 2
+class mVtxs : public CMessage_mVtxs {
   public:
     idx_t *vtxdist; // number of vertices in partitions
+    char *rpcport; // yarp rpc port name
+    idx_t xrpcport;
 };
 
 
@@ -73,7 +94,7 @@ class Main : public CBase_Main {
     mDist* BuildDist();
     mModel* BuildModel();
 #ifdef STACS_WITH_YARP
-    mVtxDist* BuildVtxDist();
+    mVtxs* BuildVtxs();
 #endif
 
     /* Stacs */
@@ -82,37 +103,34 @@ class Main : public CBase_Main {
     void Stop();
     void Halt();
     
-    /* Simulation */
-    void CheckNetwork(CkReductionMsg *msg);
-    void SaveNetwork(CkReductionMsg *msg);
-    int WriteDist(bool check = false);
-
-    /* Polychronization */
-    void ResetPNG();
+    /* Persistence */
+    void CheckDist(CkReductionMsg *msg);
+    void SaveDist(CkReductionMsg *msg);
+    int WriteDist();
 
   private:
-    /* Persistence */
+    /* Chare Arrays */
+    CProxy_Netdata netdata;
+    CProxy_Network network;
+    /* Configuration */
     std::vector<dist_t> netdist;
     std::vector<model_t> models;
-    /* Simulation */
     bool startpaused;
     bool plasticity;
-    /* Polychronization */
     std::vector<std::string> actives;
     std::vector<std::string> pngmods;
-    /* Chare Arrays */
-    CProxy_NetData netdata;
-    CProxy_Network network;
+    CkCallback cbcycle;
     /* Timing */
     std::chrono::system_clock::time_point tstart, tstop;
-#ifdef STACS_WITH_YARP
-    /* YARP */
-    CProxy_StreamRPC streamrpc;
-    yarp::os::Network yarp;
-#endif
     /* Bookkeeping */
     int ninit, cinit;
     int nhalt, chalt;
+#ifdef STACS_WITH_YARP
+    /* YARP */
+    CProxy_Stream stream;
+    yarp::os::Network yarp;
+    std::string rpcport;
+#endif
 };
 
 
@@ -122,15 +140,15 @@ class Main : public CBase_Main {
 
 #ifndef STACS_WITH_YARP
 // Empty classes if no YARP
-class StreamRPC : public CBase_StreamRPC {
+class Stream : public CBase_Stream {
   public:
     /* Constructors and Destructors */
-    StreamRPC(mVtxDist *msg) { delete msg; }
-    StreamRPC(CkMigrateMessage *msg) { delete msg; }
-    ~StreamRPC() { }
+    Stream(mVtxs *msg) { delete msg; }
+    Stream(CkMigrateMessage *msg) { delete msg; }
+    ~Stream() { }
     /* Stream */
-    void Open(CProxy_Network cpnet, bool startpaused) { }
-    void Close() { }
+    void OpenRPC(CProxy_Network cpnet, const CkCallback &cbcyc, bool paused) { }
+    void CloseRPC() { }
     /* Synchronization */
     void Sync() { }
     void Pause() { }
@@ -142,15 +160,17 @@ class StreamRPC : public CBase_StreamRPC {
 class RPCReader : public yarp::os::PortReader {
   public:
     /* Constructors and Destructors */
-    RPCReader(CProxy_Network n, std::vector<idx_t>& v,
-        const CkCallback &cbp, const CkCallback &cbs, const CkCallback &cbm) :
-      network(n), vtxdist(v), cbpause(cbp), cbsync(cbs), cbmain(cbm) { }
+    RPCReader(CProxy_Network cpn, std::vector<idx_t>& vtxs,
+        const CkCallback &cbp, const CkCallback &cbs,
+        const CkCallback &cbm, const CkCallback &cbc) :
+      network(cpn), vtxdist(vtxs), cbpause(cbp), cbsync(cbs),
+      cbmain(cbm), cbcycle(cbc) { }
 
     /* Reader */
     virtual bool read(yarp::os::ConnectionReader& connection);
 
     /* RPC Messages */
-    mRPC* BuildRPCMsg(idx_t command, yarp::os::Bottle message);
+    mRPC* BuildRPC(idx_t command, yarp::os::Bottle message);
 
     /* Coordination */
     void SetSyncFlag(idx_t sf) { syncflag = sf; }
@@ -162,22 +182,23 @@ class RPCReader : public yarp::os::PortReader {
     CkCallback cbpause;
     CkCallback cbsync;
     CkCallback cbmain;
+    CkCallback cbcycle;
     /* Coordination */
     idx_t syncflag;
 };
 
 // Port server (server)
 //
-class StreamRPC : public yarp::os:: RpcServer, public CBase_StreamRPC {
+class Stream : public yarp::os:: RpcServer, public CBase_Stream {
   public:
     /* Constructors and Destructors */
-    StreamRPC(mVtxDist *msg);
-    StreamRPC(CkMigrateMessage *msg);
-    ~StreamRPC();
+    Stream(mVtxs *msg);
+    Stream(CkMigrateMessage *msg);
+    ~Stream();
 
     /* Stream */
-    void Open(CProxy_Network cpnet, bool startpaused);
-    void Close();
+    void OpenRPC(CProxy_Network cpnet, const CkCallback &cbcyc, bool paused);
+    void CloseRPC();
 
     /* Synchronization */
     void Sync();
@@ -187,10 +208,12 @@ class StreamRPC : public yarp::os:: RpcServer, public CBase_StreamRPC {
     /* Network */
     CProxy_Network network;
     std::vector<idx_t> vtxdist;
-    /* Reader */
+    /* Callbacks */
+    CkCallback cbmain;
+    CkCallback cbcycle;
+    /* Remote Procedure Call */
+    std::string rpcport;
     RPCReader *rpcreader;
-    /* Coordination */
-    CkCallback *cbmain;
 };
 
 #endif //STACS_WITH_YARP

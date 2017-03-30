@@ -82,7 +82,7 @@ int Main::ReadDist() {
 
 // Write graph adjacency distribution
 //
-int Main::WriteDist(bool check) {
+int Main::WriteDist() {
   /* File operations */
   FILE *pDist;
   char csrfile[100];
@@ -129,7 +129,7 @@ int Main::WriteDist(bool check) {
 
 // Read in network files
 //
-void NetData::ReadCSR() {
+void Netdata::ReadNetwork() {
   /* File operations */
   FILE *pCoord;
   FILE *pAdjcy;
@@ -344,7 +344,7 @@ void NetData::ReadCSR() {
     
 // Write out network files
 //
-void NetData::WriteCSR(bool check) {
+void Netdata::WriteNetwork() {
   /* File operations */
   FILE *pCoord;
   FILE *pAdjcy;

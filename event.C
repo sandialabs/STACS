@@ -143,7 +143,7 @@ void Network::CommEvent(mEvent *msg) {
 
     // Start a new cycle
     //thisProxy(prtidx).CycleNetwork();
-    cbcycle.send();
+    cbcycleprt.send();
   }
 }
 

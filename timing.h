@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Felix Wang
+ * Copyright (C) 2017 Felix Wang
  *
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
@@ -16,10 +16,5 @@
 #define TCHECK_DEFAULT     50.0 // 50ms
 #define TRECORD_DEFAULT    25.0 // 25ms
 #define TDISPLAY_DEFAULT    1.0 // 1ms
-
-#define RUNMODE_TOTAL   2
-#define RUNMODE_SIM     0
-#define RUNMODE_PNG     1
-#define RUNMODE_DEFAULT 0
 
 #endif //__STACS_TIMING_H__

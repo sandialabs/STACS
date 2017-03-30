@@ -5,7 +5,6 @@
  */
 
 #include "stacs.h"
-#include "pup_stl.h"
 
 /**************************************************************************
 * Charm++ Read-Only Variables
@@ -26,7 +25,6 @@
 /*readonly*/ tick_t tdisplay;
 /*readonly*/ idx_t equeue;
 /*readonly*/ idx_t rngseed;
-/*readonly*/ std::string rpcport;
 /*readonly*/ idx_t runmode;
 
 
@@ -118,7 +116,7 @@ Main::Main(CkArgMsg *msg) {
   // netdata
   ++ninit;
   mDist *mdist = BuildDist();
-  netdata = CProxy_NetData::ckNew(mdist, npdat);
+  netdata = CProxy_Netdata::ckNew(mdist, npdat);
   netdata.ckSetReductionClient(cb);
   // network
   ++ninit;
@@ -126,10 +124,10 @@ Main::Main(CkArgMsg *msg) {
   network = CProxy_Network::ckNew(mmodel, npnet);
   network.ckSetReductionClient(cb);
 #ifdef STACS_WITH_YARP
-  // streamrpc
+  // stream
   ++ninit;
-  mVtxDist *mvtxdist = BuildVtxDist();
-  streamrpc = CProxy_StreamRPC::ckNew(mvtxdist);
+  mVtxs *mvtxs = BuildVtxs();
+  stream = CProxy_Stream::ckNew(mvtxs);
 #endif
 }
 
@@ -154,11 +152,19 @@ void Main::Init() {
     // Load data from input files to network parts
     CkCallback *cb = new CkCallback(CkReductionTarget(Main, Start), mainProxy);
     network.ckSetReductionClient(cb);
-    network.LoadNetwork(netdata);
+
+    if (runmode == RUNMODE_SIM) {
+      cbcycle = CkCallback(CkIndex_Network::CycleSim(), network);
+      network.InitSim(netdata);
+    }
+    else if (runmode == RUNMODE_PNG) {
+      cbcycle = CkCallback(CkIndex_Network::CyclePNG(), network);
+      network.InitPNG(netdata);
+    }
     
 #ifdef STACS_WITH_YARP
     // Open RPC port
-    streamrpc.Open(network, startpaused);
+    stream.OpenRPC(network, cbcycle, startpaused);
 #endif
   }
 }
@@ -170,65 +176,24 @@ void Main::Start() {
   CkCallback *cb = new CkCallback(CkReductionTarget(Main, Stop), mainProxy);
   network.ckSetReductionClient(cb);
 
-  if (runmode == RUNMODE_SIM) {
 #ifdef STACS_WITH_YARP
-    if (startpaused) {
-      // Start paused
-      CkPrintf("Starting simulation (paused)\n");
-    }
-    else {
-      CkPrintf("Starting simulation\n");
-      network.CycleNetwork();
-    }
-#else
+  if (startpaused) {
+    // Start paused
+    CkPrintf("Starting simulation (paused)\n");
+  }
+  else {
     CkPrintf("Starting simulation\n");
-    network.CycleNetwork();
-#endif
+    cbcycle.send();
   }
-  else if (runmode == RUNMODE_PNG) {
-#ifdef STACS_WITH_YARP
-    if (startpaused) {
-      // Start paused
-      CkPrintf("Finding polychronous neuronal groups (paused)\n");
-    }
-    else {
-      CkPrintf("Finding polychronous neuronal groups\n");
-      network.CyclePNG();
-    }
 #else
-    CkPrintf("Finding polychronous neuronal groups\n");
-    network.CyclePNG();
+  CkPrintf("Starting simulation\n");
+  cbcycle.send();
 #endif
-  }
 
   // Start timer
   tstart = std::chrono::system_clock::now();
 }
 
-
-/**************************************************************************
-* Simulation Coordination
-**************************************************************************/
-
-// Coordination for checkpointing simulation
-//
-void Main::CheckNetwork(CkReductionMsg *msg) {
-  //CkPrintf("Checkpointing simulation\n");
-  
-  // Save network part distribution to local
-  netdist.clear();
-  for (std::size_t i = 0; i < (msg->getSize())/sizeof(dist_t); ++i) {
-    netdist.push_back(*((dist_t *)msg->getData()+i));
-  }
-  delete msg;
-
-  // Write distribution
-  CkPrintf("  Checking network distribution\n");
-  if (WriteDist(true)) {
-    CkPrintf("Error writing distribution...\n");
-    CkExit();
-  }
-}
 
 /**************************************************************************
 * Simulation Shutdown
@@ -247,7 +212,7 @@ void Main::Stop() {
 
 #ifdef STACS_WITH_YARP
   // Close RPC port
-  streamrpc.Close();
+  stream.CloseRPC();
 #endif
 
   // Save data from network parts to output files
@@ -266,27 +231,6 @@ void Main::Stop() {
   // Set callback for halting
   CkCallback *cb = new CkCallback(CkReductionTarget(Main, Halt), mainProxy);
   netdata.ckSetReductionClient(cb);
-}
-
-// Coordination for file output
-//
-void Main::SaveNetwork(CkReductionMsg *msg) {
-  // Save network part distribution to local
-  netdist.clear();
-  for (std::size_t i = 0; i < (msg->getSize())/sizeof(dist_t); ++i) {
-    netdist.push_back(*((dist_t *)msg->getData()+i));
-  }
-  delete msg;
-
-  // Write distribution
-  CkPrintf("  Writing network distribution\n");
-  if (WriteDist()) {
-    CkPrintf("Error writing distribution...\n");
-    CkExit();
-  }
-
-  // Finished
-  thisProxy.Halt();
 }
 
 // Finish

@@ -1,11 +1,8 @@
 module network {
   initnode void registerMinTick(void);
   initnode void registerNetDist(void);
+  initnode void registerNetPNG(void);
 
-  message mGo {
-    idx_t iter;
-  };
-  
   message mDist {
     idx_t vtxdist[];
     idx_t edgdist[];
@@ -52,17 +49,7 @@ module network {
     idx_t nevent;
     idx_t prtidx;
   };
-
-  message mEvent {
-    tick_t diffuse[];
-    idx_t type[];
-    idx_t source[];
-    idx_t index[];
-    real_t data[];
-    idx_t iter;
-    idx_t nevent;
-  };
-
+  
   message mRecord {
     tick_t diffuse[];
     idx_t type[];
@@ -77,44 +64,59 @@ module network {
     idx_t nrecord;
   };
   
+  message mGo {
+    idx_t iter;
+  };
+
+  message mEvent {
+    tick_t diffuse[];
+    idx_t type[];
+    idx_t source[];
+    idx_t index[];
+    real_t data[];
+    idx_t iter;
+    idx_t nevent;
+  };
+
   message mRPC {
     real_t rpcdata[];
     idx_t nrpcdata;
     idx_t command;
   };
   
-  array [1D] NetData {
-    entry NetData(mDist *msg);
+  array [1D] Netdata {
+    entry Netdata(mDist *msg);
+    entry void LoadNetwork(int prtidx, const CkCallback &cbnet);
+    entry void CloseNetwork();
     
-    entry void LoadNetwork(int prtidx, const CkCallback &cb);
     entry void CheckNetwork(mPart *msg);
     entry void SaveNetwork(mPart *msg);
-    entry void CloseNetwork();
-
     entry void CheckRecord(mRecord *msg);
     entry void SaveRecord(mRecord *msg);
   };
 
   array [1D] Network {
     entry Network(mModel *msg);
-    entry void GoAhead(mGo *msg);
-    entry void RPCMsg(mRPC *msg);
-
-    entry void LoadNetwork(CProxy_NetData cpdat);
     entry void LoadNetwork(mPart *msg);
+    entry void CloseNetwork();
     entry void CheckNetwork();
     entry void SaveNetwork();
-    entry void CloseNetwork();
     entry void CheckRecord();
     entry void SaveRecord();
     
-    entry void CycleNetwork();
+    entry void GoAhead(mGo *msg);
     entry void CommEvent(mEvent *msg);
+    entry void CommRPC(mRPC *msg);
+   
+    entry void InitSim(CProxy_Netdata cpdat);
+    entry void CycleSim();
     
-    entry void FindPNG();
-    entry void ComputePNG(idx_t npngseeds);
-    entry void ComputePNG();
-    entry void SeedPNG(mEvent *msg);
+    entry void InitPNG(CProxy_Netdata cpdat);
     entry void CyclePNG();
+    entry void FindPNG();
+    entry void EvalPNG(CkReductionMsg *msg);
+    entry void SeedPNG(mEvent *msg);
+    entry void ComputePNG(idx_t nseeds, idx_t pngidx);
+    entry void ComputePNG();
   };
 };

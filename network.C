@@ -5,7 +5,6 @@
  */
 
 #include "network.h"
-#include "pup_stl.h"
 
 /**************************************************************************
 * Charm++ Read-Only Variables
@@ -167,16 +166,29 @@ Network::~Network() {
 
 // Coordination with NetData chare array
 //
-void Network::LoadNetwork(CProxy_NetData cpdat) {
-  // Save proxy
+void Network::InitSim(CProxy_Netdata cpdat) {
+  // Set proxies
   netdata = cpdat;
+  cbcycleprt = CkCallback(CkIndex_Network::CycleSim(), prtidx, thisProxy);
   
   // Request network part from input
-  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), thisIndex, thisProxy);
+  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
   netdata(datidx).LoadNetwork(prtidx, *cb);
 }
 
-// Receive data from NetData chare array
+// Coordination with NetData chare array
+//
+void Network::InitPNG(CProxy_Netdata cpdat) {
+  // Set proxies
+  netdata = cpdat;
+  cbcycleprt = CkCallback(CkIndex_Network::CyclePNG(), prtidx, thisProxy);
+  
+  // Request network part from input
+  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
+  netdata(datidx).LoadNetwork(prtidx, *cb);
+}
+
+// Receive data from Netdata chare array
 //
 void Network::LoadNetwork(mPart *msg) {
   /* Bookkeeping */
@@ -197,6 +209,7 @@ void Network::LoadNetwork(mPart *msg) {
   xyz.resize(msg->nvtx*3);
   pngs.resize(msg->nvtx);
   pngcan.clear();
+  pngaux.clear();
   adjcy.resize(msg->nvtx);
   adjmap.clear();
   edgmodidx.resize(msg->nvtx);
@@ -335,12 +348,6 @@ void Network::LoadNetwork(mPart *msg) {
   cadjprt[0] = 0;
   cadjprt[1] = 0;
   prtiter = 0;
-  if (runmode == RUNMODE_SIM) {
-    cbcycle = CkCallback(CkIndex_Network::CycleNetwork(), prtidx, thisProxy);
-  }
-  else if (runmode == RUNMODE_PNG) {
-    cbcycle = CkCallback(CkIndex_Network::CyclePNG(), prtidx, thisProxy);
-  }
 
   // Set up checkpointing
   checkiter = (idx_t) (tcheck/tstep);
@@ -352,6 +359,7 @@ void Network::LoadNetwork(mPart *msg) {
 #endif
   // Set up computation
   compidx = 0;
+  evalidx = 0;
   ccomp = 0;
   ncomp = 0;
   tcomp = 0;
@@ -534,7 +542,7 @@ mPart* Network::BuildPart() {
   return mpart;
 }
 
-// Send network partition to NetData chare array (checkpointing)
+// Send network partition to Netdata chare array (checkpointing)
 //
 void Network::CheckNetwork() {
   // Build network part message for saving
@@ -542,10 +550,11 @@ void Network::CheckNetwork() {
   netdata(datidx).CheckNetwork(mpart);
     
   // Start a new cycle (checked data sent)
-  thisProxy(prtidx).CycleNetwork();
+  //thisProxy(prtidx).CycleNetwork();
+  cbcycleprt.send();
 }
 
-// Send network partition to NetData chare array
+// Send network partition to Netdata chare array
 //
 void Network::SaveNetwork() {
   // Close ports as needed
@@ -610,13 +619,14 @@ void Network::GoAhead(mGo *msg) {
     ++iter;
 
     // Start a new cycle
-    thisProxy(prtidx).CycleNetwork();
+    //thisProxy(prtidx).CycleNetwork();
+    cbcycleprt.send();
   }
 }
 
 // Network Simulation Cycle (control flow)
 //
-void Network::CycleNetwork() {
+void Network::CycleSim() {
   // Check if simulation time is complete
   if (tsim >= tmax) {
     // return control to main

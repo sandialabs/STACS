@@ -5,6 +5,7 @@
  */
 
 #include "network.h"
+#include "record.h"
 
 /**************************************************************************
 * Charm++ Read-Only Variables
@@ -114,7 +115,8 @@ void Network::CheckRecord() {
   netdata(datidx).CheckRecord(mrecord);
   
   // Start a new cycle (checked data sent)
-  thisProxy(prtidx).CycleNetwork();
+  //thisProxy(prtidx).CycleNetwork();
+  cbcycleprt.send();
 }
 
 // Send Records for writing
@@ -132,7 +134,7 @@ void Network::SaveRecord() {
 
 // Write periodic records to file
 //
-void NetData::CheckRecord(mRecord *msg) {
+void Netdata::CheckRecord(mRecord *msg) {
   // Stash record
   records[msg->prtidx - xprt] = msg;
   
@@ -153,7 +155,7 @@ void NetData::CheckRecord(mRecord *msg) {
 
 // Write periodic records to file (final)
 //
-void NetData::SaveRecord(mRecord *msg) {
+void Netdata::SaveRecord(mRecord *msg) {
   // Stash record
   records[msg->prtidx - xprt] = msg;
   
@@ -182,7 +184,7 @@ void NetData::SaveRecord(mRecord *msg) {
 
 // Writing Records to file
 //
-void NetData::WriteRecord() {
+void Netdata::WriteRecord() {
   /* File operations */
   FILE *pRecord;
   char recfile[100];

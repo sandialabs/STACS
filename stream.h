@@ -1,13 +1,11 @@
 /**
- * Copyright (C) 2015 Felix Wang
+ * Copyright (C) 2017 Felix Wang
  *
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
 
-#ifndef __STACS_MESSAGES_H__
-#define __STACS_MESSAGES_H__
-
-#define RPCPORT_DEFAULT "/stacs/rpc"
+#ifndef __STACS_STREAM_H__
+#define __STACS_STREAM_H__
 
 #define RPCCOMMAND_NONE     0
 #define RPCCOMMAND_PAUSE    1
@@ -29,4 +27,4 @@
 #define RPCSTIM_CIRCLE      2
 #define RPCSTIM_SPHERE      3
 
-#endif //__STACS_MESSAGES_H__
+#endif //__STACS_STREAM_H__

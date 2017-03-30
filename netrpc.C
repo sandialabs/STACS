@@ -6,6 +6,7 @@
 
 #include "stacs.h"
 #include "network.h"
+#include "stream.h"
 
 #ifdef STACS_WITH_YARP
 
@@ -23,7 +24,7 @@ extern /*readonly*/ idx_t equeue;
 
 // Receive and handle RPC messages
 //
-void Network::RPCMsg(mRPC *msg) {
+void Network::CommRPC(mRPC *msg) {
   //CkPrintf("Received %" PRIidx" on %" PRIidx " in iteration %" PRIidx "\n", msg->command, prtidx, iter);
 
   // Pausing/Checkpointing/Stepping
@@ -41,7 +42,7 @@ void Network::RPCMsg(mRPC *msg) {
   else if (msg->command == RPCCOMMAND_UNPAUSE) {
     // Resume simulation
     //thisProxy(prtidx).CycleNetwork();
-    cbcycle.send();
+    cbcycleprt.send();
   }
   else if (msg->command == RPCCOMMAND_CHECK) {
     // Coordinate the synchronization iteration
@@ -60,7 +61,7 @@ void Network::RPCMsg(mRPC *msg) {
     }
     // Resume simulation until synchronization point
     //thisProxy(prtidx).CycleNetwork();
-    cbcycle.send();
+    cbcycleprt.send();
   }
 
   // Stimulation
@@ -120,7 +121,7 @@ void Network::RPCMsg(mRPC *msg) {
     // Resync if necessary
     if (msg->command == RPCCOMMAND_PSTIM) {
       //thisProxy(prtidx).CycleNetwork();
-      cbcycle.send();
+      cbcycleprt.send();
     }
   }
 
@@ -131,14 +132,14 @@ void Network::RPCMsg(mRPC *msg) {
     synciter = iter;
     // Resync
     //thisProxy(prtidx).CycleNetwork();
-    cbcycle.send();
+    cbcycleprt.send();
   }
   else if (msg->command == RPCCOMMAND_CLOSE) {
     // Coordinate the syncronization iteration
     synciter = iter;
     // Resync
     //thisProxy(prtidx).CycleNetwork();
-    cbcycle.send();
+    cbcycleprt.send();
   }
 
   // cleanup
@@ -153,7 +154,7 @@ void Network::RPCMsg(mRPC *msg) {
 
 // Build RPC message (single)
 //
-mRPC* RPCReader::BuildRPCMsg(idx_t command, yarp::os::Bottle message) {
+mRPC* RPCReader::BuildRPC(idx_t command, yarp::os::Bottle message) {
   /* Message data */
   std::vector<real_t> rpcdata;
   
@@ -220,22 +221,22 @@ mRPC* RPCReader::BuildRPCMsg(idx_t command, yarp::os::Bottle message) {
   // Initialize rpc message
   int msgSize[MSG_RPC];
   msgSize[0] = rpcdata.size();    //rpcdata
-  mRPC *rpcmsg = new(msgSize, 0) mRPC;
+  mRPC *mrpc = new(msgSize, 0) mRPC;
   // Sizes
-  rpcmsg->nrpcdata = rpcdata.size();
-  rpcmsg->command = command;
+  mrpc->nrpcdata = rpcdata.size();
+  mrpc->command = command;
 
   for (std::size_t i = 0; i < rpcdata.size(); ++i) {
-    rpcmsg->rpcdata[i] = rpcdata[i];
+    mrpc->rpcdata[i] = rpcdata[i];
   }
 
   // Return built message
-  return rpcmsg;
+  return mrpc;
 }
 
 // Network callback (continue)
 //
-void StreamRPC::Sync() {
+void Stream::Sync() {
   // Display some information
   CkPrintf("  Simulation Synced\n");
 
@@ -243,15 +244,16 @@ void StreamRPC::Sync() {
   rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
 
   // Reset callback
-  network.ckSetReductionClient(cbmain);
+  network.ckSetReductionClient(&cbmain);
 
   // Restart network
-  network.CycleNetwork();
+  //network.CycleNetwork();
+  cbcycle.send();
 }
 
 // Network callback (paused)
 //
-void StreamRPC::Pause() {
+void Stream::Pause() {
   // Display some information
   CkPrintf("  Simulation Paused\n");
 
@@ -259,7 +261,7 @@ void StreamRPC::Pause() {
   rpcreader->SetSyncFlag(RPCSYNC_SYNCED);
 
   // Reset callback
-  network.ckSetReductionClient(cbmain);
+  network.ckSetReductionClient(&cbmain);
 }
 
 #endif //STACS_WITH_YARP
