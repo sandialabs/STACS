@@ -18,7 +18,7 @@ extern /*readonly*/ tick_t tstep;
 
 
 /**************************************************************************
-* Remote Procedure Call
+* Stream (Remote Procedure Call)
 **************************************************************************/
 
 // Stream constructor
@@ -77,11 +77,11 @@ void Stream::OpenRPC(CProxy_Network cpnet, const CkCallback &cbcyc, bool paused)
       }
     }
     else {
-      CkPrintf("  rpcreader failed to initialize\n");
+      CkPrintf("rpcreader failed to initialize...\n");
     }
   }
   else {
-    CkPrintf("  %s failed to open\n", rpcport.c_str());
+    CkPrintf("%s failed to open...\n", rpcport.c_str());
   }
 }
 
@@ -96,6 +96,41 @@ void Stream::CloseRPC() {
       delete rpcreader;
     }
   }
+}
+
+
+/**************************************************************************
+* Stream synchronization callbacks
+**************************************************************************/
+
+// Network callback (continue)
+//
+void Stream::Sync() {
+  // Display some information
+  CkPrintf("Synced\n");
+
+  // Set Synchronization flag
+  rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
+
+  // Reset callback
+  network.ckSetReductionClient(&cbmain);
+
+  // Restart network
+  //network.CycleNetwork();
+  cbcycle.send();
+}
+
+// Network callback (paused)
+//
+void Stream::Pause() {
+  // Display some information
+  CkPrintf("Paused\n");
+
+  // Set Synchronization flag
+  rpcreader->SetSyncFlag(RPCSYNC_SYNCED);
+
+  // Reset callback
+  network.ckSetReductionClient(&cbmain);
 }
 
 

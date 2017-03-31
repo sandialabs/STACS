@@ -17,14 +17,15 @@ module network {
   
   message mModel {
     idx_t modtype[];
-    bool modact[];
-    bool modpng[];
     idx_t nstate[];
     idx_t nstick[];
     idx_t xparam[];
     real_t param[];
     idx_t xport[];
     char port[];
+    bool pngactive[];
+    bool pngmother[];
+    bool pnganchor[];
     idx_t nmodel;
   };
 
@@ -89,12 +90,12 @@ module network {
     entry Netdata(mDist *msg);
     entry void LoadNetwork(int prtidx, const CkCallback &cbnet);
     
-    entry void CheckNetwork(mPart *msg);
     entry void SaveNetwork(mPart *msg);
-    entry void CloseNetwork();
+    entry void SaveFinalNetwork(mPart *msg);
+    entry void FinalizeNetwork();
     
-    entry void CheckRecord(mRecord *msg);
     entry void SaveRecord(mRecord *msg);
+    entry void SaveFinalRecord(mRecord *msg);
   };
 
   array [1D] Network {
@@ -108,12 +109,12 @@ module network {
     entry void CommEvent(mEvent *msg);
     entry void CommRPC(mRPC *msg);
    
-    entry void CheckNetwork();
     entry void SaveNetwork();
-    entry void CloseNetwork();
+    entry void SaveFinalNetwork();
+    entry void FinalizeNetwork();
     
-    entry void CheckRecord();
     entry void SaveRecord();
+    entry void SaveFinalRecord();
     
     entry void InitPNG(CProxy_Netdata cpdat);
     entry void FindPNG();

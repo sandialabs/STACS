@@ -10,12 +10,10 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ std::string recdir;
-extern /*readonly*/ std::string filebase;
 
 
 /**************************************************************************
-* Network Recording
+* Network Recording (local)
 **************************************************************************/
 
 // Store records
@@ -47,6 +45,81 @@ void Network::StoreRecord() {
   }
   // Event records are recorded in event handling
 }
+
+
+/**************************************************************************
+* Network Recording (to file)
+**************************************************************************/
+
+// Send Records for writing
+//
+void Network::SaveRecord() {
+  // Build record message for saving
+  mRecord* mrecord = BuildRecord();
+  netdata(datidx).SaveRecord(mrecord);
+  
+  // Start a new cycle (checked data sent)
+  //thisProxy(prtidx).CycleNetwork();
+  cbcycleprt.send();
+}
+
+// Send Records for writing (final)
+//
+void Network::SaveFinalRecord() {
+  // Build record message for saving
+  mRecord* mrecord = BuildRecord();
+  netdata(datidx).SaveFinalRecord(mrecord);
+}
+
+// Write records to file
+//
+void Netdata::SaveRecord(mRecord *msg) {
+  // Stash record
+  records[msg->prtidx - xprt] = msg;
+  
+  // Wait for all parts
+  if (++rprt == nprt) {
+    rprt = 0;
+    
+    // Write data
+    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
+    WriteRecord();
+
+    // Cleanup stash
+    for (idx_t i = 0; i < nprt; ++i) {
+      delete records[i];
+    }
+  }
+}
+
+// Write records to file (final)
+//
+void Netdata::SaveFinalRecord(mRecord *msg) {
+  // Stash record
+  records[msg->prtidx - xprt] = msg;
+  
+  // Wait for all parts
+  if (++rprt == nprt) {
+    rprt = 0;
+    
+    // Write data
+    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
+    WriteRecord();
+
+    // Cleanup stash
+    for (idx_t i = 0; i < nprt; ++i) {
+      delete records[i];
+    }
+    
+    // Return control to main (halting)
+    contribute(0, NULL, CkReduction::nop);
+  }
+}
+
+
+/**************************************************************************
+* Build Messages
+**************************************************************************/
 
 // Build record message for writing
 //
@@ -105,128 +178,4 @@ mRecord* Network::BuildRecord() {
   recevt.clear();
 
   return mrecord;
-}
-
-// Send Records for writing (checking)
-//
-void Network::CheckRecord() {
-  // Build record message for saving
-  mRecord* mrecord = BuildRecord();
-  netdata(datidx).CheckRecord(mrecord);
-  
-  // Start a new cycle (checked data sent)
-  //thisProxy(prtidx).CycleNetwork();
-  cbcycleprt.send();
-}
-
-// Send Records for writing
-//
-void Network::SaveRecord() {
-  // Build record message for saving
-  mRecord* mrecord = BuildRecord();
-  netdata(datidx).SaveRecord(mrecord);
-}
-
-
-/**************************************************************************
-* Netdata recording to file
-**************************************************************************/
-
-// Write periodic records to file
-//
-void Netdata::CheckRecord(mRecord *msg) {
-  // Stash record
-  records[msg->prtidx - xprt] = msg;
-  
-  // Wait for all parts
-  if (++rprt == nprt) {
-    rprt = 0;
-    
-    // Write data
-    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
-    WriteRecord();
-
-    // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
-      delete records[i];
-    }
-  }
-}
-
-// Write periodic records to file (final)
-//
-void Netdata::SaveRecord(mRecord *msg) {
-  // Stash record
-  records[msg->prtidx - xprt] = msg;
-  
-  // Wait for all parts
-  if (++rprt == nprt) {
-    rprt = 0;
-    
-    // Write data
-    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
-    WriteRecord();
-
-    // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
-      delete records[i];
-    }
-    
-    // Return control to main (halting)
-    contribute(0, NULL, CkReduction::nop);
-  }
-}
-
-
-/**************************************************************************
-* Writing Record Information
-**************************************************************************/
-
-// Writing Records to file
-//
-void Netdata::WriteRecord() {
-  /* File operations */
-  FILE *pRecord;
-  char recfile[100];
-
-  // Open File
-  sprintf(recfile, "%s/%s.record.%" PRIidx ".%" PRIidx "", recdir.c_str(), filebase.c_str(), datidx, records[0]->iter);
-  pRecord = fopen(recfile,"w");
-  if (pRecord == NULL) {
-    CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
-    CkExit();
-  }
-
-  // TODO: Store records indexed by time and then by type
-  // Loop through parts
-  for (idx_t k = 0; k < nprt; ++k) {
-    // Loop through events
-    for (idx_t e = 0; e < records[k]->nrecevt; ++e) {
-      // event types lacking data
-      if (records[k]->type[e] == EVENT_SPIKE) {
-        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "\n",
-            records[k]->type[e], records[k]->diffuse[e], records[k]->source[e]);
-      }
-      // event types with data
-      else {
-        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
-            records[k]->type[e], records[k]->diffuse[e], records[k]->source[e], records[k]->index[e], records[k]->data[e]);
-      }
-    }
-    // Loop through records
-    for (idx_t r = 0; r < records[k]->nrecord; ++r) {
-      // record 'event type' followed by number of data entries
-      fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "",
-          EVENT_RECORD, records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
-      // data
-      for (idx_t d = records[k]->xdata[r]; d < records[k]->xdata[r+1]; ++d) {
-        fprintf(pRecord, " %" PRIrealfull "", records[k]->data[d]);
-      }
-      // one line per record
-      fprintf(pRecord, "\n");
-    }
-  }
-  
-  // Cleanup
-  fclose(pRecord);
 }

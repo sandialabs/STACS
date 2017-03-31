@@ -9,7 +9,7 @@
 
 #include "stacs.h"
 #include "network.h"
-//#include "stream.h"
+#include "record.h"
 
 // Maximum size of input line (bytes)
 #define MAXLINE 1280000
@@ -25,10 +25,10 @@ extern /*readonly*/ std::string fileout;
 
 
 /**************************************************************************
-* Main
+* Network Distribution
 **************************************************************************/
 
-// Read graph adjacency distribution
+// Read graph distribution
 //
 int Main::ReadDist() {
   /* File operations */
@@ -40,8 +40,8 @@ int Main::ReadDist() {
   // Prepare buffer
   line = new char[MAXLINE];
   
-  // Open files for reading
-  //TODO: change gencsr (how, old me, how?)
+  // Open file for reading
+  CkPrintf("Reading network distribution\n");//from %s/%s.dist\n", netdir.c_str(), filebase.c_str());
   sprintf(csrfile, "%s/%s.dist", netdir.c_str(), filebase.c_str());
   pDist = fopen(csrfile,"r");
   if (pDist == NULL || line == NULL) {
@@ -95,6 +95,7 @@ int Main::WriteDist() {
   idx_t nevent;
 
   // Open File
+  CkPrintf("Writing network distribution\n");
   sprintf(csrfile, "%s/%s%s.dist", netdir.c_str(), filebase.c_str(), fileout.c_str());//(check ? ".check" : fileout.c_str()));
   pDist = fopen(csrfile,"w");
   if (pDist == NULL) {
@@ -354,6 +355,7 @@ void Netdata::WriteNetwork() {
   char csrfile[100];
 
   // Open files for writing
+  CkPrintf("Writing network data files %" PRIidx "\n", datidx);
   sprintf(csrfile, "%s/%s%s.coord.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
   pCoord = fopen(csrfile,"w");
   sprintf(csrfile, "%s/%s%s.adjcy.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
@@ -444,4 +446,58 @@ void Netdata::WriteNetwork() {
   fclose(pAdjcy);
   fclose(pState);
   fclose(pEvent);
+}
+
+
+/**************************************************************************
+* Record Information
+**************************************************************************/
+
+// Writing Records to file
+//
+void Netdata::WriteRecord() {
+  /* File operations */
+  FILE *pRecord;
+  char recfile[100];
+
+  // Open File
+  sprintf(recfile, "%s/%s.record.%" PRIidx ".%" PRIidx "", recdir.c_str(), filebase.c_str(), datidx, records[0]->iter);
+  pRecord = fopen(recfile,"w");
+  if (pRecord == NULL) {
+    CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
+    CkExit();
+  }
+
+  // TODO: Store records indexed by time and then by type
+  // Loop through parts
+  for (idx_t k = 0; k < nprt; ++k) {
+    // Loop through events
+    for (idx_t e = 0; e < records[k]->nrecevt; ++e) {
+      // event types lacking data
+      if (records[k]->type[e] == EVENT_SPIKE) {
+        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "\n",
+            records[k]->type[e], records[k]->diffuse[e], records[k]->source[e]);
+      }
+      // event types with data
+      else {
+        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
+            records[k]->type[e], records[k]->diffuse[e], records[k]->source[e], records[k]->index[e], records[k]->data[e]);
+      }
+    }
+    // Loop through records
+    for (idx_t r = 0; r < records[k]->nrecord; ++r) {
+      // record 'event type' followed by number of data entries
+      fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "",
+          EVENT_RECORD, records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
+      // data
+      for (idx_t d = records[k]->xdata[r]; d < records[k]->xdata[r+1]; ++d) {
+        fprintf(pRecord, " %" PRIrealfull "", records[k]->data[d]);
+      }
+      // one line per record
+      fprintf(pRecord, "\n");
+    }
+  }
+  
+  // Cleanup
+  fclose(pRecord);
 }

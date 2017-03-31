@@ -130,18 +130,19 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 9
+#define MSG_Model 10
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;
-    bool *modact;
-    bool *modpng;
     idx_t *nstate;
     idx_t *nstick;
     idx_t *xparam;
     real_t *param;
     idx_t *xport;
     char *port;
+    bool *pngactive;
+    bool *pngmother;
+    bool *pnganchor;
     idx_t nmodel;
 };
 
@@ -244,13 +245,14 @@ class NetModel {
     virtual ~NetModel() { }
     /* Getters */
     idx_t getModType() const { return modtype; }
-    bool getModAct() const { return modact; }
-    bool getModPNG() const { return modpng; }
     idx_t getNParam() const { return paramlist.size(); }
     idx_t getNState() const { return statelist.size(); }
     idx_t getNStick() const { return sticklist.size(); }
     idx_t getNPort() const { return portlist.size(); }
     std::vector<real_t> getParam() const { return param; }
+    bool getPNGActive() const { return pngactive; }
+    bool getPNGMother() const { return pngmother; }
+    bool getPNGAnchor() const { return pnganchor; }
     /* Setters */
     void setParam(real_t *p) {
       param = std::vector<real_t>(p, p+paramlist.size());
@@ -266,11 +268,14 @@ class NetModel {
       unifdist = u;
       rngine = r;
     }
-    void setModAct(bool mact) {
-      modact = mact;
+    void setPNGActive(bool pactive) {
+      pngactive = pactive;
     }
-    void setModPNG(bool mpng) {
-      modpng = mpng;
+    void setPNGMother(bool pmother) {
+      pngmother = pmother;
+    }
+    void setPNGAnchor(bool panchor) {
+      pnganchor = panchor;
     }
     /* Auxiliary */
     idx_t getNAux() const { return auxstate.size() + auxstick.size(); }
@@ -297,8 +302,6 @@ class NetModel {
   protected:
     /* Bookkeeping */
     idx_t modtype;
-    bool modact;
-    bool modpng;
     std::vector<std::string> paramlist;
     std::vector<std::string> statelist;
     std::vector<std::string> sticklist;
@@ -313,6 +316,10 @@ class NetModel {
     /* Random Number Generation */
     std::mt19937 *rngine;
     std::uniform_real_distribution<real_t> *unifdist;
+    /* Polychronization */
+    bool pngactive;
+    bool pngmother;
+    bool pnganchor;
 };
 
 // Network model template
@@ -400,14 +407,14 @@ class Netdata : public CBase_Netdata {
     void ReadNetwork();
 
     /* Saving */
-    void CheckNetwork(mPart *msg);
     void SaveNetwork(mPart *msg);
-    void CloseNetwork();
+    void SaveFinalNetwork(mPart *msg);
+    void FinalizeNetwork();
     void WriteNetwork();
 
     /* Recording */
-    void CheckRecord(mRecord *msg);
     void SaveRecord(mRecord *msg);
+    void SaveFinalRecord(mRecord *msg);
     void WriteRecord();
     
     /* Helper Functions */
@@ -491,16 +498,16 @@ class Network : public CBase_Network {
     void RedisEvent();
     
     /* Saving */
-    void CheckNetwork();
     void SaveNetwork();
-    void CloseNetwork();
+    void SaveFinalNetwork();
+    void FinalizeNetwork();
     void ResetNetwork();
     
     /* Recording */
     mRecord* BuildRecord();
     void StoreRecord();
-    void CheckRecord();
     void SaveRecord();
+    void SaveFinalRecord();
 
     /* Polychronization */
     void InitPNG(CProxy_Netdata cpdat);

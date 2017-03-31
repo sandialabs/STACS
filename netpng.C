@@ -39,6 +39,23 @@ CkReductionMsg *netPNG(int nMsg, CkReductionMsg **msgs) {
 
 
 /**************************************************************************
+* Polychronization Initialization
+**************************************************************************/
+
+// Coordination with NetData chare array
+//
+void Network::InitPNG(CProxy_Netdata cpdat) {
+  // Set proxies
+  netdata = cpdat;
+  cbcycleprt = CkCallback(CkIndex_Network::CyclePNG(), prtidx, thisProxy);
+  
+  // Request network part from input
+  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
+  netdata(datidx).LoadNetwork(prtidx, *cb);
+}
+
+
+/**************************************************************************
 * Finding Polychronous Neuronal Groups (PNGs)
 **************************************************************************/
 
@@ -51,7 +68,7 @@ void Network::FindPNG() {
     // Only one vertex containing partition performs control
     std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx);
     if (mother != vtxmap.end()) {
-      if (netmodel[vtxmodidx[mother->second]]->getModPNG()) {
+      if (netmodel[vtxmodidx[mother->second]]->getPNGMother()) {
         // Bookkeeping
         idx_t i = mother->second;
         pngs[i].clear();
@@ -67,7 +84,7 @@ void Network::FindPNG() {
           std::vector<idx_t> anchor;
           anchor.clear();
           for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
-            if (netmodel[edgmodidx[i][j]]->getModPNG()) {
+            if (netmodel[edgmodidx[i][j]]->getPNGAnchor()) {
               // TODO: Based off of spiking property of the 
               //       netmodel instead of just active models
               if (stick[i][j+1].size()) {
@@ -242,7 +259,7 @@ void Network::CyclePNG() {
 
     // Display synchronization information
     if (prtidx == 0) {
-      CkPrintf("  Synchronized at iteration %" PRIidx "\n", iter);
+      CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
     }
 
     // move control to sychronization callback
@@ -291,7 +308,7 @@ void Network::CyclePNG() {
     
     // Perform computation
     for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
-      if (netmodel[vtxmodidx[i]]->getModAct() == false) {
+      if (netmodel[vtxmodidx[i]]->getPNGActive() == false) {
         event[i][evtiter].clear();
         continue;
       }
@@ -439,33 +456,6 @@ void Network::CyclePNG() {
 * PNG Events
 **************************************************************************/
 
-// Build event seed for PNG computation
-//
-mEvent* Network::BuildPNGSeed(std::vector<event_t>& pngseed) {
-  // Initialize distribution message
-  int msgSize[MSG_Event];
-  msgSize[0] = pngseed.size();     // diffuse
-  msgSize[1] = pngseed.size();     // type
-  msgSize[2] = pngseed.size();     // source
-  msgSize[3] = pngseed.size();     // index
-  msgSize[4] = pngseed.size();     // data
-  mEvent *mevent = new(msgSize, 0) mEvent;
-  mevent->nevent = pngseed.size();
-  mevent->iter = 0;
-  
-  // Pack event information
-  for (std::size_t i = 0; i < pngseed.size(); ++i) {
-    // Add event to message
-    mevent->diffuse[i] = pngseed[i].diffuse;
-    mevent->type[i] = pngseed[i].type;
-    mevent->source[i] = pngseed[i].source;
-    mevent->index[i] = pngseed[i].index;
-    mevent->data[i] = pngseed[i].data;
-  }
-
-  return mevent;
-}
-
 // Seed events for PNG computation
 //
 void Network::SeedPNG(mEvent *msg) {
@@ -503,3 +493,36 @@ void Network::SeedPNG(mEvent *msg) {
   // Start cycle after seeding events
   thisProxy(prtidx).CyclePNG();
 }
+
+
+/**************************************************************************
+* Build Messages
+**************************************************************************/
+
+// Build event seed for PNG computation
+//
+mEvent* Network::BuildPNGSeed(std::vector<event_t>& pngseed) {
+  // Initialize distribution message
+  int msgSize[MSG_Event];
+  msgSize[0] = pngseed.size();     // diffuse
+  msgSize[1] = pngseed.size();     // type
+  msgSize[2] = pngseed.size();     // source
+  msgSize[3] = pngseed.size();     // index
+  msgSize[4] = pngseed.size();     // data
+  mEvent *mevent = new(msgSize, 0) mEvent;
+  mevent->nevent = pngseed.size();
+  mevent->iter = 0;
+  
+  // Pack event information
+  for (std::size_t i = 0; i < pngseed.size(); ++i) {
+    // Add event to message
+    mevent->diffuse[i] = pngseed[i].diffuse;
+    mevent->type[i] = pngseed[i].type;
+    mevent->source[i] = pngseed[i].source;
+    mevent->index[i] = pngseed[i].index;
+    mevent->data[i] = pngseed[i].data;
+  }
+
+  return mevent;
+}
+

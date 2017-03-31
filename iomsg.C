@@ -7,12 +7,13 @@
 
 #include "stacs.h"
 #include "network.h"
-//#include "stream.h"
+#include "stream.h"
 
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ idx_t npnet;
+extern /*readonly*/ tick_t tstep;
 
 
 /**************************************************************************
@@ -95,15 +96,16 @@ mModel* Main::BuildModel() {
 
   // Initialize model message
   int msgSize[MSG_Model];
-  msgSize[0] = models.size();     //modtype
-  msgSize[1] = models.size();     //modact
-  msgSize[2] = models.size();     //modpng
-  msgSize[3] = models.size();     //state
-  msgSize[4] = models.size();     //stick
-  msgSize[5] = models.size()+1;   //xparam
-  msgSize[6] = nparam;            //param
-  msgSize[7] = models.size()+1;   //xport
-  msgSize[8] = nport;             //port
+  msgSize[0] = models.size();     // modtype
+  msgSize[1] = models.size();     // state
+  msgSize[2] = models.size();     // stick
+  msgSize[3] = models.size()+1;   // xparam
+  msgSize[4] = nparam;            // param
+  msgSize[5] = models.size()+1;   // xport
+  msgSize[6] = nport;             // port
+  msgSize[7] = models.size();     // pngactive
+  msgSize[8] = models.size();     // pngmother
+  msgSize[9] = models.size();     // pnganchor
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = models.size();
@@ -116,10 +118,6 @@ mModel* Main::BuildModel() {
   for (std::size_t i = 0; i < models.size(); ++i) {
     // modtype
     mmodel->modtype[i] = models[i].modtype;
-    // modact
-    mmodel->modact[i] = models[i].modact;
-    // modpng
-    mmodel->modpng[i] = models[i].modpng;
     // nstate
     mmodel->nstate[i] = models[i].nstate;
     // nstick
@@ -141,13 +139,24 @@ mModel* Main::BuildModel() {
       // xport
       mmodel->xport[i+1] += models[i].port[j].size() + 1;
     }
+    // pngactive
+    mmodel->pngactive[i] = models[i].pngactive;
+    // pngmother
+    mmodel->pngmother[i] = models[i].pngmother;
+    // pnganchor
+    mmodel->pnganchor[i] = models[i].pnganchor;
   }
 
   // Return model
   return mmodel;
 }
 
+
 #ifdef STACS_WITH_YARP
+/**************************************************************************
+* Build Messages (Stream)
+**************************************************************************/
+
 // Build graph adjacency information (just vertices)
 //
 mVtxs* Main::BuildVtxs() {
@@ -171,4 +180,87 @@ mVtxs* Main::BuildVtxs() {
   // Return distribution message
   return mvtxs;
 }
+
+// Build RPC message (single)
+//
+mRPC* RPCReader::BuildRPC(idx_t command, yarp::os::Bottle message) {
+  /* Message data */
+  std::vector<real_t> rpcdata;
+  
+  // Prepare data
+  rpcdata.clear();
+
+  // Don't send message if nothing to send
+  if (command == RPCCOMMAND_NONE) {
+    return NULL;
+  }
+
+  // Send (optional) step size
+  if (command == RPCCOMMAND_STEP) {
+    real_t step = 0.0;
+    if (message.size() > 0) {
+      step = (real_t) ((((tick_t) (message.get(0).asDouble())*TICKS_PER_MS))/tstep);
+    }
+    if (step > 0.0) {
+      rpcdata.push_back(step);
+    }
+  }
+
+  // Send stimuli information
+  if (command == RPCCOMMAND_STIM ||
+      command == RPCCOMMAND_PSTIM) {
+    // Decompose stimuli into events
+    if (message.size() > 1) {
+      idx_t stimtype = message.get(0).asInt();
+      // stim file
+      if (stimtype == RPCSTIM_FILE) {
+        std::string filename(message.get(1).asString().c_str());
+        CkPrintf("  Opening stim file: %s\n", filename.c_str());
+      }
+      // per neuron
+      else if (stimtype == RPCSTIM_POINT) {
+        if (message.size() > 2) {
+          idx_t numvtx = message.get(1).asInt();
+          idx_t pulses = message.get(2).asInt();
+          if (message.size() == 3 + numvtx + pulses*3) {
+            rpcdata.push_back((real_t) stimtype);
+            rpcdata.push_back((real_t) numvtx);
+            rpcdata.push_back((real_t) pulses);
+            // neurons
+            for (idx_t i = 3; i < 3 + numvtx; ++i) {
+              rpcdata.push_back((real_t) message.get(i).asInt());
+            }
+            // pulses (offset, duration, amplitude)
+            for (idx_t i = 3 + numvtx; i < 3 + numvtx + pulses*3; ++i) {
+              rpcdata.push_back((real_t) message.get(i).asDouble());
+            }
+            CkPrintf("  Stimulating %" PRIidx " neurons with %" PRIidx " pulses\n", numvtx, pulses);
+          }
+        }
+      }
+      // circle
+      else if (stimtype == RPCSTIM_CIRCLE) {
+      }
+      // sphere
+      else if (stimtype == RPCSTIM_SPHERE) {
+      }
+    }
+  }
+
+  // Initialize rpc message
+  int msgSize[MSG_RPC];
+  msgSize[0] = rpcdata.size();    //rpcdata
+  mRPC *mrpc = new(msgSize, 0) mRPC;
+  // Sizes
+  mrpc->nrpcdata = rpcdata.size();
+  mrpc->command = command;
+
+  for (std::size_t i = 0; i < rpcdata.size(); ++i) {
+    mrpc->rpcdata[i] = rpcdata[i];
+  }
+
+  // Return built message
+  return mrpc;
+}
+
 #endif

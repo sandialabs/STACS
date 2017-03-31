@@ -1,12 +1,19 @@
-npdat: 4
-npnet: 8
-evtcal: 21
-tmax: 60000 # 1 minute
-tdisplay: 1000 # 1 second
-tcheck: 10000 # 10 seconds
-trecord: 1000 # 1 second
-simpause: 1 # start paused
+npdat: 4 # 4 data files
+npnet: 8 # 8 network partitions
 
-filebase: "yarpnet/yarpnet"
-recbase: "yarpnet/record/yarpnet"
-rngseed: 2032
+netdir: "yarpnet"
+recdir: "yarpnet/record"
+filebase: "yarpnet"
+
+rngseed:  2032
+tmax:    60000  # 1 minutes
+tstep:       1  # 1 millisecond
+tqueue:     20  # 20 milliseconds
+tcheck:  10000  # 10 seconds
+trecord:  1000  # 1 second
+tdisplay: 1000  # 1 second
+
+runmode: "sim"
+plasticity: on
+rpcportname: "/stacs/rpc"
+startpaused: yes

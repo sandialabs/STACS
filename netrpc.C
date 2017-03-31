@@ -1,10 +1,9 @@
 /**
- * Copyright (C) 2015 Felix Wang
+ * Copyright (C) 2017 Felix Wang
  *
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
 
-#include "stacs.h"
 #include "network.h"
 #include "stream.h"
 
@@ -13,7 +12,6 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ CProxy_Main mainProxy;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t equeue;
 
@@ -48,7 +46,7 @@ void Network::CommRPC(mRPC *msg) {
     // Coordinate the synchronization iteration
     synciter = iter;
     // Perform checkpointing
-    thisProxy(prtidx).CheckNetwork();
+    thisProxy(prtidx).SaveNetwork();
   }
   else if (msg->command == RPCCOMMAND_STEP) {
     if (msg->nrpcdata == 0) {
@@ -144,124 +142,6 @@ void Network::CommRPC(mRPC *msg) {
 
   // cleanup
   delete msg;
-}
-
-
-
-/**************************************************************************
-* RPC Messages
-**************************************************************************/
-
-// Build RPC message (single)
-//
-mRPC* RPCReader::BuildRPC(idx_t command, yarp::os::Bottle message) {
-  /* Message data */
-  std::vector<real_t> rpcdata;
-  
-  // Prepare data
-  rpcdata.clear();
-
-  // Don't send message if nothing to send
-  if (command == RPCCOMMAND_NONE) {
-    return NULL;
-  }
-
-  // Send (optional) step size
-  if (command == RPCCOMMAND_STEP) {
-    real_t step = 0.0;
-    if (message.size() > 0) {
-      step = (real_t) ((((tick_t) (message.get(0).asDouble())*TICKS_PER_MS))/tstep);
-    }
-    if (step > 0.0) {
-      rpcdata.push_back(step);
-    }
-  }
-
-  // Send stimuli information
-  if (command == RPCCOMMAND_STIM ||
-      command == RPCCOMMAND_PSTIM) {
-    // Decompose stimuli into events
-    if (message.size() > 1) {
-      idx_t stimtype = message.get(0).asInt();
-      // stim file
-      if (stimtype == RPCSTIM_FILE) {
-        std::string filename(message.get(1).asString().c_str());
-        CkPrintf("  Opening stim file: %s\n", filename.c_str());
-      }
-      // per neuron
-      else if (stimtype == RPCSTIM_POINT) {
-        if (message.size() > 2) {
-          idx_t numvtx = message.get(1).asInt();
-          idx_t pulses = message.get(2).asInt();
-          if (message.size() == 3 + numvtx + pulses*3) {
-            rpcdata.push_back((real_t) stimtype);
-            rpcdata.push_back((real_t) numvtx);
-            rpcdata.push_back((real_t) pulses);
-            // neurons
-            for (idx_t i = 3; i < 3 + numvtx; ++i) {
-              rpcdata.push_back((real_t) message.get(i).asInt());
-            }
-            // pulses (offset, duration, amplitude)
-            for (idx_t i = 3 + numvtx; i < 3 + numvtx + pulses*3; ++i) {
-              rpcdata.push_back((real_t) message.get(i).asDouble());
-            }
-            CkPrintf("  Stimulating %" PRIidx " neurons with %" PRIidx " pulses\n", numvtx, pulses);
-          }
-        }
-      }
-      // circle
-      else if (stimtype == RPCSTIM_CIRCLE) {
-      }
-      // sphere
-      else if (stimtype == RPCSTIM_SPHERE) {
-      }
-    }
-  }
-
-  // Initialize rpc message
-  int msgSize[MSG_RPC];
-  msgSize[0] = rpcdata.size();    //rpcdata
-  mRPC *mrpc = new(msgSize, 0) mRPC;
-  // Sizes
-  mrpc->nrpcdata = rpcdata.size();
-  mrpc->command = command;
-
-  for (std::size_t i = 0; i < rpcdata.size(); ++i) {
-    mrpc->rpcdata[i] = rpcdata[i];
-  }
-
-  // Return built message
-  return mrpc;
-}
-
-// Network callback (continue)
-//
-void Stream::Sync() {
-  // Display some information
-  CkPrintf("  Simulation Synced\n");
-
-  // Set Synchronization flag
-  rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
-
-  // Reset callback
-  network.ckSetReductionClient(&cbmain);
-
-  // Restart network
-  //network.CycleNetwork();
-  cbcycle.send();
-}
-
-// Network callback (paused)
-//
-void Stream::Pause() {
-  // Display some information
-  CkPrintf("  Simulation Paused\n");
-
-  // Set Synchronization flag
-  rpcreader->SetSyncFlag(RPCSYNC_SYNCED);
-
-  // Reset callback
-  network.ckSetReductionClient(&cbmain);
 }
 
 #endif //STACS_WITH_YARP

@@ -19,9 +19,10 @@ plasticity: on
 rpcportname: "/stacs/rpc"
 startpaused: no
 
-active:
+pngactive:
   - izhiex
   - izhiin
-pngmod:
+pngmother:
   - izhiex
+pnganchor:
   - exstdp

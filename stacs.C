@@ -17,6 +17,7 @@
 /*readonly*/ std::string recdir;
 /*readonly*/ std::string filebase;
 /*readonly*/ std::string fileout;
+/*readonly*/ idx_t rngseed;
 /*readonly*/ tick_t tmax;
 /*readonly*/ tick_t tstep;
 /*readonly*/ tick_t tqueue;
@@ -24,7 +25,6 @@
 /*readonly*/ tick_t trecord;
 /*readonly*/ tick_t tdisplay;
 /*readonly*/ idx_t equeue;
-/*readonly*/ idx_t rngseed;
 
 
 /**************************************************************************
@@ -35,7 +35,7 @@
 //
 Main::Main(CkArgMsg *msg) {
   // Display title
-  CkPrintf("Simulation Tool for Asynchrnous Cortical Streams (stacs)\n");
+  CkPrintf("\nSimulation Tool for Asynchrnous Cortical Streams (stacs)\n");
 
   // Command line arguments
   std::string configfile;
@@ -47,9 +47,9 @@ Main::Main(CkArgMsg *msg) {
   }
   delete msg;
 
-  // Parsing config
-  if (ParseConfig(configfile)) {
-    CkPrintf("Error loading config...\n");
+  // Read configuration
+  if (ReadConfig(configfile)) {
+    CkPrintf("Error reading configuration...\n");
     CkExit();
   }
 
@@ -58,47 +58,21 @@ Main::Main(CkArgMsg *msg) {
   if (netpe < 1) { netpe = 1; }
 
   // Display configuration information
-  if (runmode == RUNMODE_SIM) {
-    CkPrintf("Loaded config from %s\n"
-             "  STACS run mode: %s\n"
-             "  Data Files (npdat):     %" PRIidx "\n"
-             "  Network Parts (npnet):  %" PRIidx "\n"
-             "  Processing Elements:    %d\n"
-             "  Network Parts per PE:   %.2g\n"
-             "  Total Simulation Time (tmax): %" PRItick "\n"
-             "  Simulation Time Step (tstep): %" PRItick "\n"
-             "  Checkpoint Interval (tcheck): %" PRItick "\n",
-             configfile.c_str(), runmode.c_str(), npdat, npnet,
-             CkNumPes(), netpe, tmax, tstep, tcheck);
-  }
-  else if (runmode == RUNMODE_PNG) {
-    std::string pngmodstr;
-    // collect active models
-    for (std::size_t i = 0; i < pngmods.size(); ++i) {
-      std::ostringstream pngmod;
-      pngmod << " " << pngmods[i];
-      pngmodstr.append(pngmod.str());
-    }
-    CkPrintf("Loaded config from %s\n"
-             "  STACS run mode: %s\n"
-             "  Data Files (npdat):     %" PRIidx "\n"
-             "  Network Parts (npnet):  %" PRIidx "\n"
-             "  Processing Elements:    %d\n"
-             "  Network Parts per PE:   %.2g\n"
-             "  Polychronizing models: %s\n",
-             configfile.c_str(), runmode.c_str(), npdat, npnet,
-             CkNumPes(), netpe, pngmodstr.c_str());
-  }
+  CkPrintf("  STACS run mode: %s\n"
+           "  Data Files (npdat):     %" PRIidx "\n"
+           "  Network Parts (npnet):  %" PRIidx "\n"
+           "  Processing Elements:    %d\n"
+           "  Network Parts per PE:   %.2g\n",
+           runmode.c_str(), npdat, npnet, CkNumPes(), netpe);
 
-  // Read vertex distribution
-  CkPrintf("Initializing simulation\n");
+  // Read graph distribution
   if (ReadDist()) {
-    CkPrintf("Error loading distribution...\n");
+    CkPrintf("Error reading graph distribution...\n");
     CkExit();
   }
   // Read model information
   if (ReadModel()) {
-    CkPrintf("Error loading models...\n");
+    CkPrintf("Error reading model information...\n");
     CkExit();
   }
   
@@ -138,7 +112,7 @@ Main::Main(CkMigrateMessage *msg) {
 
 
 /**************************************************************************
-* Simulation Startup
+* STACS Startup
 **************************************************************************/
 
 // Coordination for file input, initialized chare arrays
@@ -146,17 +120,53 @@ Main::Main(CkMigrateMessage *msg) {
 void Main::Init() {
   // Wait on initialization
   if (++cinit == ninit) {
-    CkPrintf("Setting up network parts\n");
+    CkPrintf("Initializing network\n");
 
     // Load data from input files to network parts
     CkCallback *cb = new CkCallback(CkReductionTarget(Main, Start), mainProxy);
     network.ckSetReductionClient(cb);
 
     if (runmode == RUNMODE_SIM) {
+      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+               "  Total Simulation Time    (tmax): %" PRIrealms "ms\n"
+               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+               "  Checkpointing Interval (tcheck): %" PRIrealms "ms\n"
+               "  Recording Interval    (trecord): %" PRIrealms "ms\n"
+               "  Display Interval     (tdisplay): %" PRIrealms "ms\n",
+               rngseed, ((real_t)(tmax/TICKS_PER_MS)),
+               ((real_t)(tstep/TICKS_PER_MS)), ((real_t)(tqueue/TICKS_PER_MS)),
+               ((real_t)(tcheck/TICKS_PER_MS)), ((real_t)(trecord/TICKS_PER_MS)),
+               ((real_t)(tdisplay/TICKS_PER_MS)));
       cbcycle = CkCallback(CkIndex_Network::CycleSim(), network);
       network.InitSim(netdata);
     }
     else if (runmode == RUNMODE_PNG) {
+      std::string pnginfo;
+      // collect active models
+      for (std::size_t i = 0; i < pngactives.size(); ++i) {
+        std::ostringstream pngactive;
+        pngactive << " " << pngactives[i];
+        pnginfo.append(pngactive.str());
+      }
+      // collect mother models
+      for (std::size_t i = 0; i < pngmothers.size(); ++i) {
+        std::ostringstream pngmother;
+        pngmother << " (" << pngmothers[i] << ")";
+        pnginfo.append(pngmother.str());
+      }
+      // collect anchor models
+      for (std::size_t i = 0; i < pnganchors.size(); ++i) {
+        std::ostringstream pnganchor;
+        pnganchor << " <" << pnganchors[i] << ">";
+        pnginfo.append(pnganchor.str());
+      }
+      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+               "  Polychronization Information   :%s\n",
+               rngseed, ((real_t)(tstep/TICKS_PER_MS)),
+               ((real_t)(tqueue/TICKS_PER_MS)), pnginfo.c_str());
       cbcycle = CkCallback(CkIndex_Network::CyclePNG(), network);
       network.InitPNG(netdata);
     }
@@ -168,7 +178,7 @@ void Main::Init() {
   }
 }
 
-// Coordination for starting simulation, network partition setup
+// Coordination for starting simulation, initialized network partitions
 //
 void Main::Start() {
   // Start simulation
@@ -178,15 +188,14 @@ void Main::Start() {
 #ifdef STACS_WITH_YARP
   if (startpaused) {
     // Start paused
-    CkPrintf("Starting simulation (paused)\n");
-    stream.Pause();
+    CkPrintf("Starting (paused)\n");
   }
   else {
-    CkPrintf("Starting simulation\n");
+    CkPrintf("Starting\n");
     cbcycle.send();
   }
 #else
-  CkPrintf("Starting simulation\n");
+  CkPrintf("Starting\n");
   cbcycle.send();
 #endif
 
@@ -196,20 +205,21 @@ void Main::Start() {
 
 
 /**************************************************************************
-* Simulation Shutdown
+* STACS Shutdown
 **************************************************************************/
 
 // Coordination for stopping simulation
 //
 void Main::Stop() {
-  CkPrintf("Stopping simulation\n");
+  CkPrintf("Stopping\n");
   
   // Stop timer
   tstop = std::chrono::system_clock::now();
   // Print timing
   std::chrono::duration<real_t> tduration = std::chrono::duration_cast<std::chrono::milliseconds>(tstop - tstart);
-  CkPrintf("Elapsed time (wall clock): %" PRIrealsec " seconds\n", tduration.count());
+  CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", tduration.count());
 
+  CkPrintf("Finalizing network\n");
 #ifdef STACS_WITH_YARP
   // Close RPC port
   stream.CloseRPC();
@@ -218,13 +228,13 @@ void Main::Stop() {
   // Save data from network parts to output files
   chalt = nhalt = 0;
   if (runmode == RUNMODE_SIM) {
-    network.SaveNetwork();
+    network.SaveFinalNetwork();
     ++nhalt;
-    network.SaveRecord();
+    network.SaveFinalRecord();
     ++nhalt;
   }
   else if (runmode == RUNMODE_PNG) {
-    network.CloseNetwork();
+    network.FinalizeNetwork();
     ++nhalt;
   }
   
@@ -233,16 +243,17 @@ void Main::Stop() {
   netdata.ckSetReductionClient(cb);
 }
 
-// Finish
+// Exit STACS
 //
 void Main::Halt() {
   // Everything checks back to here
   if (++chalt == nhalt) {
   
-    // Simulation complete
+    // Halt
     CkExit();
   }
 }
+
 
 /**************************************************************************
 * Charm++ Definitions

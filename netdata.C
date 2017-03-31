@@ -82,9 +82,11 @@ Netdata::Netdata(mDist *msg) {
     netmodel.push_back(NetModelFactory::getNetModel()->Create(msg->modtype[i-1]));
     modname[i] = std::string(msg->modname + msg->xmodname[i-1], msg->modname + msg->xmodname[i]);
     modmap[modname[i]] = i;
+    /*
     if (datidx == 0) {
       CkPrintf("  Netdata model: %" PRIidx "   NStates: %" PRIidx "   Name: %s\n", i, netmodel[i]->getNState(), modname[i].c_str());
     }
+    */
   }
   delete msg;
 
@@ -93,7 +95,7 @@ Netdata::Netdata(mDist *msg) {
   records.resize(nprt);
 
   // Read in files
-  CkPrintf("  Loading input %" PRIidx "\n", datidx);
+  CkPrintf("Reading network data files %" PRIidx "\n", datidx);
   ReadNetwork();
 
 #ifdef STACS_WITH_YARP
@@ -121,7 +123,7 @@ Netdata::~Netdata() {
 
 
 /**************************************************************************
-* Network Persistence
+* Load Network Data
 **************************************************************************/
 
 // Send data to network partition
@@ -131,32 +133,12 @@ void Netdata::LoadNetwork(idx_t prtidx, const CkCallback &cbnet) {
   cbnet.send(parts[prtidx - xprt]);
 }
 
-// Receive data from network partition (checkpointing)
-//
-void Netdata::CheckNetwork(mPart *msg) {
-  // Stash part
-  parts[msg->prtidx - xprt] = msg;
-  
-  // Wait for all parts
-  if (++cprt == nprt) {
-    cprt = 0;
 
-    // Write data
-    CkPrintf("  Checking network data %" PRIidx "\n", datidx);
-    WriteNetwork();
+/**************************************************************************
+* Save Network Data
+**************************************************************************/
 
-    // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
-      delete parts[i];
-    }
-
-    // Return control to main
-    CkCallback *cb = new CkCallback(CkIndex_Main::CheckDist(NULL), mainProxy);
-    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
-  }
-}
-
-// Receive data from network partition
+// Save data from network partition
 //
 void Netdata::SaveNetwork(mPart *msg) {
   // Stash part
@@ -167,7 +149,30 @@ void Netdata::SaveNetwork(mPart *msg) {
     cprt = 0;
 
     // Write data
-    CkPrintf("  Writing network data %" PRIidx "\n", datidx);
+    WriteNetwork();
+
+    // Cleanup stash
+    for (idx_t i = 0; i < nprt; ++i) {
+      delete parts[i];
+    }
+
+    // Return control to main
+    CkCallback *cb = new CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
+    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
+  }
+}
+
+// Save data from network partition (final)
+//
+void Netdata::SaveFinalNetwork(mPart *msg) {
+  // Stash part
+  parts[msg->prtidx - xprt] = msg;
+  
+  // Wait for all parts
+  if (++cprt == nprt) {
+    cprt = 0;
+
+    // Write data
     WriteNetwork();
 
     // Cleanup stash
@@ -181,14 +186,14 @@ void Netdata::SaveNetwork(mPart *msg) {
 #endif
 
     // Return control to main
-    CkCallback *cb = new CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
+    CkCallback *cb = new CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy);
     contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
   }
 }
 
-// Receive data from network partition
+// Finalize Netdata chare array
 //
-void Netdata::CloseNetwork() {
+void Netdata::FinalizeNetwork() {
   // Wait for all parts
   if (++cprt == nprt) {
     cprt = 0;
@@ -203,9 +208,13 @@ void Netdata::CloseNetwork() {
   }
 }
 
-// Receive data from netdata files (checkpointing)
+/**************************************************************************
+* Save Network Distribution
+**************************************************************************/
+
+// Collect distribution from netdata
 //
-void Main::CheckDist(CkReductionMsg *msg) {
+void Main::SaveDist(CkReductionMsg *msg) {
   //CkPrintf("Checkpointing simulation\n");
   
   // Save network part distribution to local
@@ -216,16 +225,15 @@ void Main::CheckDist(CkReductionMsg *msg) {
   delete msg;
 
   // Write distribution
-  CkPrintf("  Checking network distribution\n");
   if (WriteDist()) {
     CkPrintf("Error writing distribution...\n");
     CkExit();
   }
 }
 
-// Receive data from netdata files (checkpointing)
+// Collect distribution from netdata (final)
 //
-void Main::SaveDist(CkReductionMsg *msg) {
+void Main::SaveFinalDist(CkReductionMsg *msg) {
   // Save network part distribution to local
   netdist.clear();
   for (std::size_t i = 0; i < (msg->getSize())/sizeof(dist_t); ++i) {
@@ -234,7 +242,6 @@ void Main::SaveDist(CkReductionMsg *msg) {
   delete msg;
 
   // Write distribution
-  CkPrintf("  Writing network distribution\n");
   if (WriteDist()) {
     CkPrintf("Error writing distribution...\n");
     CkExit();
@@ -243,4 +250,3 @@ void Main::SaveDist(CkReductionMsg *msg) {
   // Finished
   thisProxy.Halt();
 }
-

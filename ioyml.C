@@ -39,9 +39,9 @@ extern /*readonly*/ idx_t equeue;
 
 // Parse configuration file
 //
-int Main::ParseConfig(std::string configfile) {
+int Main::ReadConfig(std::string configfile) {
   // Load configuration file
-  CkPrintf("Loading config from %s\n", configfile.c_str());
+  CkPrintf("Reading config from %s\n", configfile.c_str());
   YAML::Node config;
   try {
     config = YAML::LoadFile(configfile);
@@ -191,35 +191,42 @@ int Main::ParseConfig(std::string configfile) {
   }
 #endif
 
-  // Active models
-  actives.clear();
+  // Polychronization (active models)
+  pngactives.clear();
   // Identifiers are their own 'node'
-  YAML::Node active = config["active"];
-  if (active.size() == 0) {
-    CkPrintf("  warning: network has no active models\n");
-  }
-  actives.resize(active.size());
-  for (std::size_t i = 0; i < active.size(); ++i) {
+  YAML::Node pngactive = config["pngactive"];
+  pngactives.resize(pngactive.size());
+  for (std::size_t i = 0; i < pngactive.size(); ++i) {
     try {
-      actives[i] = active[i].as<std::string>();
+      pngactives[i] = pngactive[i].as<std::string>();
     } catch (YAML::RepresentationException& e) {
-      CkPrintf("  active: %s\n", e.what());
+      CkPrintf("  pngactive: %s\n", e.what());
       return 1;
     }
   }
-  // PNG models
-  pngmods.clear();
+  // Polychronization (mothers)
+  pngmothers.clear();
   // Identifiers are their own 'node'
-  YAML::Node pngmod = config["pngmod"];
-  if (pngmod.size() == 0) {
-    CkPrintf("  warning: network has no png models\n");
-  }
-  pngmods.resize(pngmod.size());
-  for (std::size_t i = 0; i < pngmod.size(); ++i) {
+  YAML::Node pngmother = config["pngmother"];
+  pngmothers.resize(pngmother.size());
+  for (std::size_t i = 0; i < pngmother.size(); ++i) {
     try {
-      pngmods[i] = pngmod[i].as<std::string>();
+      pngmothers[i] = pngmother[i].as<std::string>();
     } catch (YAML::RepresentationException& e) {
-      CkPrintf("  pngmod: %s\n", e.what());
+      CkPrintf("  pngmother: %s\n", e.what());
+      return 1;
+    }
+  }
+  // Polychronization (anchors)
+  pnganchors.clear();
+  // Identifiers are their own 'node'
+  YAML::Node pnganchor = config["pnganchor"];
+  pnganchors.resize(pnganchor.size());
+  for (std::size_t i = 0; i < pnganchor.size(); ++i) {
+    try {
+      pnganchors[i] = pnganchor[i].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  pnganchor: %s\n", e.what());
       return 1;
     }
   }
@@ -237,7 +244,7 @@ int Main::ParseConfig(std::string configfile) {
 //
 int Main::ReadModel() {
   // Load model file
-  CkPrintf("Loading models from %s/%s.model\n", netdir.c_str(), filebase.c_str());
+  CkPrintf("Reading model information\n");// from %s/%s.model\n", netdir.c_str(), filebase.c_str());
   YAML::Node modfile;
   try {
     modfile = YAML::LoadAllFromFile(netdir + "/" + filebase + ".model");
@@ -320,28 +327,28 @@ int Main::ReadModel() {
       }
     }
 
-    // Active models
-    if (actives.size()) {
-      models[i].modact = false;
-      for (std::size_t j = 0; j < actives.size(); ++j) {
-        if (models[i].modname == actives[j]) {
-          models[i].modact = true;
-          break;
-        }
+    // Polychronization (active models)
+    models[i].pngactive = false;
+    for (std::size_t j = 0; j < pngactives.size(); ++j) {
+      if (models[i].modname == pngactives[j]) {
+        models[i].pngactive = true;
+        break;
       }
     }
-    else {
-      models[i].modact = true;
+    // Polychronization (mothers)
+    models[i].pngmother = false;
+    for (std::size_t j = 0; j < pngmothers.size(); ++j) {
+      if (models[i].modname == pngmothers[j]) {
+        models[i].pngmother = true;
+        break;
+      }
     }
-    
-    // PNG models
-    if (pngmods.size()) {
-      models[i].modpng = false;
-      for (std::size_t j = 0; j < pngmods.size(); ++j) {
-        if (models[i].modname == pngmods[j]) {
-          models[i].modpng = true;
-          break;
-        }
+    // Polychronization (anchors)
+    models[i].pnganchor = false;
+    for (std::size_t j = 0; j < pnganchors.size(); ++j) {
+      if (models[i].modname == pnganchors[j]) {
+        models[i].pnganchor = true;
+        break;
       }
     }
   }

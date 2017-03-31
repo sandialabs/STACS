@@ -18,35 +18,29 @@ extern /*readonly*/ idx_t equeue;
 * Network Event Communication
 **************************************************************************/
 
-// Build event messages (to multicast)
+// Simple go-ahead message
 //
-mEvent* Network::BuildEvent() {
-  // Initialize distribution message
-  int msgSize[MSG_Event];
-  msgSize[0] = evtext.size();     // diffuse
-  msgSize[1] = evtext.size();     // type
-  msgSize[2] = evtext.size();     // source
-  msgSize[3] = evtext.size();     // index
-  msgSize[4] = evtext.size();     // data
-  mEvent *mevent = new(msgSize, 0) mEvent;
-  mevent->nevent = evtext.size();
-  mevent->iter = iter;
-  
-  // Pack event information
-  for (std::size_t i = 0; i < evtext.size(); ++i) {
-    // Add event to message
-    mevent->diffuse[i] = evtext[i].diffuse;
-    mevent->type[i] = evtext[i].type;
-    mevent->source[i] = evtext[i].source;
-    mevent->index[i] = evtext[i].index;
-    mevent->data[i] = evtext[i].data;
-  }
+void Network::GoAhead(mGo *msg) {
+  // Increment coordination
+  ++cadjprt[(prtiter + (msg->iter - iter))%2];
+  delete msg;
 
-  return mevent;
+  // Start next cycle
+  if (cadjprt[prtiter] == nadjprt) {
+    // Bookkeepping
+    cadjprt[prtiter] = 0;
+    prtiter = (prtiter+1)%2;
+
+    // Increment iteration
+    ++iter;
+
+    // Start a new cycle
+    //thisProxy(prtidx).CycleNetwork();
+    cbcycleprt.send();
+  }
 }
 
-
-// Multicast communication of event
+// Multicast communication of events
 //
 void Network::CommEvent(mEvent *msg) {
   // Increment coordination
@@ -176,3 +170,34 @@ void Network::RedisEvent() {
   }
 }
 
+
+/**************************************************************************
+* Build Messages
+**************************************************************************/
+
+// Build event messages (to multicast)
+//
+mEvent* Network::BuildEvent() {
+  // Initialize distribution message
+  int msgSize[MSG_Event];
+  msgSize[0] = evtext.size();     // diffuse
+  msgSize[1] = evtext.size();     // type
+  msgSize[2] = evtext.size();     // source
+  msgSize[3] = evtext.size();     // index
+  msgSize[4] = evtext.size();     // data
+  mEvent *mevent = new(msgSize, 0) mEvent;
+  mevent->nevent = evtext.size();
+  mevent->iter = iter;
+  
+  // Pack event information
+  for (std::size_t i = 0; i < evtext.size(); ++i) {
+    // Add event to message
+    mevent->diffuse[i] = evtext[i].diffuse;
+    mevent->type[i] = evtext[i].type;
+    mevent->source[i] = evtext[i].source;
+    mevent->index[i] = evtext[i].index;
+    mevent->data[i] = evtext[i].data;
+  }
+
+  return mevent;
+}

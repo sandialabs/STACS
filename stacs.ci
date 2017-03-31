@@ -31,8 +31,8 @@ mainmodule stacs {
     entry [reductiontarget] void Stop();
     entry [reductiontarget] void Halt();
     
-    entry void CheckDist(CkReductionMsg *msg);
     entry void SaveDist(CkReductionMsg *msg);
+    entry void SaveFinalDist(CkReductionMsg *msg);
   };
   
   chare Stream {

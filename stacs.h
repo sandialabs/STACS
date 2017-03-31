@@ -8,6 +8,7 @@
 #define __STACS_STACS_H__
 
 #include <string>
+#include <sstream>
 #include "typedefs.h"
 #include "timing.h"
 #include "ckmulticast.h"
@@ -49,12 +50,13 @@ struct dist_t {
 struct model_t {
   std::string modname;
   idx_t modtype;
-  bool modact;
-  bool modpng;
   idx_t nstate;
   idx_t nstick;
   std::vector<real_t> param;
   std::vector<std::string> port;
+  bool pngactive;
+  bool pngmother;
+  bool pnganchor;
 };
 
 
@@ -86,7 +88,7 @@ class Main : public CBase_Main {
     Main(CkMigrateMessage *msg);
 
     /* Configuration */
-    int ParseConfig(std::string configfile);
+    int ReadConfig(std::string configfile);
     int ReadDist();
     int ReadModel();
 
@@ -103,23 +105,25 @@ class Main : public CBase_Main {
     void Stop();
     void Halt();
     
-    /* Persistence */
-    void CheckDist(CkReductionMsg *msg);
+    /* Network Distribution */
     void SaveDist(CkReductionMsg *msg);
+    void SaveFinalDist(CkReductionMsg *msg);
     int WriteDist();
 
   private:
     /* Chare Arrays */
     CProxy_Netdata netdata;
     CProxy_Network network;
+    CkCallback cbcycle;
     /* Configuration */
     std::vector<dist_t> netdist;
     std::vector<model_t> models;
     std::string runmode;
     bool plasticity;
-    std::vector<std::string> actives;
-    std::vector<std::string> pngmods;
-    CkCallback cbcycle;
+    /* Polychronization */
+    std::vector<std::string> pngactives;
+    std::vector<std::string> pngmothers;
+    std::vector<std::string> pnganchors;
     /* Timing */
     std::chrono::system_clock::time_point tstart, tstop;
     /* Bookkeeping */
