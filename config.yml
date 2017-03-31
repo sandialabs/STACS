@@ -1,7 +1,12 @@
-npdat: 2
-npnet: 4
-tmax:  100
-evtcal: 20
+npdat: 2 # 2 data files
+npnet: 4 # 4 network partitions
 
-filebase: "testnet/testnet"
-simpause: 1
+filedir: "testnet"
+filebase: "testnet"
+
+rngseed:  2032
+tmax:      100  # 100 milliseconds
+tqueue:     20  # 20 milliseconds
+
+runmode: "sim"
+startpaused: yes

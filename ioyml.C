@@ -19,10 +19,10 @@
 **************************************************************************/
 extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
-extern /*readonly*/ std::string netdir;
-extern /*readonly*/ std::string recdir;
+extern /*readonly*/ std::string filedir;
 extern /*readonly*/ std::string filebase;
-extern /*readonly*/ std::string fileout;
+extern /*readonly*/ std::string filemod;
+extern /*readonly*/ std::string recordir;
 extern /*readonly*/ idx_t rngseed;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
@@ -69,17 +69,17 @@ int Main::ReadConfig(std::string configfile) {
   
   // Network data directory
   try {
-    netdir = config["netdir"].as<std::string>();
+    filedir = config["filedir"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  netdir: %s\n", e.what());
+    CkPrintf("  filedir: %s\n", e.what());
     return 1;
   }
   // Records output directory
   try {
-    recdir = config["recdir"].as<std::string>();
+    recordir = config["recordir"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  recdir not defined, defaulting to: \"%s\"\n", netdir.c_str());
-    recdir = netdir;
+    CkPrintf("  recordir not defined, defaulting to: \"%s\"\n", filedir.c_str());
+    recordir = filedir;
   }
   // Network file base name
   try {
@@ -90,10 +90,10 @@ int Main::ReadConfig(std::string configfile) {
   }
   // output filename modifications
   try {
-    fileout = config["fileout"].as<std::string>();
+    filemod = config["filemod"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  fileout not defined, defaulting to: \".o\"\n");
-    fileout = std::string(".o");
+    CkPrintf("  filemod not defined, defaulting to: \".o\"\n");
+    filemod = std::string(".o");
   }
   
   // Random number seed
@@ -244,10 +244,10 @@ int Main::ReadConfig(std::string configfile) {
 //
 int Main::ReadModel() {
   // Load model file
-  CkPrintf("Reading model information\n");// from %s/%s.model\n", netdir.c_str(), filebase.c_str());
+  CkPrintf("Reading model information\n");// from %s/%s.model\n", filedir.c_str(), filebase.c_str());
   YAML::Node modfile;
   try {
-    modfile = YAML::LoadAllFromFile(netdir + "/" + filebase + ".model");
+    modfile = YAML::LoadAllFromFile(filedir + "/" + filebase + ".model");
   } catch (YAML::BadFile& e) {
     CkPrintf("  %s\n", e.what());
     return 1;

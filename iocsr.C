@@ -18,10 +18,10 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ idx_t npnet;
-extern /*readonly*/ std::string netdir;
-extern /*readonly*/ std::string recdir;
+extern /*readonly*/ std::string filedir;
 extern /*readonly*/ std::string filebase;
-extern /*readonly*/ std::string fileout;
+extern /*readonly*/ std::string filemod;
+extern /*readonly*/ std::string recordir;
 
 
 /**************************************************************************
@@ -41,8 +41,8 @@ int Main::ReadDist() {
   line = new char[MAXLINE];
   
   // Open file for reading
-  CkPrintf("Reading network distribution\n");//from %s/%s.dist\n", netdir.c_str(), filebase.c_str());
-  sprintf(csrfile, "%s/%s.dist", netdir.c_str(), filebase.c_str());
+  CkPrintf("Reading network distribution\n");//from %s/%s.dist\n", filedir.c_str(), filebase.c_str());
+  sprintf(csrfile, "%s/%s.dist", filedir.c_str(), filebase.c_str());
   pDist = fopen(csrfile,"r");
   if (pDist == NULL || line == NULL) {
     return 1;
@@ -96,7 +96,7 @@ int Main::WriteDist() {
 
   // Open File
   CkPrintf("Writing network distribution\n");
-  sprintf(csrfile, "%s/%s%s.dist", netdir.c_str(), filebase.c_str(), fileout.c_str());//(check ? ".check" : fileout.c_str()));
+  sprintf(csrfile, "%s/%s%s.dist", filedir.c_str(), filebase.c_str(), filemod.c_str());//(check ? ".check" : filemod.c_str()));
   pDist = fopen(csrfile,"w");
   if (pDist == NULL) {
     printf("Error opening file for writing\n");
@@ -151,13 +151,13 @@ void Netdata::ReadNetwork() {
   line = new char[MAXLINE];
   
   // Open files for reading
-  sprintf(csrfile, "%s/%s.coord.%" PRIidx "", netdir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s.coord.%" PRIidx "", filedir.c_str(), filebase.c_str(), datidx);
   pCoord = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.adjcy.%" PRIidx "", netdir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s.adjcy.%" PRIidx "", filedir.c_str(), filebase.c_str(), datidx);
   pAdjcy = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.state.%" PRIidx "", netdir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s.state.%" PRIidx "", filedir.c_str(), filebase.c_str(), datidx);
   pState = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.event.%" PRIidx "", netdir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s.event.%" PRIidx "", filedir.c_str(), filebase.c_str(), datidx);
   pEvent = fopen(csrfile,"r");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL ||
       pEvent == NULL || line == NULL) {
@@ -356,13 +356,13 @@ void Netdata::WriteNetwork() {
 
   // Open files for writing
   CkPrintf("Writing network data files %" PRIidx "\n", datidx);
-  sprintf(csrfile, "%s/%s%s.coord.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.coord.%" PRIidx "", filedir.c_str(), filebase.c_str(), filemod.c_str(), datidx);
   pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.adjcy.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.adjcy.%" PRIidx "", filedir.c_str(), filebase.c_str(), filemod.c_str(), datidx);
   pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.state.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.state.%" PRIidx "", filedir.c_str(), filebase.c_str(), filemod.c_str(), datidx);
   pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.event.%" PRIidx "", netdir.c_str(), filebase.c_str(), fileout.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.event.%" PRIidx "", filedir.c_str(), filebase.c_str(), filemod.c_str(), datidx);
   pEvent = fopen(csrfile,"w");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
     CkPrintf("Error opening files for writing %" PRIidx "\n", datidx);
@@ -461,7 +461,7 @@ void Netdata::WriteRecord() {
   char recfile[100];
 
   // Open File
-  sprintf(recfile, "%s/%s.record.%" PRIidx ".%" PRIidx "", recdir.c_str(), filebase.c_str(), datidx, records[0]->iter);
+  sprintf(recfile, "%s/%s.record.%" PRIidx ".%" PRIidx "", recordir.c_str(), filebase.c_str(), datidx, records[0]->iter);
   pRecord = fopen(recfile,"w");
   if (pRecord == NULL) {
     CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
