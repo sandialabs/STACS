@@ -4,7 +4,9 @@ npnet: 8 # 8 network partitions
 netdir: "polynet"
 recdir: "polynet/record"
 filebase: "polynet"
+fileout: ".out"
 
+rngseed:  2032
 tmax:   180000  # 3 minutes
 tstep:       1  # 1 millisecond
 tqueue:     20  # 20 milliseconds
@@ -12,10 +14,11 @@ tcheck:  60000  # 1 minute
 trecord:  1000  # 1 second
 tdisplay: 1000  # 1 second
 
-rngseed: 2032
-runmode: "png"
-startpaused: no
+runmode: "sim"
 plasticity: on
+rpcportname: "/stacs/rpc"
+startpaused: no
+
 active:
   - izhiex
   - izhiin

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2015 Felix Wang
+ * Copyright (C) 2017 Felix Wang
  *
  * Simulation Tool for Asynchrnous Cortical Streams (stacs)
  */
@@ -25,7 +25,6 @@
 /*readonly*/ tick_t tdisplay;
 /*readonly*/ idx_t equeue;
 /*readonly*/ idx_t rngseed;
-/*readonly*/ idx_t runmode;
 
 
 /**************************************************************************
@@ -61,15 +60,15 @@ Main::Main(CkArgMsg *msg) {
   // Display configuration information
   if (runmode == RUNMODE_SIM) {
     CkPrintf("Loaded config from %s\n"
+             "  STACS run mode: %s\n"
              "  Data Files (npdat):     %" PRIidx "\n"
              "  Network Parts (npnet):  %" PRIidx "\n"
              "  Processing Elements:    %d\n"
              "  Network Parts per PE:   %.2g\n"
-             "  Simulation run mode:    sim\n"
              "  Total Simulation Time (tmax): %" PRItick "\n"
              "  Simulation Time Step (tstep): %" PRItick "\n"
              "  Checkpoint Interval (tcheck): %" PRItick "\n",
-             configfile.c_str(), npdat, npnet,
+             configfile.c_str(), runmode.c_str(), npdat, npnet,
              CkNumPes(), netpe, tmax, tstep, tcheck);
   }
   else if (runmode == RUNMODE_PNG) {
@@ -81,13 +80,13 @@ Main::Main(CkArgMsg *msg) {
       pngmodstr.append(pngmod.str());
     }
     CkPrintf("Loaded config from %s\n"
+             "  STACS run mode: %s\n"
              "  Data Files (npdat):     %" PRIidx "\n"
              "  Network Parts (npnet):  %" PRIidx "\n"
              "  Processing Elements:    %d\n"
              "  Network Parts per PE:   %.2g\n"
-             "  Simulation run mode:    png\n"
              "  Polychronizing models: %s\n",
-             configfile.c_str(), npdat, npnet,
+             configfile.c_str(), runmode.c_str(), npdat, npnet,
              CkNumPes(), netpe, pngmodstr.c_str());
   }
 
@@ -180,6 +179,7 @@ void Main::Start() {
   if (startpaused) {
     // Start paused
     CkPrintf("Starting simulation (paused)\n");
+    stream.Pause();
   }
   else {
     CkPrintf("Starting simulation\n");

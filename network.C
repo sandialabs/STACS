@@ -12,14 +12,13 @@
 extern /*readonly*/ CkGroupID mCastGrpId;
 extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
+extern /*readonly*/ idx_t rngseed;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t equeue;
-extern /*readonly*/ idx_t rngseed;
-extern /*readonly*/ idx_t runmode;
 
 
 /**************************************************************************
@@ -76,7 +75,8 @@ Network::Network(mModel *msg) {
   netmodel.clear();
   // "none" model
   netmodel.push_back(NetModelFactory::getNetModel()->Create(0));
-  netmodel[0]->setModFlag(MODFLAG_DEFAULT);
+  netmodel[0]->setModAct(false);
+  netmodel[0]->setModPNG(false);
   // User defined models
   for (idx_t i = 1; i < msg->nmodel+1; ++i) {
     // Create model object
@@ -87,7 +87,8 @@ Network::Network(mModel *msg) {
     netmodel[i]->setParam(msg->param + msg->xparam[i-1]);
     netmodel[i]->setPort(msg->port + msg->xport[i-1]);
     netmodel[i]->setRandom(unifdist, &rngine);
-    netmodel[i]->setModFlag(msg->modflag[i-1]);
+    netmodel[i]->setModAct(msg->modact[i-1]);
+    netmodel[i]->setModPNG(msg->modpng[i-1]);
 
     // Print out model information
     if (prtidx == 0) {

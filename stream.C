@@ -69,16 +69,12 @@ void Stream::OpenRPC(CProxy_Network cpnet, const CkCallback &cbcyc, bool paused)
     rpcreader = new RPCReader(network, vtxdist, *cbp, *cbs, cbmain, cbcycle);
     if (rpcreader != NULL) {
       this->setReader(*rpcreader);
-#ifdef STACS_WITH_YARP
       if (paused) {
         rpcreader->SetSyncFlag(RPCSYNC_SYNCED);
       }
       else {
         rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
       }
-#else
-      rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
-#endif
     }
     else {
       CkPrintf("  rpcreader failed to initialize\n");

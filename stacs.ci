@@ -9,6 +9,7 @@ mainmodule stacs {
   readonly std::string recdir;
   readonly std::string filebase;
   readonly std::string fileout;
+  readonly idx_t rngseed;
   readonly tick_t tmax;
   readonly tick_t tstep;
   readonly tick_t tqueue;
@@ -16,8 +17,6 @@ mainmodule stacs {
   readonly tick_t trecord;
   readonly tick_t tdisplay;
   readonly idx_t equeue;
-  readonly idx_t rngseed;
-  readonly idx_t runmode;
   
   message mVtxs {
     idx_t vtxdist[];

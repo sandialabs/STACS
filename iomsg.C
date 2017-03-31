@@ -96,13 +96,14 @@ mModel* Main::BuildModel() {
   // Initialize model message
   int msgSize[MSG_Model];
   msgSize[0] = models.size();     //modtype
-  msgSize[1] = models.size();     //modflag
-  msgSize[2] = models.size();     //state
-  msgSize[3] = models.size();     //stick
-  msgSize[4] = models.size()+1;   //xparam
-  msgSize[5] = nparam;            //param
-  msgSize[6] = models.size()+1;   //xport
-  msgSize[7] = nport;             //port
+  msgSize[1] = models.size();     //modact
+  msgSize[2] = models.size();     //modpng
+  msgSize[3] = models.size();     //state
+  msgSize[4] = models.size();     //stick
+  msgSize[5] = models.size()+1;   //xparam
+  msgSize[6] = nparam;            //param
+  msgSize[7] = models.size()+1;   //xport
+  msgSize[8] = nport;             //port
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = models.size();
@@ -115,8 +116,10 @@ mModel* Main::BuildModel() {
   for (std::size_t i = 0; i < models.size(); ++i) {
     // modtype
     mmodel->modtype[i] = models[i].modtype;
-    // modflag
-    mmodel->modflag[i] = models[i].modflag;
+    // modact
+    mmodel->modact[i] = models[i].modact;
+    // modpng
+    mmodel->modpng[i] = models[i].modpng;
     // nstate
     mmodel->nstate[i] = models[i].nstate;
     // nstick

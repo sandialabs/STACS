@@ -17,10 +17,9 @@
 #include <yarp/os/all.h>
 #endif
 
-#define RUNMODE_TOTAL   2 
-#define RUNMODE_SIM     0 
-#define RUNMODE_PNG     1 
-#define RUNMODE_DEFAULT 0
+#define RUNMODE_SIM     "sim"
+#define RUNMODE_PNG     "png"
+#define RUNMODE_DEFAULT "sim"
 
 #define RPCPORTNAME_DEFAULT "/stacs/rpc"
 #define STARTPAUSED_DEFAULT true // Start paused
@@ -50,7 +49,8 @@ struct dist_t {
 struct model_t {
   std::string modname;
   idx_t modtype;
-  flag_t modflag;
+  bool modact;
+  bool modpng;
   idx_t nstate;
   idx_t nstick;
   std::vector<real_t> param;
@@ -115,7 +115,7 @@ class Main : public CBase_Main {
     /* Configuration */
     std::vector<dist_t> netdist;
     std::vector<model_t> models;
-    bool startpaused;
+    std::string runmode;
     bool plasticity;
     std::vector<std::string> actives;
     std::vector<std::string> pngmods;
@@ -130,6 +130,7 @@ class Main : public CBase_Main {
     CProxy_Stream stream;
     yarp::os::Network yarp;
     std::string rpcport;
+    bool startpaused;
 #endif
 };
 

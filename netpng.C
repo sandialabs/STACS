@@ -51,7 +51,7 @@ void Network::FindPNG() {
     // Only one vertex containing partition performs control
     std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx);
     if (mother != vtxmap.end()) {
-      if (netmodel[vtxmodidx[mother->second]]->getPNGMod()) {
+      if (netmodel[vtxmodidx[mother->second]]->getModPNG()) {
         // Bookkeeping
         idx_t i = mother->second;
         pngs[i].clear();
@@ -67,7 +67,7 @@ void Network::FindPNG() {
           std::vector<idx_t> anchor;
           anchor.clear();
           for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
-            if (netmodel[edgmodidx[i][j]]->getPNGMod()) {
+            if (netmodel[edgmodidx[i][j]]->getModPNG()) {
               // TODO: Based off of spiking property of the 
               //       netmodel instead of just active models
               if (stick[i][j+1].size()) {
@@ -224,6 +224,9 @@ void Network::CyclePNG() {
     ResetNetwork();
     tsim = 0;
     iter = 0;
+    cadjprt[0] = 0;
+    cadjprt[1] = 0;
+    prtiter = 0;
     
     // Coordination after reset
     // Reduce PNG information
@@ -288,7 +291,7 @@ void Network::CyclePNG() {
     
     // Perform computation
     for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
-      if (netmodel[vtxmodidx[i]]->getActive() == false) {
+      if (netmodel[vtxmodidx[i]]->getModAct() == false) {
         event[i][evtiter].clear();
         continue;
       }

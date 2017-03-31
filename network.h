@@ -130,11 +130,12 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 8
+#define MSG_Model 9
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;
-    flag_t *modflag;
+    bool *modact;
+    bool *modpng;
     idx_t *nstate;
     idx_t *nstick;
     idx_t *xparam;
@@ -236,10 +237,6 @@ class mRPC : public CMessage_mRPC {
 * Network Models (abstract factory pattern)
 **************************************************************************/
 
-#define MODFLAG_DEFAULT     0x00
-#define MODFLAG_ACTIVE      0x01
-#define MODFLAG_PNGMOD      0x10
-
 // Network Model
 //
 class NetModel {
@@ -247,9 +244,8 @@ class NetModel {
     virtual ~NetModel() { }
     /* Getters */
     idx_t getModType() const { return modtype; }
-    flag_t getModFlag() const { return modflag; }
-    bool getActive() const { return ((modflag & MODFLAG_ACTIVE) != 0); }
-    bool getPNGMod() const { return ((modflag & MODFLAG_PNGMOD) != 0); }
+    bool getModAct() const { return modact; }
+    bool getModPNG() const { return modpng; }
     idx_t getNParam() const { return paramlist.size(); }
     idx_t getNState() const { return statelist.size(); }
     idx_t getNStick() const { return sticklist.size(); }
@@ -270,14 +266,11 @@ class NetModel {
       unifdist = u;
       rngine = r;
     }
-    void setModFlag(flag_t flag) {
-      modflag = flag;
+    void setModAct(bool mact) {
+      modact = mact;
     }
-    void setActive(bool active) {
-      modflag = active ? (modflag | MODFLAG_ACTIVE) : (modflag & ~MODFLAG_ACTIVE);
-    }
-    void setPNGMod(bool pngmod) {
-      modflag = pngmod ? (modflag | MODFLAG_PNGMOD) : (modflag & ~MODFLAG_PNGMOD);
+    void setModPNG(bool mpng) {
+      modpng = mpng;
     }
     /* Auxiliary */
     idx_t getNAux() const { return auxstate.size() + auxstick.size(); }
@@ -304,7 +297,8 @@ class NetModel {
   protected:
     /* Bookkeeping */
     idx_t modtype;
-    flag_t modflag;
+    bool modact;
+    bool modpng;
     std::vector<std::string> paramlist;
     std::vector<std::string> statelist;
     std::vector<std::string> sticklist;
@@ -401,13 +395,15 @@ class Netdata : public CBase_Netdata {
     Netdata(CkMigrateMessage *msg);
     ~Netdata();
 
-    /* Persistence */
+    /* Loading */
     void LoadNetwork(idx_t prtidx, const CkCallback &cbnet);
     void ReadNetwork();
+
+    /* Saving */
     void CheckNetwork(mPart *msg);
     void SaveNetwork(mPart *msg);
-    void WriteNetwork();
     void CloseNetwork();
+    void WriteNetwork();
 
     /* Recording */
     void CheckRecord(mRecord *msg);
@@ -479,9 +475,22 @@ class Network : public CBase_Network {
     Network(CkMigrateMessage *msg);
     ~Network();
 
-    /* Persistence */
+    /* Loading */
     mPart* BuildPart();
     void LoadNetwork(mPart *msg);
+    
+    /* Simulation */
+    void InitSim(CProxy_Netdata cpdat);
+    void CycleSim();
+
+    /* Communication */
+    void CreateGroup();
+    void GoAhead(mGo *msg);
+    mEvent* BuildEvent();
+    void CommEvent(mEvent *msg);
+    void RedisEvent();
+    
+    /* Saving */
     void CheckNetwork();
     void SaveNetwork();
     void CloseNetwork();
@@ -492,27 +501,16 @@ class Network : public CBase_Network {
     void StoreRecord();
     void CheckRecord();
     void SaveRecord();
-    
-    /* Communication */
-    void CreateGroup();
-    void GoAhead(mGo *msg);
-    mEvent* BuildEvent();
-    void CommEvent(mEvent *msg);
-    void RedisEvent();
-    
-    /* Simulation */
-    void InitSim(CProxy_Netdata cpdat);
-    void CycleSim();
 
     /* Polychronization */
     void InitPNG(CProxy_Netdata cpdat);
-    void CyclePNG();
     void FindPNG();
-    void EvalPNG(CkReductionMsg *msg);
     void ComputePNG(idx_t nseeds, idx_t pngidx);
     void ComputePNG();
     mEvent* BuildPNGSeed(std::vector<event_t>& pngseed);
     void SeedPNG(mEvent *msg);
+    void CyclePNG();
+    void EvalPNG(CkReductionMsg *msg);
 
 #ifdef STACS_WITH_YARP
     /* RPC Control */

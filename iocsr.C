@@ -17,10 +17,11 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
+extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ std::string netdir;
+extern /*readonly*/ std::string recdir;
 extern /*readonly*/ std::string filebase;
 extern /*readonly*/ std::string fileout;
-extern /*readonly*/ idx_t npnet;
 
 
 /**************************************************************************
