@@ -237,8 +237,14 @@ void Main::Stop() {
   // Save data from network parts to output files
   chalt = nhalt = 0;
   if (runmode == RUNMODE_SIM) {
-    network.SaveFinalNetwork();
-    ++nhalt;
+    if (plasticity) {
+      network.SaveFinalNetwork();
+      ++nhalt;
+    }
+    else {
+      network.FinalizeNetwork();
+      ++nhalt;
+    }
     network.SaveFinalRecord();
     ++nhalt;
   }

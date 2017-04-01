@@ -325,19 +325,6 @@ void Network::CycleSimStatic() {
     contribute(0, NULL, CkReduction::nop);
   }
 #endif
-  // Checkpointing
-  else if (iter == checkiter) {
-    // Bookkeeping
-    checkiter = checkiter + (idx_t) (tcheck/tstep);
-    
-    // Display checkpointing information
-    if (prtidx == 0) {
-      CkPrintf("  Checkpointing at iteration %" PRIidx "\n", iter);
-    }
-
-    // Checkpoint
-    thisProxy(prtidx).SaveNetwork();
-  }
   // Recording
   else if (iter == reciter) {
     // Bookkeeping
