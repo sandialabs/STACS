@@ -248,37 +248,9 @@ class NetModel {
     idx_t getNParam() const { return paramlist.size(); }
     idx_t getNState() const { return statelist.size(); }
     idx_t getNStick() const { return sticklist.size(); }
+    idx_t getNAux() const { return auxstate.size() + auxstick.size(); }
     idx_t getNPort() const { return portlist.size(); }
     std::vector<real_t> getParam() const { return param; }
-    bool getPNGActive() const { return pngactive; }
-    bool getPNGMother() const { return pngmother; }
-    bool getPNGAnchor() const { return pnganchor; }
-    /* Setters */
-    void setParam(real_t *p) {
-      param = std::vector<real_t>(p, p+paramlist.size());
-    }
-    void setPort(char *p) {
-      portname.resize(portlist.size());
-      for (std::size_t i = 0; i < portlist.size(); ++i) {
-        portname[i] = std::string(p);
-        p += portname[i].size() + 1;
-      }
-    }
-    void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
-      unifdist = u;
-      rngine = r;
-    }
-    void setPNGActive(bool pactive) {
-      pngactive = pactive;
-    }
-    void setPNGMother(bool pmother) {
-      pngmother = pmother;
-    }
-    void setPNGAnchor(bool panchor) {
-      pnganchor = panchor;
-    }
-    /* Auxiliary */
-    idx_t getNAux() const { return auxstate.size() + auxstick.size(); }
     std::vector<std::string> getAuxState() const { return auxstate; }
     std::vector<std::string> getAuxStick() const { return auxstick; }
     idx_t getStateIdx(const std::string& name) const {
@@ -289,33 +261,58 @@ class NetModel {
       idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
       return (index < sticklist.size() ? index : -1);
     }
+    bool getPNGActive() const { return pngactive; }
+    bool getPNGMother() const { return pngmother; }
+    bool getPNGAnchor() const { return pnganchor; }
+    /* Setters */
+    void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
+      unifdist = u;
+      rngine = r;
+    }
+    void setParam(real_t *p) {
+      param = std::vector<real_t>(p, p+paramlist.size());
+    }
+    void setPort(char *p) {
+      portname.resize(portlist.size());
+      for (std::size_t i = 0; i < portlist.size(); ++i) {
+        portname[i] = std::string(p);
+        p += portname[i].size() + 1;
+      }
+    }
+    void setPNGActive(bool pactive) {
+      pngactive = pactive;
+    }
+    void setPNGMother(bool pmother) {
+      pngmother = pmother;
+    }
+    void setPNGAnchor(bool panchor) {
+      pnganchor = panchor;
+    }
     /* Protocol Functions */
     virtual void OpenPorts() { }
     virtual void ClosePorts() { }
-    /* Repeating Events */
-    virtual void addRepeat(idx_t modidx, std::vector<event_t>& repevt) { }
     /* Abstract Functions */
+    virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
+    virtual void addRepeat(idx_t modidx, std::vector<event_t>& repevt) { }
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
     virtual void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) = 0;
     virtual void Hop(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) { }
-    virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
   protected:
-    /* Bookkeeping */
+    /* Random Number Generation */
+    std::mt19937 *rngine;
+    std::uniform_real_distribution<real_t> *unifdist;
+    /* Model Information */
     idx_t modtype;
     std::vector<std::string> paramlist;
     std::vector<std::string> statelist;
     std::vector<std::string> sticklist;
+    std::vector<std::string> auxstate;
+    std::vector<std::string> auxstick;
     std::vector<std::string> portlist;
     /* Model Data */
     std::vector<real_t> param;
-    /* Auxiliary */
-    std::vector<std::string> auxstate;
-    std::vector<std::string> auxstick;
     /* Protocol */
     std::vector<std::string> portname;
-    /* Random Number Generation */
-    std::mt19937 *rngine;
-    std::uniform_real_distribution<real_t> *unifdist;
     /* Polychronization */
     bool pngactive;
     bool pngmother;
@@ -487,8 +484,10 @@ class Network : public CBase_Network {
     void LoadNetwork(mPart *msg);
     
     /* Simulation */
-    void InitSim(CProxy_Netdata cpdat);
-    void CycleSim();
+    void InitSimPlastic(CProxy_Netdata cpdat);
+    void InitSimStatic(CProxy_Netdata cpdat);
+    void CycleSimPlastic();
+    void CycleSimStatic();
 
     /* Communication */
     void CreateGroup();

@@ -102,8 +102,10 @@ module network {
     entry Network(mModel *msg);
     entry void LoadNetwork(mPart *msg);
     
-    entry void InitSim(CProxy_Netdata cpdat);
-    entry void CycleSim();
+    entry void InitSimPlastic(CProxy_Netdata cpdat);
+    entry void InitSimStatic(CProxy_Netdata cpdat);
+    entry void CycleSimPlastic();
+    entry void CycleSimStatic();
     
     entry void GoAhead(mGo *msg);
     entry void CommEvent(mEvent *msg);

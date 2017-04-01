@@ -133,13 +133,21 @@ void Main::Init() {
                "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
                "  Checkpointing Interval (tcheck): %" PRIrealms "ms\n"
                "  Recording Interval    (trecord): %" PRIrealms "ms\n"
-               "  Display Interval     (tdisplay): %" PRIrealms "ms\n",
+               "  Display Interval     (tdisplay): %" PRIrealms "ms\n"
+               "  Network Plasticity (plasticity): %s\n",
                rngseed, ((real_t)(tmax/TICKS_PER_MS)),
                ((real_t)(tstep/TICKS_PER_MS)), ((real_t)(tqueue/TICKS_PER_MS)),
                ((real_t)(tcheck/TICKS_PER_MS)), ((real_t)(trecord/TICKS_PER_MS)),
-               ((real_t)(tdisplay/TICKS_PER_MS)));
-      cbcycle = CkCallback(CkIndex_Network::CycleSim(), network);
-      network.InitSim(netdata);
+               ((real_t)(tdisplay/TICKS_PER_MS)), (plasticity ? "on" : "off"));
+      // Set compute cycle
+      if (plasticity) {
+        cbcycle = CkCallback(CkIndex_Network::CycleSimPlastic(), network);
+        network.InitSimPlastic(netdata);
+      }
+      else {
+        cbcycle = CkCallback(CkIndex_Network::CycleSimStatic(), network);
+        network.InitSimStatic(netdata);
+      }
     }
     else if (runmode == RUNMODE_PNG) {
       std::string pnginfo;
@@ -167,6 +175,7 @@ void Main::Init() {
                "  Polychronization Information   :%s\n",
                rngseed, ((real_t)(tstep/TICKS_PER_MS)),
                ((real_t)(tqueue/TICKS_PER_MS)), pnginfo.c_str());
+      // Set compute cycle
       cbcycle = CkCallback(CkIndex_Network::CyclePNG(), network);
       network.InitPNG(netdata);
     }
