@@ -40,6 +40,7 @@ charmrun
 *.event.*
 *.part.*
 *.record.*
+*.png.*
 
 # Temporary Files
 *.swp

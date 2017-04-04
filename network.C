@@ -75,6 +75,7 @@ Network::Network(mModel *msg) {
   netmodel.clear();
   // "none" model
   netmodel.push_back(NetModelFactory::getNetModel()->Create(0));
+  // TODO: Roll this into model creation perhaps
   netmodel[0]->setPNGActive(false);
   netmodel[0]->setPNGMother(false);
   netmodel[0]->setPNGAnchor(false);
@@ -188,9 +189,6 @@ void Network::LoadNetwork(mPart *msg) {
   vtxmap.clear();
   vtxmodidx.resize(msg->nvtx);
   xyz.resize(msg->nvtx*3);
-  pngs.resize(msg->nvtx);
-  pngcan.clear();
-  pngaux.clear();
   adjcy.resize(msg->nvtx);
   adjmap.clear();
   edgmodidx.resize(msg->nvtx);
@@ -206,8 +204,15 @@ void Network::LoadNetwork(mPart *msg) {
   recordlist.clear();
   recevt.clear();
   recevtlist.resize(EVENT_TOTAL);
+  // TODO: Put this in the yml config file
   // Record spikes
   recevtlist[EVENT_SPIKE] = true;
+  // Polychronization
+  pngs.resize(msg->nvtx);
+  pngseeds.clear();
+  pngcan.clear();
+  pngaux.clear();
+  pnglog.resize(msg->nvtx);
 
   // Graph distribution information
   for (idx_t i = 0; i < npnet+1; ++i) {
@@ -230,7 +235,6 @@ void Network::LoadNetwork(mPart *msg) {
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
     xyz[i*3+2] = msg->xyz[i*3+2];
-    pngs[i].clear();
     // preallocate sizes
     adjcy[i].resize(msg->xadj[i+1] - msg->xadj[i]);
     edgmodidx[i].resize(msg->xadj[i+1] - msg->xadj[i]);
@@ -304,6 +308,9 @@ void Network::LoadNetwork(mPart *msg) {
     if (netmodel[vtxmodidx[i]]->getNPort()) {
       netmodel[vtxmodidx[i]]->OpenPorts();
     }
+    // initialize polychronization
+    pngs[i].clear();
+    pnglog[i].clear();
   }
   CkAssert(msg->nedg == nadjcy);
   CkAssert(msg->nedg == jmodidx);

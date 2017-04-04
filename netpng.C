@@ -26,15 +26,15 @@ void registerNetPNG(void) {
 }
 
 CkReductionMsg *netPNG(int nMsg, CkReductionMsg **msgs) {
-  std::vector<png_t> ret;
+  std::vector<stamp_t> ret;
   ret.clear();
   for (int i = 0; i < nMsg; i++) {
-    for (std::size_t j = 0; j < msgs[i]->getSize()/sizeof(png_t); ++j) {
+    for (std::size_t j = 0; j < msgs[i]->getSize()/sizeof(stamp_t); ++j) {
       // Extract data and reduce 
-      ret.push_back(*((png_t *)msgs[i]->getData() + j));
+      ret.push_back(*((stamp_t *)msgs[i]->getData() + j));
     }
   }
-  return CkReductionMsg::buildNew(ret.size()*sizeof(png_t), ret.data());
+  return CkReductionMsg::buildNew(ret.size()*sizeof(stamp_t), ret.data());
 }
 
 
@@ -86,8 +86,8 @@ void Network::FindPNG() {
           for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
             if (netmodel[edgmodidx[i][j]]->getPNGAnchor()) {
               // TODO: Based off of spiking property of the 
-              //       netmodel instead of just active models
-              if (stick[i][j+1].size()) {
+              //       netmodel instead of just anchor models
+              if (netmodel[edgmodidx[i][j]]->getStickIdx("delay") == 0) {
                 anchor.push_back(j);
               }
             }
@@ -95,8 +95,8 @@ void Network::FindPNG() {
 
           // PNG combinatorics
           for (idx_t j0 = 0; j0 < anchor.size(); ++j0) {
-            for (idx_t j1 = j0; j1 < anchor.size(); ++j1) {
-              for (idx_t j2 = j1; j2 < anchor.size(); ++j2) {
+            for (idx_t j1 = j0+1; j1 < anchor.size(); ++j1) {
+              for (idx_t j2 = j1+1; j2 < anchor.size(); ++j2) {
                 // Test for spiking of mother neuron
                 // assuming perfect timing of anchor
                 netmodel[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
@@ -112,7 +112,7 @@ void Network::FindPNG() {
                 evtpre.index = anchor[j2]+1;
                 netmodel[edgmodidx[i][anchor[j2]]]->Hop(evtpre, state[i], stick[i], edgaux[edgmodidx[i][anchor[j2]]][vtxmodidx[i]]);
                 tick_t tdrift = 0;
-                tick_t tstop = tstep * 4; // Strongly spiking triplets only
+                tick_t tstop = tstep * 5; // Strongly spiking triplets only
                 while (tdrift < tstop) {
                   // Step through model drift (vertex)
                   tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], evtlog);
@@ -138,9 +138,9 @@ void Network::FindPNG() {
                   pngseed.push_back(evtpre);
                   // correctly order the timing
                   std::sort(pngseed.begin(), pngseed.end());
-                  pngseed[2].diffuse = pngseed[2].diffuse - pngseed[2].diffuse;
-                  pngseed[1].diffuse = pngseed[2].diffuse - pngseed[1].diffuse;
                   pngseed[0].diffuse = pngseed[2].diffuse - pngseed[0].diffuse;
+                  pngseed[1].diffuse = pngseed[2].diffuse - pngseed[1].diffuse;
+                  pngseed[2].diffuse = pngseed[2].diffuse - pngseed[2].diffuse;
                   std::sort(pngseed.begin(), pngseed.end());
                   // Push to PNG seeds
                   pngseeds.push_back(pngseed);
@@ -185,23 +185,6 @@ void Network::ComputePNG(idx_t nseeds, idx_t pngidx) {
   thisProxy(prtidx).ComputePNG();
 }
 
-// Coordination for PNG computation
-//
-void Network::EvalPNG(CkReductionMsg *msg) {
-  // Add to png candidate
-  for (std::size_t i = 0; i < (msg->getSize())/sizeof(png_t); ++i) {
-    pngcan.push_back(*((png_t *)msg->getData()+i));
-  }
-  delete msg;
-
-  //if (pngcan.size() > minpngsize) {
-  //  pngs[i].push_back(pngcan);
-  //}
-    
-  // Compute next PNG
-  thisProxy.ComputePNG();
-}
-
 // Compute PNG (vertex control loop)
 //
 void Network::ComputePNG() {
@@ -209,12 +192,15 @@ void Network::ComputePNG() {
   if (ccomp < ncomp) {
     pngcan.clear();
     pngaux.clear();
-    if (pngseeds.size()) {
+    if (!pngseeds.empty()) {
       // Initialize candidate PNG
       pngcan.resize(pngseeds[ccomp].size());
       for (std::size_t i = 0; i < pngseeds[ccomp].size(); ++i) {
         pngcan[i].diffuse = pngseeds[ccomp][i].diffuse;
         pngcan[i].source = pngseeds[ccomp][i].source;
+        pngcan[i].origin = -1;
+        pngcan[i].departure = 0;
+        pngcan[i].arrival = 0;
       }
       // Seed spikes for simulation
       mEvent *mevent = BuildPNGSeed(pngseeds[ccomp]);
@@ -223,9 +209,62 @@ void Network::ComputePNG() {
     ++ccomp;
   }
   else {
+    std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx-1);
+    if (mother != vtxmap.end()) {
+      idx_t i = mother->second;
+      CkPrintf("  Found %d PNGs\n", pngs[i].size());
+      // Write to file
+      WritePNG(i);
+    }
     // Return control to main loop
     thisProxy(prtidx).FindPNG();
   }
+}
+
+// Coordination for PNG computation
+//
+void Network::EvalPNG(CkReductionMsg *msg) {
+  // Add to png candidate
+  for (std::size_t i = 0; i < (msg->getSize())/sizeof(stamp_t); ++i) {
+    pngcan.push_back(*((stamp_t *)msg->getData()+i));
+  }
+  delete msg;
+
+  //CkPrintf("Evaluating\n");
+  // Sorting
+  std::sort(pngcan.begin(), pngcan.end());
+
+  // Max path of png should be longer than min path threshold (7)
+  std::unordered_map<idx_t, int> pngpath;
+  int maxpath = 0;
+  for (std::size_t i = 0; i < pngcan.size(); ++i) {
+    pngpath[pngcan[i].source] = std::max(pngpath[pngcan[i].source], 1+pngpath[pngcan[i].origin]);
+    maxpath = std::max(maxpath, pngpath[pngcan[i].source]);
+  }
+  if (maxpath > 7) {
+    // Anchors should contribute to more than just the mother neuron
+    bool alluseful = true;
+    for (std::size_t j = 0; j < pngseeds[ccomp-1].size(); ++j) {
+      int useful = 0;
+      for (std::size_t i = 0; i < pngcan.size(); ++i) {
+        if (pngcan[i].origin == pngseeds[ccomp-1][j].source) {
+          if (++useful >= 2) { break; }
+        }
+      }
+      if (useful < 2) {
+        alluseful = false;
+        break;
+      }
+    }
+    if (alluseful) {
+      std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx-1);
+      idx_t i = mother->second;
+      pngs[i].push_back(pngcan);
+    }
+  }
+
+  // Compute next PNG
+  thisProxy.ComputePNG();
 }
 
 /**************************************************************************
@@ -248,8 +287,7 @@ void Network::CyclePNG() {
     // Coordination after reset
     // Reduce PNG information
     CkCallback *cb = new CkCallback(CkIndex_Network::EvalPNG(NULL), evalidx, thisProxy);
-    //contribute(0, NULL, CkReduction::nop, *cb);
-    contribute(sizeof(png_t), pngaux.data(), net_png, *cb);
+    contribute(pngaux.size()*sizeof(stamp_t), pngaux.data(), net_png, *cb);
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
@@ -325,6 +363,14 @@ void Network::CyclePNG() {
         // edge events
         if (evt->index) {
           netmodel[edgmodidx[i][evt->index-1]]->Hop(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+          // Add to PNG log
+          if (evt->type == EVENT_SPIKE) {
+            route_t pngpre;
+            pngpre.origin = adjcy[i][evt->index-1];
+            pngpre.departure = evt->diffuse - stick[i][evt->index][0];
+            pngpre.arrival = evt->diffuse;
+            pnglog[i].push_back(pngpre);
+          }
         }
         // vertex events
         else {
@@ -333,8 +379,16 @@ void Network::CyclePNG() {
         ++evt;
       }
       
-      // TODO: Method to grow PNGs (asynchronously?)
-      //       Also a spike-timing relationship graph
+      // Move sliding window of contributing routes forward
+      // TODO: make this value user adjustable
+      while (!pnglog[i].empty()) {
+        if (pnglog[i].front().arrival + ((tick_t)10.0)*TICKS_PER_MS <= tdrift) {
+          pnglog[i].pop_front();
+        }
+        else {
+          break;
+        }
+      }
 
       // Computation
       while (tdrift < tstop) {
@@ -345,6 +399,19 @@ void Network::CyclePNG() {
         // TODO: Conversion from edge indices to global (for individual output)
         if (evtlog.size()) {
           for (std::size_t e = 0; e < evtlog.size(); ++e) {
+            // Polychronization information
+            if (evtlog[e].type == EVENT_SPIKE) {
+              stamp_t pngpre;
+              pngpre.diffuse = evtlog[e].diffuse;
+              pngpre.source = vtxidx[i];
+              // go through contribution log
+              for (std::size_t j = 0; j < pnglog[i].size(); ++j) {
+                pngpre.origin = pnglog[i][j].origin;
+                pngpre.departure = pnglog[i][j].departure;
+                pngpre.arrival = pnglog[i][j].arrival;
+                pngaux.push_back(pngpre);
+              }
+            }
             // Get information
             idx_t target = evtlog[e].source;
             idx_t index = evtlog[e].index;

@@ -501,3 +501,41 @@ void Netdata::WriteRecord() {
   // Cleanup
   fclose(pRecord);
 }
+
+
+/**************************************************************************
+* PNG Information
+**************************************************************************/
+
+// Writing PNGs to file
+//
+// TODO: Move this to Netdata?
+void Network::WritePNG(idx_t pngidx) {
+  /* File operations */
+  FILE *pPNG;
+  char pngfile[100];
+
+  // Open File
+  sprintf(pngfile, "%s/png/%s.png.%" PRIidx "", filedir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  pPNG = fopen(pngfile,"w");
+  if (pPNG == NULL) {
+    CkPrintf("Error opening files for PNG output %" PRIidx "\n", vtxidx[pngidx]);
+    CkExit();
+  }
+
+  // Loop through pngs
+  for (std::size_t p = 0; p < pngs[pngidx].size(); ++p) {
+    // Loop through stamps
+    for (std::size_t s = 0; s < pngs[pngidx][p].size(); ++s) {
+      fprintf(pPNG, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRItickhex " %" PRItickhex "\n",
+          pngs[pngidx][p][s].diffuse, pngs[pngidx][p][s].source, pngs[pngidx][p][s].origin, pngs[pngidx][p][s].departure, pngs[pngidx][p][s].arrival);
+    }
+    // empty line between records
+    fprintf(pPNG, "\n");
+  }
+
+  // Cleanup
+  fclose(pPNG);
+}
+
+

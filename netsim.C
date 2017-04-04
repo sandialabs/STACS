@@ -41,9 +41,6 @@ void Network::InitSimStatic(CProxy_Netdata cpdat) {
   netdata = cpdat;
   cbcycleprt = CkCallback(CkIndex_Network::CycleSimStatic(), prtidx, thisProxy);
 
-  // Reset network
-  ResetNetwork();
-  
   // Request network part from input
   CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
   netdata(datidx).LoadNetwork(prtidx, *cb);

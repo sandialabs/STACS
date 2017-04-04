@@ -59,20 +59,6 @@ struct aux_t {
   std::vector<idx_t> stickidx;
 };
 
-// PNGs
-//
-struct png_t {
-  tick_t diffuse;
-  idx_t source;
-  idx_t presource;
-  tick_t prediffuse;
-  tick_t postdiffuse;
-
-  bool operator<(const png_t& png) const {
-    return diffuse < png.diffuse;
-  }
-};
-
 // Events
 //
 struct event_t {
@@ -84,6 +70,32 @@ struct event_t {
   
   bool operator<(const event_t& event) const {
     return diffuse < event.diffuse;
+  }
+};
+
+// Spike-timing events (for PNGs)
+//
+struct stamp_t {
+  tick_t diffuse; // timestamp of spike
+  idx_t source; // index of vertex that spiked
+  idx_t origin; // index of vertex that contributed to spike
+  tick_t departure; // timestamp of vertex spike departure
+  tick_t arrival; // timestamp of vertex spike arrival
+
+  bool operator<(const stamp_t & stamp) const {
+    return diffuse < stamp.diffuse;
+  }
+};
+
+// Spike-timing routes (for PNGs)
+//
+struct route_t {
+  idx_t origin; // index of vertex that (possibly) contributed to spike
+  tick_t departure; // timestamp of vertex spike departure
+  tick_t arrival; // timestamp of vertex spike arrival
+
+  bool operator<(const route_t& route) const {
+    return arrival < route.arrival;
   }
 };
 
@@ -517,6 +529,7 @@ class Network : public CBase_Network {
     void SeedPNG(mEvent *msg);
     void CyclePNG();
     void EvalPNG(CkReductionMsg *msg);
+    void WritePNG(idx_t pngidx);
 
 #ifdef STACS_WITH_YARP
     /* RPC Control */
@@ -528,35 +541,27 @@ class Network : public CBase_Network {
   private:
     /* Multicast */
     CProxySection_Network netgroup;
-    std::unordered_map<idx_t, idx_t> srcprt;
-    std::vector<idx_t> trgprt;
+    std::unordered_map<idx_t, idx_t> srcprt; // source partitions
+    std::vector<idx_t> trgprt; // target partitions
     /* Network Adjacency */
-    std::vector<idx_t> vtxdist;             // vertex distribution per part
-    std::vector<idx_t> vtxidx;              // local vertex index to global index
-    std::unordered_map<idx_t, idx_t> vtxmap;  // global vertex index to local index
+    std::vector<idx_t> vtxdist; // vertex distribution per part
+    std::vector<idx_t> vtxidx; // local vertex index to global index
+    std::unordered_map<idx_t, idx_t> vtxmap; // global vertex index to local index
     std::vector<idx_t> vtxmodidx; // vertex model index into netmodel
-    std::vector<std::vector<idx_t>> adjcy;  // local vertex adjacency to global index
-    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> adjmap;
-        // mapping from global index to vector of target vertices and their adjcency
+    std::vector<std::vector<idx_t>> adjcy; // local vertex adjacency to global index
+    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> adjmap; // mapping from global index to vector of target vertices and their adjcency
     /* Network Model */
-    std::vector<NetModel*> netmodel;               // collection of model objects
+    std::vector<NetModel*> netmodel; // collection of model objects
     std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
     /* Network Data */
-    std::vector<real_t> xyz;
-    std::vector<std::vector<std::vector<real_t>>> state;
-        // first level is the vertex, second level is the models, third is state data
-    std::vector<std::vector<std::vector<tick_t>>> stick;
-    std::vector<std::vector<aux_t>> vtxaux; // auxiliary indices per vertex
-    std::vector<std::vector<std::vector<aux_t>>> edgaux; // per edge model
-    /* Polychronization */
-    std::vector<std::vector<std::vector<png_t>>> pngs; // PNGs of the vertex (if applicable)
-    std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex
-    std::vector<png_t> pngcan; // Candidate PNG
-    std::vector<png_t> pngaux; // Additional PNG
+    std::vector<real_t> xyz; // spatial coordinates per vertex
+    std::vector<std::vector<std::vector<real_t>>> state; // first level is the vertex, second level is the models, third is the state data
+    std::vector<std::vector<std::vector<tick_t>>> stick; // first level is the vertex, second level is the models, third is the stick data
+    std::vector<std::vector<aux_t>> vtxaux; // auxiliary indices per vertex (for vertex/edge cross-modification of state)
+    std::vector<std::vector<std::vector<aux_t>>> edgaux; // auxiliary indices  per edge model
     /* Network Events */
-    std::vector<std::vector<std::vector<event_t>>> event;
-        // event queue per vertex per iteration (use as calendar queue)
-    std::vector<std::vector<event_t>> evtaux; // overflow event queue
+    std::vector<std::vector<std::vector<event_t>>> event; // event queue per vertex per iteration (used as calendar queue)
+    std::vector<std::vector<event_t>> evtaux; // overflow/spillover event queue
     std::vector<event_t> evtlog; // event buffer for generated events
     std::vector<event_t> evtext; // external events (and extra spillover)
     /* Repeating Events */
@@ -569,6 +574,12 @@ class Network : public CBase_Network {
     std::vector<recentry_t> recordlist; // what to record
     std::vector<event_t> recevt; // record keeping for events
     std::vector<bool> recevtlist; // types of events to record
+    /* Polychronization */
+    std::vector<std::vector<std::vector<stamp_t>>> pngs; // PNGs per vertex (as mother)
+    std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex (seed events)
+    std::vector<stamp_t> pngcan; // Candidate PNG (evaluated on reduction)
+    std::vector<stamp_t> pngaux; // Generated spike-timing events during computation per partition
+    std::vector<std::deque<route_t>> pnglog; // sliding window of contributing spike-timing events per vertex
     /* Random Number Generation */
     std::mt19937 rngine;
     std::uniform_real_distribution<real_t> *unifdist;
