@@ -14,7 +14,7 @@ tcheck:  60000  # 1 minute
 trecord:  1000  # 1 second
 tdisplay: 1000  # 1 second
 
-runmode: "png"
+runmode: "sim"
 plasticity: on
 rpcportname: "/stacs/rpc"
 startpaused: no

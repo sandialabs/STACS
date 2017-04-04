@@ -35,7 +35,7 @@ class DummyEdg : public NetModelTmpl < 2, DummyEdg > {
     
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
-    void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
+    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
 
 /**************************************************************************
@@ -51,7 +51,7 @@ tick_t DummyEdg::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, s
 
 // Simulation jump
 //
-void DummyEdg::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
+void DummyEdg::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   //CkPrintf("Jumping Edg\n");
   std::this_thread::sleep_for(std::chrono::microseconds(10));
 }

@@ -18,7 +18,7 @@ extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
-extern /*readonly*/ idx_t equeue;
+extern /*readonly*/ idx_t nevtday;
 
 
 /**************************************************************************
@@ -195,8 +195,8 @@ void Network::LoadNetwork(mPart *msg) {
   state.resize(msg->nvtx);
   stick.resize(msg->nvtx);
   vtxaux.resize(msg->nvtx);
-  event.resize(msg->nvtx);
-  evtaux.resize(msg->nvtx);
+  evtcal.resize(msg->nvtx);
+  evtcol.resize(msg->nvtx);
   evtlog.clear();
   evtext.clear();
   repidx.clear();
@@ -240,7 +240,7 @@ void Network::LoadNetwork(mPart *msg) {
     edgmodidx[i].resize(msg->xadj[i+1] - msg->xadj[i]);
     state[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
     stick[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
-    event[i].resize(equeue);
+    evtcal[i].resize(nevtday);
     nadjcy += adjcy[i].size();
     // copy over vertex data
     state[i][0] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + netmodel[vtxmodidx[i]]->getNState());
@@ -274,7 +274,7 @@ void Network::LoadNetwork(mPart *msg) {
       std::vector<std::string> auxstick = netmodel[vtxmodidx[i]]->getAuxStick();
       for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
         if (edgmodidx[i][j]) {
-          vtxaux[i].push_back(aux_t());
+          vtxaux[i].push_back(auxidx_t());
           vtxaux[i].back().index = j+1;
           vtxaux[i].back().stateidx.resize(auxstate.size());
           for (std::size_t s = 0; s < auxstate.size(); ++s) {
@@ -288,19 +288,19 @@ void Network::LoadNetwork(mPart *msg) {
       }
     }
     // copy over event data
-    event_t evtpre;
+    event_t event;
     for (idx_t e = msg->xevent[i]; e < msg->xevent[i+1]; ++e) {
-      evtpre.diffuse = msg->diffuse[e];
-      evtpre.type = msg->type[e];
-      evtpre.source = msg->source[e];
-      evtpre.index = msg->index[e];
-      evtpre.data = msg->data[e];
+      event.diffuse = msg->diffuse[e];
+      event.type = msg->type[e];
+      event.source = msg->source[e];
+      event.index = msg->index[e];
+      event.data = msg->data[e];
       // Add to event queue or spillover
-      if (evtpre.diffuse/tstep < equeue) {
-        event[i][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
+      if (event.diffuse/tstep < nevtday) {
+        evtcal[i][(event.diffuse/tstep)%nevtday].push_back(event);
       }
       else {
-        evtaux[i].push_back(evtpre);
+        evtcol[i].push_back(event);
       }
       ++nevent;
     }
@@ -458,10 +458,10 @@ void Network::CreateGroup() {
 void Network::ResetNetwork() {
   for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
     // Clear events
-    for (idx_t j = 0; j < equeue; ++j) {
-      event[i][j].clear();
+    for (idx_t j = 0; j < nevtday; ++j) {
+      evtcal[i][j].clear();
     }
-    evtaux[i].clear();
+    evtcol[i].clear();
     // Reset vertex models
     netmodel[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
   }
@@ -492,10 +492,10 @@ mPart* Network::BuildPart() {
       nstate += state[i][j].size();
       nstick += stick[i][j].size();
     }
-    for (std::size_t j = 0; j < event[i].size(); ++j) {
-      nevent += event[i][j].size();
+    for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
+      nevent += evtcal[i][j].size();
     }
-    nevent += evtaux[i].size();
+    nevent += evtcol[i].size();
   }
 
   // Initialize partition data message
@@ -568,22 +568,22 @@ mPart* Network::BuildPart() {
     }
 
     // events
-    for (std::size_t j = 0; j < event[i].size(); ++j) {
-      for (std::size_t e = 0; e < event[i][j].size(); ++e) {
-        mpart->diffuse[jevent] = event[i][j][e].diffuse - tsim;
-        mpart->type[jevent] = event[i][j][e].type;
-        mpart->source[jevent] = event[i][j][e].source;
-        mpart->index[jevent] = event[i][j][e].index;
-        mpart->data[jevent++] = event[i][j][e].data;
+    for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
+      for (std::size_t e = 0; e < evtcal[i][j].size(); ++e) {
+        mpart->diffuse[jevent] = evtcal[i][j][e].diffuse - tsim;
+        mpart->type[jevent] = evtcal[i][j][e].type;
+        mpart->source[jevent] = evtcal[i][j][e].source;
+        mpart->index[jevent] = evtcal[i][j][e].index;
+        mpart->data[jevent++] = evtcal[i][j][e].data;
       }
     }
     // events spillover
-    for (std::size_t e = 0; e < evtaux[i].size(); ++e) {
-      mpart->diffuse[jevent] = evtaux[i][e].diffuse - tsim;
-      mpart->type[jevent] = evtaux[i][e].type;
-      mpart->source[jevent] = evtaux[i][e].source;
-      mpart->index[jevent] = evtaux[i][e].index;
-      mpart->data[jevent++] = evtaux[i][e].data;
+    for (std::size_t e = 0; e < evtcol[i].size(); ++e) {
+      mpart->diffuse[jevent] = evtcol[i][e].diffuse - tsim;
+      mpart->type[jevent] = evtcol[i][e].type;
+      mpart->source[jevent] = evtcol[i][e].source;
+      mpart->index[jevent] = evtcol[i][e].index;
+      mpart->data[jevent++] = evtcol[i][e].data;
     }
     // xevent
     mpart->xevent[i+1] = jevent;

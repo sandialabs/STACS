@@ -30,7 +30,7 @@ extern /*readonly*/ tick_t tqueue;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
-extern /*readonly*/ idx_t equeue;
+extern /*readonly*/ idx_t nevtday;
 
 
 /**************************************************************************
@@ -154,7 +154,7 @@ int Main::ReadConfig(std::string configfile) {
   }
   tdisplay = (tick_t)(treal*TICKS_PER_MS);
   // Slots in event queue (calendar days per year)
-  equeue = (tqueue / tstep) + 1;
+  nevtday = (tqueue / tstep) + 1;
   
   // Run mode
   try {

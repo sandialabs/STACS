@@ -37,7 +37,7 @@ class IzhiNeuron : public NetModelTmpl < 10, IzhiNeuron > {
 
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
-    void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
+    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
     
     /* Protocol */
     void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick);
@@ -67,13 +67,13 @@ tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
     state[1] = state[1] + param[3];
 
     // generate events
-    event_t evtpre;
-    evtpre.diffuse = tdrift;
-    evtpre.type = EVENT_SPIKE;
-    evtpre.source = REMOTE_EDGES | LOCAL_EDGES;
-    evtpre.index = 0;
-    evtpre.data = 0.0;
-    evtlog.push_back(evtpre);
+    event_t event;
+    event.diffuse = tdrift;
+    event.type = EVENT_SPIKE;
+    event.source = REMOTE_EDGES | LOCAL_EDGES;
+    event.index = 0;
+    event.data = 0.0;
+    evtlog.push_back(event);
   }
   
   // for numerical stability, use timestep (at most) = 1ms
@@ -92,10 +92,10 @@ tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
 
 // Simulation jump
 //
-void IzhiNeuron::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
+void IzhiNeuron::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   //CkPrintf("Jumping Vtx\n");
-  if (evt.type == EVENT_STIM) {
+  if (event.type == EVENT_STIM) {
     // Add stim to applied current
-    state[0][3] += evt.data;
+    state[0][3] += event.data;
   }
 }

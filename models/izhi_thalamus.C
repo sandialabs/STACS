@@ -31,7 +31,7 @@ class IzhiThalamus : public NetModelTmpl < 100, IzhiThalamus > {
     
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
-    void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
+    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
 
 
@@ -45,23 +45,23 @@ tick_t IzhiThalamus::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
   // Random thalamic input (to transient current)
   if (param[0] > 0) {
     // generate events
-    event_t evtpre;
-    evtpre.diffuse = tdrift;
-    evtpre.type = EVENT_STIM;
-    evtpre.source = REMOTE_EDGE;
-    evtpre.index = std::floor(param[0]*(*unifdist)(*rngine));
-    evtpre.data = param[1];
-    evtlog.push_back(evtpre);
-    evtpre.diffuse = tdrift + TICKS_PER_MS;
-    evtpre.data = -param[1];
-    evtlog.push_back(evtpre);
+    event_t event;
+    event.diffuse = tdrift;
+    event.type = EVENT_STIM;
+    event.source = REMOTE_EDGE;
+    event.index = std::floor(param[0]*(*unifdist)(*rngine));
+    event.data = param[1];
+    evtlog.push_back(event);
+    event.diffuse = tdrift + TICKS_PER_MS;
+    event.data = -param[1];
+    evtlog.push_back(event);
   }
   return tdiff;
 }
 
 // Simulation jump
 //
-void IzhiThalamus::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
+void IzhiThalamus::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   //CkPrintf("Jumping Vtx\n");
 }
 

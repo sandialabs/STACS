@@ -15,7 +15,7 @@ extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
-extern /*readonly*/ idx_t equeue;
+extern /*readonly*/ idx_t nevtday;
 
 
 /**************************************************************************
@@ -105,39 +105,39 @@ void Network::CycleSimPlastic() {
     }
     
     // Bookkeeping
-    idx_t evtiter = iter%equeue;
+    idx_t evtday = iter%nevtday;
     tick_t tstop = tsim + tstep;
 
     // Clear event buffer
     evtext.clear();
     idx_t nevent = 0;
     // Redistribute any events (on new year)
-    if (evtiter == 0) {
-      RedisEvent();
+    if (evtday == 0) {
+      MarkEvent();
     }
     
     // Check for repeating events
     if (tsim >= trep) {
-      std::vector<event_t>::iterator evt = repevt.begin();
+      std::vector<event_t>::iterator event = repevt.begin();
       // Compute periodic events
-      while (evt != repevt.end() && evt->diffuse <= tsim) {
+      while (event != repevt.end() && event->diffuse <= tsim) {
         // Set temporary model index
-        idx_t modidx = evt->index;
+        idx_t modidx = event->index;
         // Loop through all models
         for (std::size_t i = 0; i < repidx[modidx].size(); ++i) {
-          evt->index = repidx[modidx][i][1];
-          if (evt->index) {
-            netmodel[modidx]->Jump(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
+          event->index = repidx[modidx][i][1];
+          if (event->index) {
+            netmodel[modidx]->Jump(*event, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
           }
           else {
-            netmodel[modidx]->Jump(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
+            netmodel[modidx]->Jump(*event, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
           }
         }
         // Return model index
-        evt->index = modidx;
+        event->index = modidx;
         // Update timing
-        evt->diffuse += ((tick_t) evt->data)* TICKS_PER_MS;
-        ++evt;
+        event->diffuse += ((tick_t) event->data)* TICKS_PER_MS;
+        ++event;
       }
       std::sort(repevt.begin(), repevt.end());
       trep = repevt[0].diffuse;
@@ -149,21 +149,21 @@ void Network::CycleSimPlastic() {
       tick_t tdrift = tsim;
 
       // Sort events
-      std::sort(event[i][evtiter].begin(), event[i][evtiter].end());
-      nevent += event[i][evtiter].size();
+      std::sort(evtcal[i][evtday].begin(), evtcal[i][evtday].end());
+      nevent += evtcal[i][evtday].size();
 
       // Perform events starting at beginning of step
-      std::vector<event_t>::iterator evt = event[i][evtiter].begin();
-      while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
+      std::vector<event_t>::iterator event = evtcal[i][evtday].begin();
+      while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
-        if (evt->index) {
-          netmodel[edgmodidx[i][evt->index-1]]->Jump(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+        if (event->index) {
+          netmodel[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Jump(*evt, state[i], stick[i], vtxaux[i]);
+          netmodel[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
         }
-        ++evt;
+        ++event;
       }
 
       // Computation
@@ -208,11 +208,11 @@ void Network::CycleSimPlastic() {
             if (target & LOCAL_EDGES) {
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               // Jump loops
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
-                    event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
+                    evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
                   }
                 }
               }
@@ -229,7 +229,7 @@ void Network::CycleSimPlastic() {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
-                    evtaux[i].push_back(evtlog[e]);
+                    evtcol[i].push_back(evtlog[e]);
                   }
                 }
               }
@@ -239,15 +239,15 @@ void Network::CycleSimPlastic() {
               // vertex to itself
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               evtlog[e].index = 0;
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
-                event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
+                evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
               }
               else if (evtlog[e].diffuse < tsim + tstep) {
                 // Jump now
                 netmodel[vtxmodidx[i]]->Jump(evtlog[e], state[i], stick[i], vtxaux[i]);
               }
               else {
-                evtaux[i].push_back(evtlog[e]);
+                evtcol[i].push_back(evtlog[e]);
               }
             }
             // Record listed event
@@ -263,22 +263,22 @@ void Network::CycleSimPlastic() {
         }
         
         // Perform events up to tdrift
-        while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
+        while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
-          if (evt->index) {
-            netmodel[edgmodidx[i][evt->index-1]]->Jump(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+          if (event->index) {
+            netmodel[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Jump(*evt, state[i], stick[i], vtxaux[i]);
+            netmodel[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
           }
-          ++evt;
+          ++event;
         }
       }
 
       // Clear event queue
-      //CkAssert(evt == event[i][evtiter].end());
-      event[i][evtiter].clear();
+      //CkAssert(event == event[i][evtday].end());
+      evtcal[i][evtday].clear();
     }
     //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
 
@@ -340,39 +340,39 @@ void Network::CycleSimStatic() {
     }
     
     // Bookkeeping
-    idx_t evtiter = iter%equeue;
+    idx_t evtday = iter%nevtday;
     tick_t tstop = tsim + tstep;
 
     // Clear event buffer
     evtext.clear();
     idx_t nevent = 0;
     // Redistribute any events (on new year)
-    if (evtiter == 0) {
-      RedisEvent();
+    if (evtday == 0) {
+      MarkEvent();
     }
     
     // Check for repeating events
     if (tsim >= trep) {
-      std::vector<event_t>::iterator evt = repevt.begin();
+      std::vector<event_t>::iterator event = repevt.begin();
       // Compute periodic events
-      while (evt != repevt.end() && evt->diffuse <= tsim) {
+      while (event != repevt.end() && event->diffuse <= tsim) {
         // Set temporary model index
-        idx_t modidx = evt->index;
+        idx_t modidx = event->index;
         // Loop through all models
         for (std::size_t i = 0; i < repidx[modidx].size(); ++i) {
-          evt->index = repidx[modidx][i][1];
-          if (evt->index) {
-            netmodel[modidx]->Hop(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
+          event->index = repidx[modidx][i][1];
+          if (event->index) {
+            netmodel[modidx]->Hop(*event, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
           }
           else {
-            netmodel[modidx]->Hop(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
+            netmodel[modidx]->Hop(*event, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
           }
         }
         // Return model index
-        evt->index = modidx;
+        event->index = modidx;
         // Update timing
-        evt->diffuse += ((tick_t) evt->data)* TICKS_PER_MS;
-        ++evt;
+        event->diffuse += ((tick_t) event->data)* TICKS_PER_MS;
+        ++event;
       }
       std::sort(repevt.begin(), repevt.end());
       trep = repevt[0].diffuse;
@@ -384,21 +384,21 @@ void Network::CycleSimStatic() {
       tick_t tdrift = tsim;
 
       // Sort events
-      std::sort(event[i][evtiter].begin(), event[i][evtiter].end());
-      nevent += event[i][evtiter].size();
+      std::sort(evtcal[i][evtday].begin(), evtcal[i][evtday].end());
+      nevent += evtcal[i][evtday].size();
 
       // Perform events starting at beginning of step
-      std::vector<event_t>::iterator evt = event[i][evtiter].begin();
-      while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
+      std::vector<event_t>::iterator event = evtcal[i][evtday].begin();
+      while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
-        if (evt->index) {
-          netmodel[edgmodidx[i][evt->index-1]]->Hop(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+        if (event->index) {
+          netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Hop(*evt, state[i], stick[i], vtxaux[i]);
+          netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
         }
-        ++evt;
+        ++event;
       }
 
       // Computation
@@ -443,11 +443,11 @@ void Network::CycleSimStatic() {
             if (target & LOCAL_EDGES) {
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               // Jump loops
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
-                    event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
+                    evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
                   }
                 }
               }
@@ -464,7 +464,7 @@ void Network::CycleSimStatic() {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
-                    evtaux[i].push_back(evtlog[e]);
+                    evtcol[i].push_back(evtlog[e]);
                   }
                 }
               }
@@ -474,15 +474,15 @@ void Network::CycleSimStatic() {
               // vertex to itself
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               evtlog[e].index = 0;
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
-                event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
+                evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
               }
               else if (evtlog[e].diffuse < tsim + tstep) {
                 // Jump now
                 netmodel[vtxmodidx[i]]->Hop(evtlog[e], state[i], stick[i], vtxaux[i]);
               }
               else {
-                evtaux[i].push_back(evtlog[e]);
+                evtcol[i].push_back(evtlog[e]);
               }
             }
             // Record listed event
@@ -498,22 +498,22 @@ void Network::CycleSimStatic() {
         }
         
         // Perform events up to tdrift
-        while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
+        while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
-          if (evt->index) {
-            netmodel[edgmodidx[i][evt->index-1]]->Hop(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+          if (event->index) {
+            netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Hop(*evt, state[i], stick[i], vtxaux[i]);
+            netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
           }
-          ++evt;
+          ++event;
         }
       }
 
       // Clear event queue
-      //CkAssert(evt == event[i][evtiter].end());
-      event[i][evtiter].clear();
+      //CkAssert(event == event[i][evtday].end());
+      evtcal[i][evtday].clear();
     }
     //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
 

@@ -11,7 +11,7 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ idx_t equeue;
+extern /*readonly*/ idx_t nevtday;
 
 
 /**************************************************************************
@@ -47,16 +47,16 @@ void Network::CommEvent(mEvent *msg) {
   ++cadjprt[(prtiter + (msg->iter - iter))%2];
 
   // Event prototype
-  event_t evtpre;
-  tick_t evtdif;
+  event_t event;
+  tick_t departure;
 
   // Distribute events
   for (std::size_t i = 0; i < msg->nevent; ++i) {
     // Fill in prototype
-    evtdif = msg->diffuse[i];
-    evtpre.type = msg->type[i];
-    evtpre.source = msg->source[i];
-    evtpre.data = msg->data[i];
+    departure = msg->diffuse[i];
+    event.type = msg->type[i];
+    event.source = msg->source[i];
+    event.data = msg->data[i];
     // Determine local event target(s)
     // If index == source (multicast to edges)
     // If index != source (singlecast to edge)
@@ -66,17 +66,17 @@ void Network::CommEvent(mEvent *msg) {
       std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = adjmap.find(msg->source[i]);
       if (targets != adjmap.end()) {
         for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
-          evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
-          evtpre.index = (*target)[1];
+          event.diffuse = departure + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
+          event.index = (*target)[1];
           // Add to event queue or spillover
-          if ((evtpre.diffuse/tstep - msg->iter) < equeue) {
-            event[(*target)[0]][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
+          if ((event.diffuse/tstep - msg->iter) < nevtday) {
+            evtcal[(*target)[0]][(event.diffuse/tstep)%nevtday].push_back(event);
           }
-          else if (evtpre.diffuse/tstep < msg->iter) {
-            event[(*target)[0]][(msg->iter+1)%equeue].push_back(evtpre);
+          else if (event.diffuse/tstep < msg->iter) {
+            evtcal[(*target)[0]][(msg->iter+1)%nevtday].push_back(event);
           }
           else {
-            evtaux[(*target)[0]].push_back(evtpre);
+            evtcol[(*target)[0]].push_back(event);
           }
         }
       }
@@ -85,17 +85,17 @@ void Network::CommEvent(mEvent *msg) {
       // Find local target
       std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find(-(msg->index[i]+1));
       if (target != vtxmap.end()) {
-        evtpre.diffuse = evtdif; // direct events to vertices have no edge delay
-        evtpre.index = 0;
+        event.diffuse = departure; // direct events to vertices have no edge delay
+        event.index = 0;
         // Add to event queue or spillover
-        if ((evtpre.diffuse/tstep - msg->iter) < equeue) {
-          event[target->second][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
+        if ((event.diffuse/tstep - msg->iter) < nevtday) {
+          evtcal[target->second][(event.diffuse/tstep)%nevtday].push_back(event);
         }
-        else if (evtpre.diffuse/tstep < msg->iter) {
-          event[target->second][(msg->iter+1)%equeue].push_back(evtpre);
+        else if (event.diffuse/tstep < msg->iter) {
+          evtcal[target->second][(msg->iter+1)%nevtday].push_back(event);
         }
         else {
-          evtaux[target->second].push_back(evtpre);
+          evtcol[target->second].push_back(event);
         }
       }
     }
@@ -106,17 +106,17 @@ void Network::CommEvent(mEvent *msg) {
         // Find target mapping from source
         for (std::size_t j = 0; j < adjcy[target->second].size(); ++j) {
           if (adjcy[target->second][j] == msg->source[i]) {
-            evtpre.diffuse = evtdif + stick[target->second][j+1][0]; // delay always first stick of edge
-            evtpre.index = j+1; // 0'th entry is vertex
+            event.diffuse = departure + stick[target->second][j+1][0]; // delay always first stick of edge
+            event.index = j+1; // 0'th entry is vertex
             // Add to event queue or spillover
-            if ((evtpre.diffuse/tstep - msg->iter) < equeue) {
-              event[target->second][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
+            if ((event.diffuse/tstep - msg->iter) < nevtday) {
+              evtcal[target->second][(event.diffuse/tstep)%nevtday].push_back(event);
             }
-            else if (evtpre.diffuse/tstep < msg->iter) {
-              event[target->second][(msg->iter+1)%equeue].push_back(evtpre);
+            else if (event.diffuse/tstep < msg->iter) {
+              evtcal[target->second][(msg->iter+1)%nevtday].push_back(event);
             }
             else {
-              evtaux[target->second].push_back(evtpre);
+              evtcol[target->second].push_back(event);
             }
           }
         }
@@ -146,26 +146,26 @@ void Network::CommEvent(mEvent *msg) {
 * Network Event Helpers
 **************************************************************************/
 
-// Redistribute Event Spillover (on new year)
+// Move from Event Collection to Calendar (on new year)
 //
-void Network::RedisEvent() {
-  for (std::size_t i = 0; i < evtaux.size(); ++i) {
-    for (std::size_t j = 0; j < evtaux[i].size(); ++j) {
+void Network::MarkEvent() {
+  for (std::size_t i = 0; i < evtcol.size(); ++i) {
+    for (std::size_t j = 0; j < evtcol[i].size(); ++j) {
       // Add to event queue or back onto spillover
-      if ((evtaux[i][j].diffuse - tsim)/tstep < equeue) {
-        event[i][(evtaux[i][j].diffuse/tstep)%equeue].push_back(evtaux[i][j]);
+      if ((evtcol[i][j].diffuse - tsim)/tstep < nevtday) {
+        evtcal[i][(evtcol[i][j].diffuse/tstep)%nevtday].push_back(evtcol[i][j]);
       }
       else {
-        evtext.push_back(evtaux[i][j]);
+        evtext.push_back(evtcol[i][j]);
       }
     }
     // Copy back spillover
     if (evtext.size()) {
-      evtaux[i] = evtext;
+      evtcol[i] = evtext;
       evtext.clear();
     }
     else {
-      evtaux[i].clear();
+      evtcol[i].clear();
     }
   }
 }

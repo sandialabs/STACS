@@ -24,7 +24,7 @@
 /*readonly*/ tick_t tcheck;
 /*readonly*/ tick_t trecord;
 /*readonly*/ tick_t tdisplay;
-/*readonly*/ idx_t equeue;
+/*readonly*/ idx_t nevtday;
 
 
 /**************************************************************************

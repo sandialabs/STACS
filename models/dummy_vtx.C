@@ -32,7 +32,7 @@ class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
 
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
-    void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
+    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
 
 
@@ -49,20 +49,20 @@ tick_t DummyVtx::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, s
   std::this_thread::sleep_for(std::chrono::microseconds(tcomp));
 
   // generate events
-  event_t evtpre;
-  evtpre.diffuse = tdrift + tdiff/2;
-  evtpre.type = EVENT_SPIKE;
-  evtpre.source = REMOTE_EDGES | LOCAL_EDGES;
-  evtpre.index = 0;
-  evtpre.data = 0.0;
-  evtlog.push_back(evtpre);
+  event_t event;
+  event.diffuse = tdrift + tdiff/2;
+  event.type = EVENT_SPIKE;
+  event.source = REMOTE_EDGES | LOCAL_EDGES;
+  event.index = 0;
+  event.data = 0.0;
+  evtlog.push_back(event);
 
   return tdiff;
 }
 
 // Simulation jump
 //
-void DummyVtx::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
+void DummyVtx::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   CkPrintf("Jumping Vtx\n");
 }
 

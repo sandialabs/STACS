@@ -174,7 +174,7 @@ class YarpAudio : public NetModelTmpl < 101, YarpAudio > {
 
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
-    void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) { }
+    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
 
     /* Protocol */
     void OpenPorts();
@@ -206,31 +206,31 @@ tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
     port->mels.pop_front();
     //CkPrintf("Popping front of deque.\n");
     // generate events
-    event_t evtpre;
-    evtpre.type = EVENT_STIM;
-    evtpre.source = REMOTE_EDGE;
+    event_t event;
+    event.type = EVENT_STIM;
+    event.source = REMOTE_EDGE;
     // overlap of 16ms
     // total time of 32ms
     for (idx_t i = 0; i < (idx_t) param[0]; ++i) {
-      evtpre.index = i;
-      evtpre.diffuse = tdrift;
-      evtpre.data = (mel[i] + 16.0)/8;
-      evtlog.push_back(evtpre);
-      evtpre.diffuse = tdrift + 8 * TICKS_PER_MS;
-      evtpre.data = (mel[i] + 16.0)/8;
-      evtlog.push_back(evtpre);
-      evtpre.diffuse = tdrift + 12 * TICKS_PER_MS;
-      evtpre.data = (mel[i] + 16.0)/4;
-      evtlog.push_back(evtpre);
-      evtpre.diffuse = tdrift + 20 * TICKS_PER_MS;
-      evtpre.data = -(mel[i] + 16.0)/4;
-      evtlog.push_back(evtpre);
-      evtpre.diffuse = tdrift + 24 * TICKS_PER_MS;
-      evtpre.data = -(mel[i] + 16.0)/8;
-      evtlog.push_back(evtpre);
-      evtpre.diffuse = tdrift + 32 * TICKS_PER_MS;
-      evtpre.data = -(mel[i] + 16.0)/8;
-      evtlog.push_back(evtpre);
+      event.index = i;
+      event.diffuse = tdrift;
+      event.data = (mel[i] + 16.0)/8;
+      evtlog.push_back(event);
+      event.diffuse = tdrift + 8 * TICKS_PER_MS;
+      event.data = (mel[i] + 16.0)/8;
+      evtlog.push_back(event);
+      event.diffuse = tdrift + 12 * TICKS_PER_MS;
+      event.data = (mel[i] + 16.0)/4;
+      evtlog.push_back(event);
+      event.diffuse = tdrift + 20 * TICKS_PER_MS;
+      event.data = -(mel[i] + 16.0)/4;
+      evtlog.push_back(event);
+      event.diffuse = tdrift + 24 * TICKS_PER_MS;
+      event.data = -(mel[i] + 16.0)/8;
+      evtlog.push_back(event);
+      event.diffuse = tdrift + 32 * TICKS_PER_MS;
+      event.data = -(mel[i] + 16.0)/8;
+      evtlog.push_back(event);
     }
   }
   // Check if enough mels available

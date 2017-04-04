@@ -43,8 +43,8 @@ class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
 
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
-    void Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
-    void Hop(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux);
+    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
+    void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
 
 /**************************************************************************
@@ -54,13 +54,13 @@ class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
 // Periodic events
 //
 void IzhiSynSTDP::addRepeat(idx_t modidx, std::vector<event_t>& repevt) {
-  event_t evtpre;
-  evtpre.diffuse = 0;
-  evtpre.source = 0;
-  evtpre.index = modidx;
-  evtpre.type = EVENT_EDGUP;
-  evtpre.data = param[2];
-  repevt.push_back(evtpre);
+  event_t event;
+  event.diffuse = 0;
+  event.source = 0;
+  event.index = modidx;
+  event.type = EVENT_EDGUP;
+  event.data = param[2];
+  repevt.push_back(event);
 }
 
 
@@ -72,37 +72,37 @@ tick_t IzhiSynSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state
 
 // Simulation jump
 //
-void IzhiSynSTDP::Jump(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
-  if (evt.type == EVENT_SPIKE) {
+void IzhiSynSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
+  if (event.type == EVENT_SPIKE) {
     // External spike event
-    if (evt.source >= 0) {
-      idx_t e = evt.index;
+    if (event.source >= 0) {
+      idx_t e = event.index;
       // Apply effect to neuron (vertex)
-      state[0][aux[0].stateidx[0]] += state[e][0];
+      state[0][auxidx[0].stateidx[0]] += state[e][0];
       // Compute trace value
-      state[e][3] = state[e][3]*exp(-((real_t) (evt.diffuse - stick[e][2])/TICKS_PER_MS)/param[1]);
+      state[e][3] = state[e][3]*exp(-((real_t) (event.diffuse - stick[e][2])/TICKS_PER_MS)/param[1]);
       // Depress weight
       state[e][1] += state[e][3];
       // Reset trace to 0.1 when pre-synaptic neuron fires
       state[e][2] = 0.1;
       // Update last event value for calculating trace
-      stick[e][1] = evt.diffuse;
+      stick[e][1] = event.diffuse;
     }
     // Internal spike event
-    else if (evt.source < 0) {
-      idx_t e = evt.index;
+    else if (event.source < 0) {
+      idx_t e = event.index;
       // Compute trace value
-      state[e][2] = state[e][2]*exp(-((real_t) (evt.diffuse - stick[e][1])/TICKS_PER_MS)/param[1]);
+      state[e][2] = state[e][2]*exp(-((real_t) (event.diffuse - stick[e][1])/TICKS_PER_MS)/param[1]);
       // Facilitate weight
       state[e][1] += state[e][2];
       // Reset negative trace to -0.12 when post-synaptic neuron fires
       state[e][3] = -0.12;
       // Update last event value for calculating trace
-      stick[e][2] = evt.diffuse;
+      stick[e][2] = event.diffuse;
     }
   }
-  else if (evt.type == EVENT_EDGUP) {
-    idx_t e = evt.index;
+  else if (event.type == EVENT_EDGUP) {
+    idx_t e = event.index;
     // Update weight only every second
     state[e][0] += 0.01 + state[e][1];
     if (state[e][0] < 0) {
@@ -118,10 +118,10 @@ void IzhiSynSTDP::Jump(const event_t& evt, std::vector<std::vector<real_t>>& sta
 
 // Simulation hop
 //
-void IzhiSynSTDP::Hop(const event_t& evt, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<aux_t>& aux) {
-  if (evt.type == EVENT_SPIKE && evt.source >= 0) {
+void IzhiSynSTDP::Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
+  if (event.type == EVENT_SPIKE && event.source >= 0) {
     // Apply effect to neuron (vertex)
-    state[0][aux[0].stateidx[0]] += state[evt.index][0];
+    state[0][auxidx[0].stateidx[0]] += state[event.index][0];
   }
 }
 

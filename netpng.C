@@ -12,7 +12,7 @@
 **************************************************************************/
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ idx_t equeue;
+extern /*readonly*/ idx_t nevtday;
 
 
 /**************************************************************************
@@ -100,17 +100,17 @@ void Network::FindPNG() {
                 // Test for spiking of mother neuron
                 // assuming perfect timing of anchor
                 netmodel[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
-                event_t evtpre;
-                evtpre.diffuse = 0;
-                evtpre.type = EVENT_SPIKE;
-                evtpre.source = i;
-                evtpre.data = 0.0;
-                evtpre.index = anchor[j0]+1;
-                netmodel[edgmodidx[i][anchor[j0]]]->Hop(evtpre, state[i], stick[i], edgaux[edgmodidx[i][anchor[j0]]][vtxmodidx[i]]);
-                evtpre.index = anchor[j1]+1;
-                netmodel[edgmodidx[i][anchor[j1]]]->Hop(evtpre, state[i], stick[i], edgaux[edgmodidx[i][anchor[j1]]][vtxmodidx[i]]);
-                evtpre.index = anchor[j2]+1;
-                netmodel[edgmodidx[i][anchor[j2]]]->Hop(evtpre, state[i], stick[i], edgaux[edgmodidx[i][anchor[j2]]][vtxmodidx[i]]);
+                event_t event;
+                event.diffuse = 0;
+                event.type = EVENT_SPIKE;
+                event.source = i;
+                event.data = 0.0;
+                event.index = anchor[j0]+1;
+                netmodel[edgmodidx[i][anchor[j0]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j0]]][vtxmodidx[i]]);
+                event.index = anchor[j1]+1;
+                netmodel[edgmodidx[i][anchor[j1]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j1]]][vtxmodidx[i]]);
+                event.index = anchor[j2]+1;
+                netmodel[edgmodidx[i][anchor[j2]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j2]]][vtxmodidx[i]]);
                 tick_t tdrift = 0;
                 tick_t tstop = tstep * 5; // Strongly spiking triplets only
                 while (tdrift < tstop) {
@@ -122,20 +122,20 @@ void Network::FindPNG() {
                   evtlog.clear();
                   std::vector<event_t> pngseed;
                   pngseed.clear();
-                  evtpre.type = EVENT_SPIKE;
-                  evtpre.data = 0.0;
-                  evtpre.diffuse = stick[i][anchor[j0]+1][0];
-                  evtpre.source = adjcy[i][anchor[j0]];
-                  evtpre.index = adjcy[i][anchor[j0]];
-                  pngseed.push_back(evtpre);
-                  evtpre.diffuse = stick[i][anchor[j1]+1][0];
-                  evtpre.source = adjcy[i][anchor[j1]];
-                  evtpre.index = adjcy[i][anchor[j1]];
-                  pngseed.push_back(evtpre);
-                  evtpre.diffuse = stick[i][anchor[j2]+1][0];
-                  evtpre.source = adjcy[i][anchor[j2]];
-                  evtpre.index = adjcy[i][anchor[j2]];
-                  pngseed.push_back(evtpre);
+                  event.type = EVENT_SPIKE;
+                  event.data = 0.0;
+                  event.diffuse = stick[i][anchor[j0]+1][0];
+                  event.source = adjcy[i][anchor[j0]];
+                  event.index = adjcy[i][anchor[j0]];
+                  pngseed.push_back(event);
+                  event.diffuse = stick[i][anchor[j1]+1][0];
+                  event.source = adjcy[i][anchor[j1]];
+                  event.index = adjcy[i][anchor[j1]];
+                  pngseed.push_back(event);
+                  event.diffuse = stick[i][anchor[j2]+1][0];
+                  event.source = adjcy[i][anchor[j2]];
+                  event.index = adjcy[i][anchor[j2]];
+                  pngseed.push_back(event);
                   // correctly order the timing
                   std::sort(pngseed.begin(), pngseed.end());
                   pngseed[0].diffuse = pngseed[2].diffuse - pngseed[0].diffuse;
@@ -306,39 +306,39 @@ void Network::CyclePNG() {
 #endif
   else {
     // Bookkeeping
-    idx_t evtiter = iter%equeue;
+    idx_t evtday = iter%nevtday;
     tick_t tstop = tsim + tstep;
 
     // Clear event buffer
     evtext.clear();
     idx_t nevent = 0;
     // Redistribute any events (on new year)
-    if (evtiter == 0) {
-      RedisEvent();
+    if (evtday == 0) {
+      MarkEvent();
     }
     
     // Check for repeating events
     if (tsim >= trep) {
-      std::vector<event_t>::iterator evt = repevt.begin();
+      std::vector<event_t>::iterator event = repevt.begin();
       // Compute periodic events
-      while (evt != repevt.end() && evt->diffuse <= tsim) {
+      while (event != repevt.end() && event->diffuse <= tsim) {
         // Set temporary model index
-        idx_t modidx = evt->index;
+        idx_t modidx = event->index;
         // Loop through all models
         for (std::size_t i = 0; i < repidx[modidx].size(); ++i) {
-          evt->index = repidx[modidx][i][1];
-          if (evt->index) {
-            netmodel[modidx]->Hop(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
+          event->index = repidx[modidx][i][1];
+          if (event->index) {
+            netmodel[modidx]->Hop(*event, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
           }
           else {
-            netmodel[modidx]->Hop(*evt, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
+            netmodel[modidx]->Hop(*event, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
           }
         }
         // Return model index
-        evt->index = modidx;
+        event->index = modidx;
         // Update timing
-        evt->diffuse += ((tick_t) evt->data)* TICKS_PER_MS;
-        ++evt;
+        event->diffuse += ((tick_t) event->data)* TICKS_PER_MS;
+        ++event;
       }
       std::sort(repevt.begin(), repevt.end());
       trep = repevt[0].diffuse;
@@ -347,36 +347,36 @@ void Network::CyclePNG() {
     // Perform computation
     for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
       if (netmodel[vtxmodidx[i]]->getPNGActive() == false) {
-        event[i][evtiter].clear();
+        evtcal[i][evtday].clear();
         continue;
       }
       // Timing
       tick_t tdrift = tsim;
 
       // Sort events
-      std::sort(event[i][evtiter].begin(), event[i][evtiter].end());
-      nevent += event[i][evtiter].size();
+      std::sort(evtcal[i][evtday].begin(), evtcal[i][evtday].end());
+      nevent += evtcal[i][evtday].size();
 
       // Perform events starting at beginning of step
-      std::vector<event_t>::iterator evt = event[i][evtiter].begin();
-      while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
+      std::vector<event_t>::iterator event = evtcal[i][evtday].begin();
+      while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
-        if (evt->index) {
-          netmodel[edgmodidx[i][evt->index-1]]->Hop(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+        if (event->index) {
+          netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           // Add to PNG log
-          if (evt->type == EVENT_SPIKE) {
+          if (event->type == EVENT_SPIKE) {
             route_t pngpre;
-            pngpre.origin = adjcy[i][evt->index-1];
-            pngpre.departure = evt->diffuse - stick[i][evt->index][0];
-            pngpre.arrival = evt->diffuse;
+            pngpre.origin = adjcy[i][event->index-1];
+            pngpre.departure = event->diffuse - stick[i][event->index][0];
+            pngpre.arrival = event->diffuse;
             pnglog[i].push_back(pngpre);
           }
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Hop(*evt, state[i], stick[i], vtxaux[i]);
+          netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
         }
-        ++evt;
+        ++event;
       }
       
       // Move sliding window of contributing routes forward
@@ -445,11 +445,11 @@ void Network::CyclePNG() {
             if (target & LOCAL_EDGES) {
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               // Jump loops
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
-                    event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
+                    evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
                   }
                 }
               }
@@ -466,7 +466,7 @@ void Network::CyclePNG() {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     evtlog[e].index = j+1;
-                    evtaux[i].push_back(evtlog[e]);
+                    evtcol[i].push_back(evtlog[e]);
                   }
                 }
               }
@@ -476,15 +476,15 @@ void Network::CyclePNG() {
               // vertex to itself
               evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
               evtlog[e].index = 0;
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < equeue) {
-                event[i][(evtlog[e].diffuse/tstep)%equeue].push_back(evtlog[e]);
+              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
+                evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
               }
               else if (evtlog[e].diffuse < tsim + tstep) {
                 // Jump now
                 netmodel[vtxmodidx[i]]->Hop(evtlog[e], state[i], stick[i], vtxaux[i]);
               }
               else {
-                evtaux[i].push_back(evtlog[e]);
+                evtcol[i].push_back(evtlog[e]);
               }
             }
           }
@@ -493,21 +493,21 @@ void Network::CyclePNG() {
         }
         
         // Perform events up to tdrift
-        while (evt != event[i][evtiter].end() && evt->diffuse <= tdrift) {
+        while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
-          if (evt->index) {
-            netmodel[edgmodidx[i][evt->index-1]]->Hop(*evt, state[i], stick[i], edgaux[edgmodidx[i][evt->index-1]][vtxmodidx[i]]);
+          if (event->index) {
+            netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Hop(*evt, state[i], stick[i], vtxaux[i]);
+            netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
           }
-          ++evt;
+          ++event;
         }
       }
 
       // Clear event queue
-      event[i][evtiter].clear();
+      evtcal[i][evtday].clear();
     }
 
     // Send messages to neighbors
@@ -527,30 +527,30 @@ void Network::CyclePNG() {
 //
 void Network::SeedPNG(mEvent *msg) {
   // Event prototype
-  event_t evtpre;
-  tick_t evtdif;
+  event_t event;
+  tick_t departure;
 
   // Distribute events
   for (std::size_t i = 0; i < msg->nevent; ++i) {
     // Fill in prototype
-    evtdif = msg->diffuse[i];
-    evtpre.type = msg->type[i];
-    evtpre.source = msg->source[i];
-    evtpre.data = msg->data[i];
+    departure = msg->diffuse[i];
+    event.type = msg->type[i];
+    event.source = msg->source[i];
+    event.data = msg->data[i];
     // Determine local event target(s)
     // If index == source (multicast to edges)
     // Find target mapping from source
     std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = adjmap.find(msg->source[i]);
     if (targets != adjmap.end()) {
       for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
-        evtpre.diffuse = evtdif + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
-        evtpre.index = (*target)[1];
+        event.diffuse = departure + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
+        event.index = (*target)[1];
         // Add to event queue or spillover
-        if (evtpre.diffuse/tstep < equeue) {
-          event[(*target)[0]][(evtpre.diffuse/tstep)%equeue].push_back(evtpre);
+        if (event.diffuse/tstep < nevtday) {
+          evtcal[(*target)[0]][(event.diffuse/tstep)%nevtday].push_back(event);
         }
         else {
-          evtaux[(*target)[0]].push_back(evtpre);
+          evtcol[(*target)[0]].push_back(event);
         }
       }
     }
