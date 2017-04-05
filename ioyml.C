@@ -276,7 +276,7 @@ int Main::ReadModel() {
     // Params are their own 'node'
     YAML::Node param = modfile[i]["param"];
     if (param.size() == 0) {
-      CkPrintf("  warning: %s has no parameters\n", models[i].modname.c_str());
+      //CkPrintf("  warning: %s has no parameters\n", models[i].modname.c_str());
     }
     models[i].param.resize(param.size());
     for (std::size_t j = 0; j < param.size(); ++j) {
@@ -291,7 +291,7 @@ int Main::ReadModel() {
     // States are their own 'node'
     YAML::Node state = modfile[i]["state"];
     if (state.size() == 0) {
-      CkPrintf("  warning: %s has no state\n", models[i].modname.c_str());
+      //CkPrintf("  warning: %s has no state\n", models[i].modname.c_str());
     }
     // Count states and sticks
     models[i].nstate = 0;
@@ -315,7 +315,7 @@ int Main::ReadModel() {
     // Ports are their own 'node'
     YAML::Node port = modfile[i]["port"];
     if (port.size() == 0) {
-      CkPrintf("  warning: %s has no ports\n", models[i].modname.c_str());
+      //CkPrintf("  warning: %s has no ports\n", models[i].modname.c_str());
     }
     models[i].port.resize(port.size());
     for (std::size_t j = 0; j < port.size(); ++j) {
@@ -351,6 +351,19 @@ int Main::ReadModel() {
         break;
       }
     }
+  
+    // Print out model information
+    std::string modelports;
+    // collect ports
+    for (idx_t j = 0; j < models[i].port.size(); ++j) {
+      std::ostringstream port;
+      port << " " << models[i].port[j];
+      modelports.append(port.str());
+    }
+    // TODO: modtype to name for base model
+    CkPrintf("  Model: %d   Name: %s   Type: %" PRIidx "   States: %" PRIidx"   Params: %d   Ports:%s\n",
+        i+1, models[i].modname.c_str(), models[i].modtype, models[i].nstate + models[i].nstick,
+        models[i].param.size(), (modelports == "") ? " None" : modelports.c_str());
   }
 
   // Return success
