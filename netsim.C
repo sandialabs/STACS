@@ -169,67 +169,70 @@ void Network::CycleSimPlastic() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], evtlog);
+        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
-        if (evtlog.size()) {
-          for (std::size_t e = 0; e < evtlog.size(); ++e) {
+        if (events.size()) {
+          for (std::size_t e = 0; e < events.size(); ++e) {
             // Get information
-            idx_t target = evtlog[e].source;
-            idx_t index = evtlog[e].index;
+            idx_t target = events[e].source;
+            idx_t index = events[e].index;
+            // Reindex to global
+            events[e].source = vtxidx[i];
+            // Record listed event
+            if (evtloglist[events[e].type]) {
+              evtlog.push_back(events[e]);
+            }
             // Remote events (multicast to edges)
             if (target & REMOTE_EDGES) {
               // reindex to global
-              evtlog[e].source = vtxidx[i];
-              evtlog[e].index = vtxidx[i];
+              events[e].index = vtxidx[i];
               // push to communication
-              evtext.push_back(evtlog[e]);
+              evtext.push_back(events[e]);
             }
             // Remote event (singlecast to edge)
             else if (target & REMOTE_EDGE) {
               // reindex to global
-              evtlog[e].source = vtxidx[i];
               // TODO: get this value from the target mapping
-              evtlog[e].index = adjcy[i][index];
+              events[e].index = adjcy[i][index];
               // push to communication
-              evtext.push_back(evtlog[e]);
+              evtext.push_back(events[e]);
             }
             // Remote event (singlecast to vertex)
             else if (target & REMOTE_VERTEX) {
               // reindex to global
-              evtlog[e].source = vtxidx[i];
               // TODO: get this value from the target mapping
-              evtlog[e].index = -adjcy[i][index]-1; // negative index indicates vertex
+              events[e].index = -adjcy[i][index]-1; // negative index indicates vertex
               // push to communication
-              evtext.push_back(evtlog[e]);
+              evtext.push_back(events[e]);
             }
             // Local events (multicast to edges)
             if (target & LOCAL_EDGES) {
-              evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
+              events[e].source = -1; // negative source indicates local event
               // Jump loops
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
+              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
-                    evtlog[e].index = j+1;
-                    evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
+                    events[e].index = j+1;
+                    evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
                   }
                 }
               }
-              else if (evtlog[e].diffuse < tsim + tstep) {
+              else if (events[e].diffuse < tsim + tstep) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
-                    evtlog[e].index = j+1;
+                    events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Jump(evtlog[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    netmodel[edgmodidx[i][j]]->Jump(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
               else {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
-                    evtlog[e].index = j+1;
-                    evtcol[i].push_back(evtlog[e]);
+                    events[e].index = j+1;
+                    evtcol[i].push_back(events[e]);
                   }
                 }
               }
@@ -237,29 +240,22 @@ void Network::CycleSimPlastic() {
             // Local event (singlecast to vertex)
             if (target & LOCAL_VERTEX) {
               // vertex to itself
-              evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
-              evtlog[e].index = 0;
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
+              events[e].source = -1; // negative source indicates local event
+              events[e].index = 0;
+              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
+                evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
               }
-              else if (evtlog[e].diffuse < tsim + tstep) {
+              else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Jump(evtlog[e], state[i], stick[i], vtxaux[i]);
+                netmodel[vtxmodidx[i]]->Jump(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
-                evtcol[i].push_back(evtlog[e]);
+                evtcol[i].push_back(events[e]);
               }
-            }
-            // Record listed event
-            if (recevtlist[evtlog[e].type]) {
-              // reindex to global
-              evtlog[e].source = vtxidx[i];
-              evtlog[e].index = index;
-              recevt.push_back(evtlog[e]);
             }
           }
           // clear log for next time
-          evtlog.clear();
+          events.clear();
         }
         
         // Perform events up to tdrift
@@ -404,67 +400,70 @@ void Network::CycleSimStatic() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], evtlog);
+        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
-        if (evtlog.size()) {
-          for (std::size_t e = 0; e < evtlog.size(); ++e) {
+        if (events.size()) {
+          for (std::size_t e = 0; e < events.size(); ++e) {
             // Get information
-            idx_t target = evtlog[e].source;
-            idx_t index = evtlog[e].index;
+            idx_t target = events[e].source;
+            idx_t index = events[e].index;
+            // reindex to global
+            events[e].source = vtxidx[i];
+            // Record listed event
+            if (evtloglist[events[e].type]) {
+              evtlog.push_back(events[e]);
+            }
             // Remote events (multicast to edges)
             if (target & REMOTE_EDGES) {
               // reindex to global
-              evtlog[e].source = vtxidx[i];
-              evtlog[e].index = vtxidx[i];
+              events[e].index = vtxidx[i];
               // push to communication
-              evtext.push_back(evtlog[e]);
+              evtext.push_back(events[e]);
             }
             // Remote event (singlecast to edge)
             else if (target & REMOTE_EDGE) {
               // reindex to global
-              evtlog[e].source = vtxidx[i];
               // TODO: get this value from the target mapping
-              evtlog[e].index = adjcy[i][index];
+              events[e].index = adjcy[i][index];
               // push to communication
-              evtext.push_back(evtlog[e]);
+              evtext.push_back(events[e]);
             }
             // Remote event (singlecast to vertex)
             else if (target & REMOTE_VERTEX) {
               // reindex to global
-              evtlog[e].source = vtxidx[i];
               // TODO: get this value from the target mapping
-              evtlog[e].index = -adjcy[i][index]-1; // negative index indicates vertex
+              events[e].index = -adjcy[i][index]-1; // negative index indicates vertex
               // push to communication
-              evtext.push_back(evtlog[e]);
+              evtext.push_back(events[e]);
             }
             // Local events (multicast to edges)
             if (target & LOCAL_EDGES) {
-              evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
+              events[e].source = -1; // negative source indicates local event
               // Jump loops
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
+              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
-                    evtlog[e].index = j+1;
-                    evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
+                    events[e].index = j+1;
+                    evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
                   }
                 }
               }
-              else if (evtlog[e].diffuse < tsim + tstep) {
+              else if (events[e].diffuse < tsim + tstep) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
-                    evtlog[e].index = j+1;
+                    events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Hop(evtlog[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    netmodel[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
               else {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
-                    evtlog[e].index = j+1;
-                    evtcol[i].push_back(evtlog[e]);
+                    events[e].index = j+1;
+                    evtcol[i].push_back(events[e]);
                   }
                 }
               }
@@ -472,29 +471,22 @@ void Network::CycleSimStatic() {
             // Local event (singlecast to vertex)
             if (target & LOCAL_VERTEX) {
               // vertex to itself
-              evtlog[e].source = -vtxidx[i]-1; // negative source indicates local event
-              evtlog[e].index = 0;
-              if ((evtlog[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                evtcal[i][(evtlog[e].diffuse/tstep)%nevtday].push_back(evtlog[e]);
+              events[e].source = -1; // negative source indicates local event
+              events[e].index = 0;
+              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
+                evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
               }
-              else if (evtlog[e].diffuse < tsim + tstep) {
+              else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Hop(evtlog[e], state[i], stick[i], vtxaux[i]);
+                netmodel[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
-                evtcol[i].push_back(evtlog[e]);
+                evtcol[i].push_back(events[e]);
               }
-            }
-            // Record listed event
-            if (recevtlist[evtlog[e].type]) {
-              // reindex to global
-              evtlog[e].source = vtxidx[i];
-              evtlog[e].index = index;
-              recevt.push_back(evtlog[e]);
             }
           }
           // clear log for next time
-          evtlog.clear();
+          events.clear();
         }
         
         // Perform events up to tdrift

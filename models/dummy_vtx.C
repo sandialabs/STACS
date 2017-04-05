@@ -31,7 +31,7 @@ class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
     }
 
     /* Simulation */
-    tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
+    tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
 
@@ -42,7 +42,7 @@ class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
 
 // Simulation step
 //
-tick_t DummyVtx::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
+tick_t DummyVtx::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
   idx_t tcomp = ((idx_t) tdiff)*100/TICKS_PER_MS; // 1ms sleeps for 100us
   if (tcomp > 1000000) { tcomp = 1000000; }
   else if (tcomp == 0) { tcomp = 1; }
@@ -55,7 +55,7 @@ tick_t DummyVtx::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, s
   event.source = REMOTE_EDGES | LOCAL_EDGES;
   event.index = 0;
   event.data = 0.0;
-  evtlog.push_back(event);
+  events.push_back(event);
 
   return tdiff;
 }

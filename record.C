@@ -5,7 +5,6 @@
  */
 
 #include "network.h"
-#include "record.h"
 
 /**************************************************************************
 * Charm++ Read-Only Variables
@@ -27,13 +26,15 @@ void Network::StoreRecord() {
       // record time
       record.push_back(record_t());
       record.back().drift = tsim;
-      // add data
+      // TODO: better record tracking options and through configuration file
+      record.back().type = r;
+      // add data accordingly
       for (std::size_t i = 0; i < recordlist[r].index.size(); ++i) {
         if (recordlist[r].type[i] == RECORD_STATE) {
           record.back().data.push_back(state[recordlist[r].index[i]][recordlist[r].model[i]][recordlist[r].value[i]]);
         }
         else if (recordlist[r].type[i] == RECORD_STICK) {
-          record.back().data.push_back((real_t)(stick[recordlist[r].index[i]][recordlist[r].model[i]][recordlist[r].value[i]]));
+          record.back().diffuse.push_back(stick[recordlist[r].index[i]][recordlist[r].model[i]][recordlist[r].value[i]]);
         }
         else if (recordlist[r].type[i] == RECORD_COORD) {
           record.back().data.push_back(xyz[recordlist[r].index[i]*3+0]);
@@ -43,7 +44,6 @@ void Network::StoreRecord() {
       }
     }
   }
-  // Event records are recorded in event handling
 }
 
 
@@ -126,56 +126,79 @@ void Netdata::SaveFinalRecord(mRecord *msg) {
 mRecord* Network::BuildRecord() {
   /* Bookkeeping */
   idx_t ndata = 0;
+  idx_t ndiffuse = 0;
+  idx_t nindex = 0;
 
   // Count data points
   for (std::size_t i = 0; i < record.size(); ++i) {
     ndata += record[i].data.size();
+    ndiffuse += record[i].diffuse.size();
+    nindex += record[i].index.size();
   }
 
   // Initialize distribution message
   int msgSize[MSG_Record];
-  msgSize[0] = recevt.size();       // diffuse
-  msgSize[1] = recevt.size();       // type
-  msgSize[2] = recevt.size();       // source
-  msgSize[3] = recevt.size();       // index
-  msgSize[4] = recevt.size()+ndata; // data
-  msgSize[5] = record.size();       // drift
-  msgSize[6] = record.size()+1;     // xdata
+  msgSize[0] = evtlog.size()+ndiffuse;      // diffuse
+  msgSize[1] = evtlog.size()+record.size(); // type
+  msgSize[2] = evtlog.size();               // source
+  msgSize[3] = evtlog.size()+nindex;        // index
+  msgSize[4] = evtlog.size()+ndata;         // data
+  msgSize[5] = record.size();               // drift
+  msgSize[6] = record.size()+1;             // xdata
+  msgSize[7] = record.size()+1;             // xdiffuse
+  msgSize[8] = record.size()+1;             // xindex
   mRecord *mrecord = new(msgSize, 0) mRecord;
-  mrecord->nrecevt = recevt.size();
+  mrecord->nevtlog = evtlog.size();
   mrecord->nrecord = record.size();
   mrecord->iter = iter;
   mrecord->prtidx = prtidx;
 
   // Pack event information
-  for (std::size_t i = 0; i < recevt.size(); ++i) {
-    mrecord->diffuse[i] = recevt[i].diffuse;
-    mrecord->type[i] = recevt[i].type;
-    mrecord->source[i] = recevt[i].source;
-    mrecord->index[i] = recevt[i].index;
-    mrecord->data[i] = recevt[i].data;
+  for (std::size_t i = 0; i < evtlog.size(); ++i) {
+    mrecord->diffuse[i] = evtlog[i].diffuse;
+    mrecord->type[i] = evtlog[i].type;
+    mrecord->source[i] = evtlog[i].source;
+    mrecord->index[i] = evtlog[i].index;
+    mrecord->data[i] = evtlog[i].data;
   }
   
   // Counters
-  idx_t jdata = recevt.size();
+  idx_t jdata = evtlog.size();
+  idx_t jdiffuse = evtlog.size();
+  idx_t jindex = evtlog.size();
   
-  // Prefix starts at the end of event data
-  mrecord->xdata[0] = recevt.size();
+  // Prefix starts at end of event data
+  mrecord->xdata[0] = evtlog.size();
+  mrecord->xdiffuse[0] = evtlog.size();
+  mrecord->xindex[0] = evtlog.size();
 
   // Pack record information
   for (std::size_t i = 0; i < record.size(); ++i) {
     mrecord->drift[i] = record[i].drift;
+    mrecord->type[evtlog.size()+i] = record[i].type;
     // data
     mrecord->xdata[i+1] = mrecord->xdata[i] + record[i].data.size();
     for (std::size_t j = 0; j < record[i].data.size(); ++j) {
       mrecord->data[jdata++] = record[i].data[j];
     }
+    // diffuse
+    mrecord->xdiffuse[i+1] = mrecord->xdiffuse[i] + record[i].diffuse.size();
+    for (std::size_t j = 0; j < record[i].diffuse.size(); ++j) {
+      mrecord->diffuse[jdiffuse++] = record[i].diffuse[j];
+    }
+    // index
+    mrecord->xindex[i+1] = mrecord->xindex[i] + record[i].index.size();
+    for (std::size_t j = 0; j < record[i].index.size(); ++j) {
+      mrecord->index[jindex++] = record[i].index[j];
+    }
   }
-  CkAssert(jdata == recevt.size() + ndata);
+  CkAssert(jdata == evtlog.size() + ndata);
+  CkAssert(jdiffuse == evtlog.size() + ndiffuse);
+  CkAssert(jindex == evtlog.size() + nindex);
   
   // Clear records
+  evtlog.clear();
   record.clear();
-  recevt.clear();
 
   return mrecord;
 }

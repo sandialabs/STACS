@@ -31,7 +31,7 @@ class IzhiSynNoSTDP : public NetModelTmpl < 13, IzhiSynNoSTDP > {
     }
     
     /* Simulation */
-    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
+    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
     void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
@@ -42,7 +42,7 @@ class IzhiSynNoSTDP : public NetModelTmpl < 13, IzhiSynNoSTDP > {
 
 // Simulation step
 //
-tick_t IzhiSynNoSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
+tick_t IzhiSynNoSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
   return tdiff;
 }
 

@@ -42,7 +42,7 @@ class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
     void addRepeat(idx_t modidx, std::vector<event_t>& repevt);
 
     /* Simulation */
-    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
+    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
     void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
@@ -58,7 +58,7 @@ void IzhiSynSTDP::addRepeat(idx_t modidx, std::vector<event_t>& repevt) {
   event.diffuse = 0;
   event.source = 0;
   event.index = modidx;
-  event.type = EVENT_EDGUP;
+  event.type = EVENT_SYNUP;
   event.data = param[2];
   repevt.push_back(event);
 }
@@ -66,7 +66,7 @@ void IzhiSynSTDP::addRepeat(idx_t modidx, std::vector<event_t>& repevt) {
 
 // Simulation step
 //
-tick_t IzhiSynSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
+tick_t IzhiSynSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
   return tdiff;
 }
 
@@ -101,7 +101,7 @@ void IzhiSynSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& s
       stick[e][2] = event.diffuse;
     }
   }
-  else if (event.type == EVENT_EDGUP) {
+  else if (event.type == EVENT_SYNUP) {
     idx_t e = event.index;
     // Update weight only every second
     state[e][0] += 0.01 + state[e][1];

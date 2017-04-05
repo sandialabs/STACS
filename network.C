@@ -67,7 +67,7 @@ Network::Network(mModel *msg) {
   rngine.seed(rngseed+prtidx);
   unifdist = new std::uniform_real_distribution<real_t> (0.0, 1.0);
 
-  // Vertex Models
+  // Network Models
   for (std::size_t i = 0; i < netmodel.size(); ++i) {
     delete netmodel[i];
   }
@@ -107,6 +107,16 @@ Network::Network(mModel *msg) {
     }
     */
   }
+
+  // Recording
+  evtlog.clear();
+  evtloglist.resize(EVENT_TOTAL);
+  record.clear();
+  recordlist.clear();
+  // TODO: Put this in the yml config file
+  // Record spikes
+  evtloglist[EVENT_SPIKE] = true;
+
   delete msg;
 
   // set up auxiliary state
@@ -195,18 +205,12 @@ void Network::LoadNetwork(mPart *msg) {
   state.resize(msg->nvtx);
   stick.resize(msg->nvtx);
   vtxaux.resize(msg->nvtx);
+  repidx.clear();
   evtcal.resize(msg->nvtx);
   evtcol.resize(msg->nvtx);
-  evtlog.clear();
+  events.clear();
   evtext.clear();
-  repidx.clear();
-  record.clear();
-  recordlist.clear();
-  recevt.clear();
-  recevtlist.resize(EVENT_TOTAL);
-  // TODO: Put this in the yml config file
-  // Record spikes
-  recevtlist[EVENT_SPIKE] = true;
+  evtrpc.clear();
   // Polychronization
   pngs.resize(msg->nvtx);
   pngseeds.clear();

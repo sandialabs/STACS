@@ -80,31 +80,30 @@ void Network::CommRPC(mRPC *msg) {
         idx_t numvtx = (idx_t) msg->rpcdata[1];
         idx_t pulses = (idx_t) msg->rpcdata[2];
         // build stim event
-        std::vector<event_t> events;
-        events.resize(pulses*2);
+        evtrpc.resize(pulses*2);
         for (idx_t i = 0; i < pulses; ++i) {
-          events[i*2  ].diffuse = ((tick_t) synciter*tstep) + ((tick_t) msg->rpcdata[3+numvtx+i*3]*TICKS_PER_MS);
-          events[i*2+1].diffuse = events[i*2].diffuse + ((tick_t) msg->rpcdata[3+numvtx+i*3+1]*TICKS_PER_MS);
-          events[i*2  ].type = EVENT_STIM;
-          events[i*2+1].type = EVENT_STIM;
-          events[i*2  ].source = -1;
-          events[i*2+1].source = -1;
-          events[i*2  ].index = 0;
-          events[i*2+1].index = 0;
-          events[i*2  ].data = msg->rpcdata[3+numvtx+i*3+2];
-          events[i*2+1].data = -msg->rpcdata[3+numvtx+i*3+2];
+          evtrpc[i*2  ].diffuse = ((tick_t) synciter*tstep) + ((tick_t) msg->rpcdata[3+numvtx+i*3]*TICKS_PER_MS);
+          evtrpc[i*2+1].diffuse = evtrpc[i*2].diffuse + ((tick_t) msg->rpcdata[3+numvtx+i*3+1]*TICKS_PER_MS);
+          evtrpc[i*2  ].type = EVENT_STIM;
+          evtrpc[i*2+1].type = EVENT_STIM;
+          evtrpc[i*2  ].source = -1;
+          evtrpc[i*2+1].source = -1;
+          evtrpc[i*2  ].index = 0;
+          evtrpc[i*2+1].index = 0;
+          evtrpc[i*2  ].data = msg->rpcdata[3+numvtx+i*3+2];
+          evtrpc[i*2+1].data = -msg->rpcdata[3+numvtx+i*3+2];
         }
         // add events to vertices
         for (idx_t i = 3; i < 3 + numvtx; ++i) {
           std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find((idx_t) msg->rpcdata[i]);
           if (target != vtxmap.end()) {
-            for (size_t e = 0; e < events.size(); ++e) {
-              events[e].source -= (idx_t) msg->rpcdata[i];
-              if ((events[e].diffuse/tstep - synciter) < nevtday) {
-                evtcal[target->second][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
+            for (size_t e = 0; e < evtrpc.size(); ++e) {
+              evtrpc[e].source -= (idx_t) msg->rpcdata[i];
+              if ((evtrpc[e].diffuse/tstep - synciter) < nevtday) {
+                evtcal[target->second][(evtrpc[e].diffuse/tstep)%nevtday].push_back(evtrpc[e]);
               }
               else {
-                evtcol[target->second].push_back(events[e]);
+                evtcol[target->second].push_back(evtrpc[e]);
               }
             }
           }

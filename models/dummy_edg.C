@@ -34,7 +34,7 @@ class DummyEdg : public NetModelTmpl < 2, DummyEdg > {
     }
     
     /* Simulation */
-    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
+    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
 
@@ -44,7 +44,7 @@ class DummyEdg : public NetModelTmpl < 2, DummyEdg > {
 
 // Simulation step
 //
-tick_t DummyEdg::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
+tick_t DummyEdg::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
   CkPrintf("Stepping Edg\n");
   return tdiff;
 }

@@ -17,6 +17,7 @@
 #include "typedefs.h"
 #include "timing.h"
 #include "event.h"
+#include "record.h"
 #include "ckmulticast.h"
 #include "network.decl.h"
 
@@ -32,24 +33,6 @@
 // Network Size Distributions
 //
 struct dist_t;
-
-// Records
-//
-struct record_t {
-  tick_t drift;
-  std::vector<real_t> data;
-};
-
-// Record list
-//
-struct recentry_t {
-  tick_t trec;
-  tick_t tfreq;
-  std::vector<idx_t> type;
-  std::vector<idx_t> index;
-  std::vector<idx_t> model;
-  std::vector<idx_t> value;
-};
 
 // Auxiliary indices
 //
@@ -71,6 +54,27 @@ struct event_t {
   bool operator<(const event_t& event) const {
     return diffuse < event.diffuse;
   }
+};
+
+// Records
+//
+struct record_t {
+  tick_t drift;
+  idx_t type;
+  std::vector<real_t> data;
+  std::vector<tick_t> diffuse;
+  std::vector<idx_t> index;
+};
+
+// Record list
+//
+struct track_t {
+  tick_t trec;
+  tick_t tfreq;
+  std::vector<idx_t> type;
+  std::vector<idx_t> index;
+  std::vector<idx_t> model;
+  std::vector<idx_t> value;
 };
 
 // Spike-timing events (for PNGs)
@@ -191,7 +195,7 @@ class mPart : public CMessage_mPart {
 
 // Network record data
 //
-#define MSG_Record 7
+#define MSG_Record 9
 class mRecord : public CMessage_mRecord {
   public:
     tick_t *diffuse;
@@ -201,12 +205,13 @@ class mRecord : public CMessage_mRecord {
     real_t *data;
     tick_t *drift;
     idx_t *xdata;
+    idx_t *xdiffuse;
+    idx_t *xindex;
     /* Bookkeeping */
     idx_t prtidx;
     idx_t iter;
-    idx_t nrecevt;
+    idx_t nevtlog;
     idx_t nrecord;
-    bool final;
 };
 
 // Go-ahead
@@ -306,7 +311,7 @@ class NetModel {
     /* Abstract Functions */
     virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
     virtual void addRepeat(idx_t modidx, std::vector<event_t>& repevt) { }
-    virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) = 0;
+    virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) = 0;
     virtual void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) = 0;
     virtual void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
   protected:
@@ -393,7 +398,7 @@ const idx_t NetModelTmpl<TYPE, IMPL>::MODELTYPE = NetModelFactory::getNetModel()
 class NoneModel : public NetModelTmpl < 0, NoneModel > {
   public:
     NoneModel() { paramlist.resize(0); statelist.resize(0); sticklist.resize(0); auxstate.resize(0); auxstick.resize(0); portlist.resize(0); }
-    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) { return tdiff; }
+    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) { return tdiff; }
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
 };
 
@@ -559,21 +564,22 @@ class Network : public CBase_Network {
     std::vector<std::vector<std::vector<tick_t>>> stick; // first level is the vertex, second level is the models, third is the stick data
     std::vector<std::vector<auxidx_t>> vtxaux; // auxiliary indices per vertex (for vertex/edge cross-modification of state)
     std::vector<std::vector<std::vector<auxidx_t>>> edgaux; // auxiliary indices  per edge model
-    /* Network Events */
-    std::vector<std::vector<std::vector<event_t>>> evtcal; // event queue per vertex per iteration (similar to calendar queue)
-    std::vector<std::vector<event_t>> evtcol; // collection of overflow/spillover event queue
-    std::vector<event_t> evtlog; // event buffer for generated events
-    std::vector<event_t> evtext; // external events (and extra spillover)
     /* Periodic Events */
     std::vector<event_t> repevt; // list of events
     std::vector<bool> repmodidx; // models with repeating events
     std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> repidx; // index into models
     tick_t trep; // update indicator
+    /* Network Events */
+    std::vector<std::vector<std::vector<event_t>>> evtcal; // event queue per vertex per iteration (similar to calendar queue)
+    std::vector<std::vector<event_t>> evtcol; // collection of overflow/spillover event queue
+    std::vector<event_t> events; // event buffer for generated events
+    std::vector<event_t> evtext; // external events (and extra spillover)
+    std::vector<event_t> evtrpc; // events generated from RPC
     /* Recording */
+    std::vector<event_t> evtlog; // event logging
+    std::vector<bool> evtloglist; // types of events to log
     std::vector<record_t> record; // record keeping
-    std::vector<recentry_t> recordlist; // what to record
-    std::vector<event_t> recevt; // record keeping for events
-    std::vector<bool> recevtlist; // types of events to record
+    std::vector<track_t> recordlist; // what to record
     /* Polychronization */
     std::vector<std::vector<std::vector<stamp_t>>> pngs; // PNGs per vertex (as mother)
     std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex (seed events)

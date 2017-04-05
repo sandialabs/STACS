@@ -39,11 +39,12 @@ charmrun
 *.state.*
 *.event.*
 *.part.*
-*.record.*
 *.png.*
+
+# Record Files
+*.log.*
+*.record.*
 
 # Temporary Files
 *.swp
-
-
 .DS_Store

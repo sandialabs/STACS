@@ -60,9 +60,11 @@ module network {
     real_t data[];
     tick_t drift[];
     idx_t xdata[];
+    idx_t xdiffuse[];
+    idx_t xindex[];
     idx_t prtidx;
     idx_t iter;
-    idx_t nrecevt;
+    idx_t nevtlog;
     idx_t nrecord;
   };
   

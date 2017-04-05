@@ -173,7 +173,7 @@ class YarpAudio : public NetModelTmpl < 101, YarpAudio > {
     }
 
     /* Simulation */
-    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog);
+    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
 
     /* Protocol */
@@ -195,7 +195,7 @@ class YarpAudio : public NetModelTmpl < 101, YarpAudio > {
 
 // Simulation step
 //
-tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& evtlog) {
+tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
 #ifdef STACS_WITH_YARP
   // Check every 16 ms
   // TODO: move to parameters
@@ -215,22 +215,22 @@ tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
       event.index = i;
       event.diffuse = tdrift;
       event.data = (mel[i] + 16.0)/8;
-      evtlog.push_back(event);
+      events.push_back(event);
       event.diffuse = tdrift + 8 * TICKS_PER_MS;
       event.data = (mel[i] + 16.0)/8;
-      evtlog.push_back(event);
+      events.push_back(event);
       event.diffuse = tdrift + 12 * TICKS_PER_MS;
       event.data = (mel[i] + 16.0)/4;
-      evtlog.push_back(event);
+      events.push_back(event);
       event.diffuse = tdrift + 20 * TICKS_PER_MS;
       event.data = -(mel[i] + 16.0)/4;
-      evtlog.push_back(event);
+      events.push_back(event);
       event.diffuse = tdrift + 24 * TICKS_PER_MS;
       event.data = -(mel[i] + 16.0)/8;
-      evtlog.push_back(event);
+      events.push_back(event);
       event.diffuse = tdrift + 32 * TICKS_PER_MS;
       event.data = -(mel[i] + 16.0)/8;
-      evtlog.push_back(event);
+      events.push_back(event);
     }
   }
   // Check if enough mels available

@@ -9,7 +9,6 @@
 
 #include "stacs.h"
 #include "network.h"
-#include "record.h"
 
 // Maximum size of input line (bytes)
 #define MAXLINE 1280000
@@ -457,41 +456,72 @@ void Netdata::WriteNetwork() {
 //
 void Netdata::WriteRecord() {
   /* File operations */
+  FILE *pEvtlog;
   FILE *pRecord;
   char recfile[100];
 
+  // Only save when data exists
+  idx_t nevtlog = 0;
+  idx_t nrecord = 0;
+  for (idx_t k = 0; k < nprt; ++k) {
+    nevtlog += records[k]->nevtlog;
+    nrecord += records[k]->nrecord;
+  }
+
   // Open File
-  sprintf(recfile, "%s/%s.record.%" PRIidx ".%" PRIidx "", recordir.c_str(), filebase.c_str(), datidx, records[0]->iter);
-  pRecord = fopen(recfile,"w");
-  if (pRecord == NULL) {
-    CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
-    CkExit();
+  if (nevtlog) {
+    sprintf(recfile, "%s/%s.log.%" PRIidx ".%" PRIidx "", recordir.c_str(), filebase.c_str(), datidx, records[0]->iter);
+    pEvtlog = fopen(recfile,"w");
+    if (pEvtlog == NULL) {
+      CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
+      CkExit();
+    }
+  }
+  if (nrecord) {
+    sprintf(recfile, "%s/%s.record.%" PRIidx ".%" PRIidx "", recordir.c_str(), filebase.c_str(), datidx, records[0]->iter);
+    pRecord = fopen(recfile,"w");
+    if (pRecord == NULL) {
+      CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
+      CkExit();
+    }
   }
 
   // TODO: Store records indexed by time and then by type
   // Loop through parts
   for (idx_t k = 0; k < nprt; ++k) {
     // Loop through events
-    for (idx_t e = 0; e < records[k]->nrecevt; ++e) {
+    for (idx_t e = 0; e < records[k]->nevtlog; ++e) {
       // event types lacking data
       if (records[k]->type[e] == EVENT_SPIKE) {
-        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "\n",
+        fprintf(pEvtlog, "%" PRIidx " %" PRItickhex " %" PRIidx "\n",
             records[k]->type[e], records[k]->diffuse[e], records[k]->source[e]);
       }
       // event types with data
       else {
-        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
+        fprintf(pEvtlog, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
             records[k]->type[e], records[k]->diffuse[e], records[k]->source[e], records[k]->index[e], records[k]->data[e]);
       }
     }
-    // Loop through records
+    // Loop through other records
+    // TODO: add record type and modify accordingly
     for (idx_t r = 0; r < records[k]->nrecord; ++r) {
-      // record 'event type' followed by number of data entries
-      fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx "",
-          EVENT_RECORD, records[k]->drift[r], (records[k]->xdata[r+1] - records[k]->xdata[r]));
-      // data
-      for (idx_t d = records[k]->xdata[r]; d < records[k]->xdata[r+1]; ++d) {
-        fprintf(pRecord, " %" PRIrealfull "", records[k]->data[d]);
+      // timestamp followed by number of data entries
+      fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx "",
+          records[k]->type[records[k]->nevtlog+r], records[k]->drift[r],
+          (records[k]->xdata[r+1] - records[k]->xdata[r]),
+          (records[k]->xdiffuse[r+1] - records[k]->xdiffuse[r]),
+          (records[k]->xindex[r+1] - records[k]->xindex[r]));
+      // real data
+      for (idx_t s = records[k]->xdata[r]; s < records[k]->xdata[r+1]; ++s) {
+        fprintf(pRecord, " %" PRIrealfull "", records[k]->data[s]);
+      }
+      // tick data
+      for (idx_t s = records[k]->xdiffuse[r]; s < records[k]->xdiffuse[r+1]; ++s) {
+        fprintf(pRecord, " %" PRItickhex "", records[k]->diffuse[s]);
+      }
+      // idx data
+      for (idx_t s = records[k]->xindex[r]; s < records[k]->xindex[r+1]; ++s) {
+        fprintf(pRecord, " %" PRIidx "", records[k]->index[s]);
       }
       // one line per record
       fprintf(pRecord, "\n");
@@ -499,7 +529,8 @@ void Netdata::WriteRecord() {
   }
   
   // Cleanup
-  fclose(pRecord);
+  if (nevtlog) { fclose(pEvtlog); }
+  if (nrecord) { fclose(pRecord); }
 }
 
 
