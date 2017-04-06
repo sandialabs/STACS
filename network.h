@@ -310,10 +310,10 @@ class NetModel {
     virtual void ClosePorts() { }
     /* Abstract Functions */
     virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
-    virtual void addRepeat(idx_t modidx, std::vector<event_t>& repevt) { }
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) = 0;
     virtual void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) = 0;
     virtual void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
+    virtual void Leap(std::vector<event_t>& events) { }
   protected:
     /* Random Number Generation */
     std::mt19937 *rngine;
@@ -564,17 +564,16 @@ class Network : public CBase_Network {
     std::vector<std::vector<std::vector<tick_t>>> stick; // first level is the vertex, second level is the models, third is the stick data
     std::vector<std::vector<auxidx_t>> vtxaux; // auxiliary indices per vertex (for vertex/edge cross-modification of state)
     std::vector<std::vector<std::vector<auxidx_t>>> edgaux; // auxiliary indices  per edge model
-    /* Periodic Events */
-    std::vector<event_t> repevt; // list of events
-    std::vector<bool> repmodidx; // models with repeating events
-    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> repidx; // index into models
-    tick_t trep; // update indicator
     /* Network Events */
     std::vector<std::vector<std::vector<event_t>>> evtcal; // event queue per vertex per iteration (similar to calendar queue)
     std::vector<std::vector<event_t>> evtcol; // collection of overflow/spillover event queue
     std::vector<event_t> events; // event buffer for generated events
     std::vector<event_t> evtext; // external events (and extra spillover)
     std::vector<event_t> evtrpc; // events generated from RPC
+    /* Periodic Events */
+    std::vector<event_t> evtleap; // set of periodic events
+    std::vector<bool> leaplist; // models with periodic events
+    std::vector<std::vector<std::array<idx_t, 2>>> leapidx; // indices into models
     /* Recording */
     std::vector<event_t> evtlog; // event logging
     std::vector<bool> evtloglist; // types of events to log
@@ -592,6 +591,7 @@ class Network : public CBase_Network {
     /* Timing */
     tick_t tsim;
     tick_t tdisp;
+    tick_t tleap;
     idx_t iter;
     /* Bookkeeping */
     CProxy_Netdata netdata;

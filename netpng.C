@@ -317,31 +317,29 @@ void Network::CyclePNG() {
       MarkEvent();
     }
     
-    // Check for repeating events
-    if (tsim >= trep) {
-      std::vector<event_t>::iterator event = repevt.begin();
+    // Check for periodic events
+    if (tsim >= tleap) {
+      std::vector<event_t>::iterator event = evtleap.begin();
       // Compute periodic events
-      while (event != repevt.end() && event->diffuse <= tsim) {
-        // Set temporary model index
-        idx_t modidx = event->index;
+      while (event != evtleap.end() && event->diffuse <= tsim) {
+        // Set netmodel index
+        idx_t n = event->source;
         // Loop through all models
-        for (std::size_t i = 0; i < repidx[modidx].size(); ++i) {
-          event->index = repidx[modidx][i][1];
+        for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
+          event->index = leapidx[n][m][1];
           if (event->index) {
-            netmodel[modidx]->Hop(*event, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], edgaux[modidx][vtxmodidx[repidx[modidx][i][0]]]);
+            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
           }
           else {
-            netmodel[modidx]->Hop(*event, state[repidx[modidx][i][0]], stick[repidx[modidx][i][0]], vtxaux[repidx[modidx][i][0]]);
+            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
           }
         }
-        // Return model index
-        event->index = modidx;
         // Update timing
-        event->diffuse += ((tick_t) event->data)* TICKS_PER_MS;
+        event->diffuse += (tick_t)(event->data*TICKS_PER_MS);
         ++event;
       }
-      std::sort(repevt.begin(), repevt.end());
-      trep = repevt[0].diffuse;
+      std::sort(evtleap.begin(), evtleap.end());
+      tleap = evtleap.front().diffuse;
     }
     
     // Perform computation

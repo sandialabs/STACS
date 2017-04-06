@@ -38,31 +38,17 @@ class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
       portlist.resize(0);
     }
     
-    /* Periodic events */
-    void addRepeat(idx_t modidx, std::vector<event_t>& repevt);
-
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
     void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
+    void Leap(std::vector<event_t>& events);
 };
+
 
 /**************************************************************************
 * Class methods
 **************************************************************************/
-
-// Periodic events
-//
-void IzhiSynSTDP::addRepeat(idx_t modidx, std::vector<event_t>& repevt) {
-  event_t event;
-  event.diffuse = 0;
-  event.source = 0;
-  event.index = modidx;
-  event.type = EVENT_SYNUP;
-  event.data = param[2];
-  repevt.push_back(event);
-}
-
 
 // Simulation step
 //
@@ -123,6 +109,18 @@ void IzhiSynSTDP::Hop(const event_t& event, std::vector<std::vector<real_t>>& st
     // Apply effect to neuron (vertex)
     state[0][auxidx[0].stateidx[0]] += state[event.index][0];
   }
+}
+
+// Periodic events
+//
+void IzhiSynSTDP::Leap(std::vector<event_t>& events) {
+  event_t event;
+  event.diffuse = 0;
+  event.type = EVENT_SYNUP;
+  event.source = -1;
+  event.index = 0;
+  event.data = param[2];
+  events.push_back(event);
 }
 
 

@@ -140,21 +140,28 @@ Network::Network(mModel *msg) {
       }
     }
   }
-  // set up repeating events
-  repevt.clear();
-  repmodidx.resize(netmodel.size(), false);
-  for (std::size_t i = 1; i < netmodel.size(); ++i) {
-    netmodel[i]->addRepeat((idx_t) i, repevt);
-  }
-  if (repevt.size()) {
-    std::sort(repevt.begin(), repevt.end());
-    trep = repevt[0].diffuse;
-    for (std::size_t e = 0; e < repevt.size(); ++e) {
-      repmodidx[repevt[e].index] = true;
+  // set up periodic events
+  evtleap.clear();
+  leaplist.resize(netmodel.size(), false);
+  leapidx.resize(netmodel.size());
+  events.clear();
+  for (std::size_t n = 1; n < netmodel.size(); ++n) {
+    netmodel[n]->Leap(events);
+    if (events.size()) {
+      leaplist[n] = true;
+      for (std::size_t e = 0; e < events.size(); ++e) {
+        events[e].source = (idx_t) n;
+        evtleap.push_back(events[e]);
+      }
+      events.clear();
     }
   }
+  if (evtleap.size()) {
+    std::sort(evtleap.begin(), evtleap.end());
+    tleap = evtleap.front().diffuse;
+  }
   else {
-    trep = TICK_T_MAX;
+    tleap = TICK_T_MAX; // never leap
   }
 
   // Return control to main
@@ -205,7 +212,6 @@ void Network::LoadNetwork(mPart *msg) {
   state.resize(msg->nvtx);
   stick.resize(msg->nvtx);
   vtxaux.resize(msg->nvtx);
-  repidx.clear();
   evtcal.resize(msg->nvtx);
   evtcol.resize(msg->nvtx);
   events.clear();
@@ -251,8 +257,8 @@ void Network::LoadNetwork(mPart *msg) {
     jstate += netmodel[vtxmodidx[i]]->getNState();
     stick[i][0] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + netmodel[vtxmodidx[i]]->getNStick());
     jstick += netmodel[vtxmodidx[i]]->getNStick();
-    if (repmodidx[vtxmodidx[i]]) {
-      repidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
+    if (leaplist[vtxmodidx[i]]) {
+      leapidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
     }
     // copy over edge data
     for (idx_t j = 0; j < adjcy[i].size(); ++j) {
@@ -267,8 +273,8 @@ void Network::LoadNetwork(mPart *msg) {
       jstate += netmodel[edgmodidx[i][j]]->getNState();
       stick[i][j+1] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + netmodel[edgmodidx[i][j]]->getNStick());
       jstick += netmodel[edgmodidx[i][j]]->getNStick();
-      if (repmodidx[edgmodidx[i][j]]) {
-        repidx[edgmodidx[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
+      if (leaplist[edgmodidx[i][j]]) {
+        leapidx[edgmodidx[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
       }
     }
     // set up auxiliary state
