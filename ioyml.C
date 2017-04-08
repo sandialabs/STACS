@@ -31,6 +31,8 @@ extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
+extern /*readonly*/ idx_t comprtmin;
+extern /*readonly*/ idx_t comprtmax;
 
 
 /**************************************************************************
@@ -229,6 +231,22 @@ int Main::ReadConfig(std::string configfile) {
       CkPrintf("  pnganchor: %s\n", e.what());
       return 1;
     }
+  }
+  // Polychronization compute min partition (inclusive)
+  try {
+    comprtmin = config["comprtmin"].as<idx_t>();
+  } catch (YAML::RepresentationException& e) {
+    comprtmin = 0;
+  }
+  // Polychronization compute max partition (inclusive)
+  try {
+    comprtmax = config["comprtmax"].as<idx_t>();
+  } catch (YAML::RepresentationException& e) {
+    comprtmax = npnet-1;
+  }
+  if (comprtmin < 0 || comprtmin >= npnet || comprtmax < 0 || comprtmax >= npnet) {
+    CkPrintf("  comprtmin/max out of bounds (0 to %" PRIidx ") inclusive\n", npnet-1);
+    return 1;
   }
 
   // Return success

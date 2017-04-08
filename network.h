@@ -588,31 +588,32 @@ class Network : public CBase_Network {
     /* Random Number Generation */
     std::mt19937 rngine;
     std::uniform_real_distribution<real_t> *unifdist;
-    /* Timing */
-    tick_t tsim;
-    tick_t tdisp;
-    tick_t tleap;
-    idx_t iter;
     /* Bookkeeping */
     CProxy_Netdata netdata;
     CkCallback cbcycleprt;
     idx_t prtidx, datidx;
-    /* Computation */
-    idx_t compidx;
-    idx_t evalidx;
-    idx_t ncomp, ccomp;
-    tick_t tcomp;
+    /* Timing */
+    tick_t tsim;
+    tick_t tdisp;
+    tick_t tleap;
     /* Coordination */
+    idx_t iter;
     idx_t nadjprt;
     idx_t cadjprt[2], prtiter;
-    /* Checkpointing */
-    idx_t checkiter;
-    idx_t reciter;
 #ifdef STACS_WITH_YARP
     /* RPC Control */
     CkCallback cbrpc;
     idx_t synciter;
 #endif
+    /* Checkpointing */
+    idx_t checkiter;
+    idx_t reciter;
+    /* Computation */
+    idx_t compidx;
+    idx_t compendx;
+    idx_t evalidx;
+    idx_t ncomp, ccomp;
+    tick_t tcomp;
 };
 
 #endif //__STACS_NETWORK_H__

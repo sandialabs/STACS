@@ -19,6 +19,8 @@ extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
+extern /*readonly*/ idx_t comprtmin;
+extern /*readonly*/ idx_t comprtmax;
 
 
 /**************************************************************************
@@ -347,7 +349,8 @@ void Network::LoadNetwork(mPart *msg) {
   cadjprt[1] = 0;
   prtiter = 0;
   // Set up computation
-  compidx = 0;
+  compidx = vtxdist[comprtmin];
+  compendx = vtxdist[comprtmax+1];
   evalidx = 0;
   ccomp = 0;
   ncomp = 0;

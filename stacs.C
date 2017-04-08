@@ -25,6 +25,8 @@
 /*readonly*/ tick_t trecord;
 /*readonly*/ tick_t tdisplay;
 /*readonly*/ idx_t nevtday;
+/*readonly*/ idx_t comprtmin;
+/*readonly*/ idx_t comprtmax;
 
 
 /**************************************************************************
@@ -172,9 +174,11 @@ void Main::Init() {
       CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
                "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
                "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+               "  Computation range (inclusive)  : %" PRIidx " to %" PRIidx "\n"
                "  Polychronization Information   :%s\n",
                rngseed, ((real_t)(tstep/TICKS_PER_MS)),
-               ((real_t)(tqueue/TICKS_PER_MS)), pnginfo.c_str());
+               ((real_t)(tqueue/TICKS_PER_MS)),
+               comprtmin, comprtmax, pnginfo.c_str());
       // Set compute cycle
       cbcycle = CkCallback(CkIndex_Network::CyclePNG(), network);
       network.InitPNG(netdata);

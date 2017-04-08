@@ -63,7 +63,9 @@ void Network::InitPNG(CProxy_Netdata cpdat) {
 //
 void Network::FindPNG() {
   // Loop through all vertices
-  if (compidx < vtxdist[npnet]) {
+  //if (compidx < vtxdist[npnet]) {
+  // Loop through range of vertices
+  if (compidx < compendx) {
     pngseeds.clear();
     // Only one vertex containing partition performs control
     std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx);
@@ -151,7 +153,8 @@ void Network::FindPNG() {
           ncomp = pngseeds.size();
           // Display computation information
           CkPrintf("    Computing PNGs for vertex %" PRIidx " with %" PRIidx "\n", compidx, ncomp);
-          thisProxy.ComputePNG(((ncomp > 10) ? 10 : ncomp), prtidx);
+          //thisProxy.ComputePNG(((ncomp > 10) ? 10 : ncomp), prtidx);
+          thisProxy.ComputePNG(ncomp, prtidx);
         }
       }
       else {
@@ -215,6 +218,8 @@ void Network::ComputePNG() {
       CkPrintf("  Found %d PNGs\n", pngs[i].size());
       // Write to file
       WritePNG(i);
+      // Clear found pngs after writing
+      pngs[i].clear();
     }
     // Return control to main loop
     thisProxy(prtidx).FindPNG();
@@ -283,6 +288,10 @@ void Network::CyclePNG() {
     cadjprt[0] = 0;
     cadjprt[1] = 0;
     prtiter = 0;
+    // Remove excess pnglog
+    for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
+      pnglog[i].clear();
+    }
     
     // Coordination after reset
     // Reduce PNG information
