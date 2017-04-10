@@ -87,6 +87,10 @@ struct stamp_t {
   bool operator<(const stamp_t & stamp) const {
     return diffuse < stamp.diffuse;
   }
+  bool operator==(const stamp_t & stamp) const {
+    return (diffuse == stamp.diffuse &&
+            source == stamp.source);
+  }
 };
 
 // Spike-timing routes (for PNGs)
@@ -99,7 +103,8 @@ struct route_t {
   tick_t arrival; // timestamp of vertex spike arrival
   
   bool operator<(const route_t & route) const {
-    return diffuse < route.diffuse;
+    return (diffuse < route.diffuse ||
+        (diffuse == route.diffuse && source < route.source));
   }
 };
 

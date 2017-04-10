@@ -214,7 +214,7 @@ void Network::ComputePNG() {
   }
   else {
     std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx-1);
-    if (mother != vtxmap.end()) {
+    if (!pngseeds.empty() && mother != vtxmap.end()) {
       idx_t pngidx = mother->second;
       CkPrintf("  Found %d PNGs\n", pngs[pngidx].size());
       // Write to file
@@ -248,7 +248,7 @@ void Network::EvalPNG(CkReductionMsg *msg) {
     pngpath[pngmap[i].source] = std::max(pngpath[pngmap[i].source], 1+pngpath[pngmap[i].origin]);
     maxpath = std::max(maxpath, pngpath[pngmap[i].source]);
   }
-  if (maxpath > 7) {
+  if (maxpath >= 7) {
     // Anchors should contribute to more than just the mother neuron
     bool alluseful = true;
     for (std::size_t j = 0; j < pngseeds[ccomp-1].size(); ++j) {
@@ -268,7 +268,7 @@ void Network::EvalPNG(CkReductionMsg *msg) {
       idx_t pngidx = mother->second;
       std::set<stamp_t> pngset;
       for (std::size_t i = 0; i < pngmap.size(); ++i) {
-        pngset.insert((stamp_t){pngmap[pngidx].diffuse, pngmap[pngidx].source});
+        pngset.insert((stamp_t){pngmap[i].diffuse, pngmap[i].source});
       }
       std::vector<stamp_t> pngvec;
       pngvec.assign(pngset.begin(), pngset.end());
