@@ -1,0 +1,55 @@
+stream:
+  - modname: dummystr
+    coord: [0.0, 0.0, 0.0]
+
+vertex:
+  - modname: dummyvtx
+    order: 80
+    shape: circle  # uniform circle
+    radius: 100.0  # of radius 100
+    coord: [0.0, 0.0, 0.0]
+  - modname: dummyvtx1
+    order: 20
+    shape: circle  # uniform circle
+    radius: 100.0  # of radius 100
+    coord: [0.0, 0.0, 0.0]
+
+edge:
+  - source: dummyvtx
+    target: [dummyvtx, dummyvtx1]
+    modname: dummyedg
+    cutoff: 50.0
+    connect:
+      - type: sigmoid
+        maxprob: .75
+        midpoint: 25.0
+        slope: 0.02
+      - type: sigmoid
+        maxprob: .05
+        midpoint: 37.0
+        slope: 0.03
+  - source: dummyvtx1
+    target: [dummyvtx]
+    modname: dummyedg
+    cutoff: 50.0
+    connect:
+      - type: uniform
+        prob: 0.3
+  - source: dummyvtx1
+    target: [dummyvtx1]
+    modname: dummyedg
+    cutoff: 200.0
+    connect:
+      - type: index
+        srcmul: 1
+        srcoff: 1
+      - type: index
+        srcmul: 1
+        srcoff: -1
+  - source: dummystr
+    target: [dummyvtx1]
+    modname: dummyedg
+    cutoff: 50.0
+    connect:
+      - type: uniform
+        prob: 0.4

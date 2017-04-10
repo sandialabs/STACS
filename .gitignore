@@ -31,6 +31,11 @@
 stacs
 charmrun
 
+# Configuration
+*.yml
+*.model
+*.graph
+
 # Graph Files
 *.dist*
 *.metis*
@@ -39,11 +44,14 @@ charmrun
 *.state.*
 *.event.*
 *.part.*
-*.png.*
 
 # Record Files
 *.log.*
 *.record.*
+
+# PNG Files
+*.png.*
+*.map.*
 
 # Temporary Files
 *.swp

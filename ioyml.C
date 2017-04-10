@@ -19,10 +19,11 @@
 **************************************************************************/
 extern /*readonly*/ idx_t npdat;
 extern /*readonly*/ idx_t npnet;
-extern /*readonly*/ std::string filedir;
 extern /*readonly*/ std::string filebase;
 extern /*readonly*/ std::string filemod;
-extern /*readonly*/ std::string recordir;
+extern /*readonly*/ std::string filedir;
+extern /*readonly*/ std::string recdir;
+extern /*readonly*/ std::string pngdir;
 extern /*readonly*/ idx_t rngseed;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
@@ -69,20 +70,6 @@ int Main::ReadConfig(std::string configfile) {
     return 1;
   }
   
-  // Network data directory
-  try {
-    filedir = config["filedir"].as<std::string>();
-  } catch (YAML::RepresentationException& e) {
-    CkPrintf("  filedir: %s\n", e.what());
-    return 1;
-  }
-  // Records output directory
-  try {
-    recordir = config["recordir"].as<std::string>();
-  } catch (YAML::RepresentationException& e) {
-    CkPrintf("  recordir not defined, defaulting to: \"%s\"\n", filedir.c_str());
-    recordir = filedir;
-  }
   // Network file base name
   try {
     filebase = config["filebase"].as<std::string>();
@@ -96,6 +83,27 @@ int Main::ReadConfig(std::string configfile) {
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  filemod not defined, defaulting to: \".o\"\n");
     filemod = std::string(".o");
+  }
+  // Network data directory
+  try {
+    filedir = config["filedir"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  filedir: %s\n", e.what());
+    return 1;
+  }
+  // Records output directory
+  try {
+    recdir = config["recdir"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  recdir not defined, defaulting to: \"%s\"\n", filedir.c_str());
+    recdir = filedir;
+  }
+  // Polychronization output directory
+  try {
+    pngdir = config["pngdir"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  pngdir not defined, defaulting to: \"%s\"\n", filedir.c_str());
+    pngdir = filedir;
   }
   
   // Random number seed

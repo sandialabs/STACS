@@ -13,10 +13,11 @@
 /*readonly*/ CkGroupID mCastGrpId;
 /*readonly*/ idx_t npdat;
 /*readonly*/ idx_t npnet;
-/*readonly*/ std::string filedir;
 /*readonly*/ std::string filebase;
 /*readonly*/ std::string filemod;
-/*readonly*/ std::string recordir;
+/*readonly*/ std::string filedir;
+/*readonly*/ std::string recdir;
+/*readonly*/ std::string pngdir;
 /*readonly*/ idx_t rngseed;
 /*readonly*/ tick_t tmax;
 /*readonly*/ tick_t tstep;

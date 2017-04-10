@@ -17,10 +17,11 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ idx_t npnet;
-extern /*readonly*/ std::string filedir;
 extern /*readonly*/ std::string filebase;
 extern /*readonly*/ std::string filemod;
-extern /*readonly*/ std::string recordir;
+extern /*readonly*/ std::string filedir;
+extern /*readonly*/ std::string recdir;
+extern /*readonly*/ std::string pngdir;
 
 
 /**************************************************************************
@@ -470,7 +471,7 @@ void Netdata::WriteRecord() {
 
   // Open File
   if (nevtlog) {
-    sprintf(recfile, "%s/%s.log.%" PRIidx ".%" PRIidx "", recordir.c_str(), filebase.c_str(), datidx, records[0]->iter);
+    sprintf(recfile, "%s/%s/%s.log.%" PRIidx ".%" PRIidx "", filedir.c_str(), recdir.c_str(), filebase.c_str(), datidx, records[0]->iter);
     pEvtlog = fopen(recfile,"w");
     if (pEvtlog == NULL) {
       CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
@@ -478,7 +479,7 @@ void Netdata::WriteRecord() {
     }
   }
   if (nrecord) {
-    sprintf(recfile, "%s/%s.record.%" PRIidx ".%" PRIidx "", recordir.c_str(), filebase.c_str(), datidx, records[0]->iter);
+    sprintf(recfile, "%s/%s/%s.record.%" PRIidx ".%" PRIidx "", filedir.c_str(), recdir.c_str(), filebase.c_str(), datidx, records[0]->iter);
     pRecord = fopen(recfile,"w");
     if (pRecord == NULL) {
       CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
@@ -548,9 +549,9 @@ void Network::WritePNG(idx_t pngidx) {
   char pngfile[100];
 
   // Open File
-  sprintf(pngfile, "%s/png/%s.png.%" PRIidx "", filedir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  sprintf(pngfile, "%s/%s/%s.png.%" PRIidx "", filedir.c_str(), pngdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
   pPNG = fopen(pngfile,"w");
-  sprintf(pngfile, "%s/png/%s.map.%" PRIidx "", filedir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  sprintf(pngfile, "%s/%s/%s.map.%" PRIidx "", filedir.c_str(), pngdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
   pMap = fopen(pngfile,"w");
   if (pPNG == NULL || pMap == NULL) {
     CkPrintf("Error opening files for PNG output %" PRIidx "\n", vtxidx[pngidx]);
