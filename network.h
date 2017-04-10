@@ -10,6 +10,7 @@
 #include <array>
 #include <deque>
 #include <random>
+#include <set>
 #include <string>
 #include <sstream>
 #include <unordered_map>
@@ -82,9 +83,6 @@ struct track_t {
 struct stamp_t {
   tick_t diffuse; // timestamp of spike
   idx_t source; // index of vertex that spiked
-  idx_t origin; // index of vertex that contributed to spike
-  tick_t departure; // timestamp of vertex spike departure
-  tick_t arrival; // timestamp of vertex spike arrival
 
   bool operator<(const stamp_t & stamp) const {
     return diffuse < stamp.diffuse;
@@ -94,12 +92,26 @@ struct stamp_t {
 // Spike-timing routes (for PNGs)
 //
 struct route_t {
+  tick_t diffuse; // timestamp of spike
+  idx_t source; // index of vertex that spiked
+  idx_t origin; // index of vertex that contributed to spike
+  tick_t departure; // timestamp of vertex spike departure
+  tick_t arrival; // timestamp of vertex spike arrival
+  
+  bool operator<(const route_t & route) const {
+    return diffuse < route.diffuse;
+  }
+};
+
+// Spike-timing history (for PNGs)
+//
+struct trail_t {
   idx_t origin; // index of vertex that (possibly) contributed to spike
   tick_t departure; // timestamp of vertex spike departure
   tick_t arrival; // timestamp of vertex spike arrival
 
-  bool operator<(const route_t& route) const {
-    return arrival < route.arrival;
+  bool operator<(const trail_t& trail) const {
+    return arrival < trail.arrival;
   }
 };
 
@@ -582,9 +594,10 @@ class Network : public CBase_Network {
     /* Polychronization */
     std::vector<std::vector<std::vector<stamp_t>>> pngs; // PNGs per vertex (as mother)
     std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex (seed events)
-    std::vector<stamp_t> pngcan; // Candidate PNG (evaluated on reduction)
-    std::vector<stamp_t> pngaux; // Generated spike-timing events during computation per partition
-    std::vector<std::deque<route_t>> pnglog; // sliding window of contributing spike-timing events per vertex
+    std::vector<std::deque<trail_t>> pngtrail; // sliding window of contributing spike-timing events per vertex
+    std::vector<route_t> pnglog; // Generated spike-timing routes during computation per partition
+    std::vector<route_t> pngmap; // Candidate PNG (evaluated on reduction)
+    std::vector<std::vector<route_t>> pngmaps; // Collection of PNG routes for a given vertex
     /* Random Number Generation */
     std::mt19937 rngine;
     std::uniform_real_distribution<real_t> *unifdist;

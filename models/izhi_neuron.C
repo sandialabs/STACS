@@ -60,22 +60,6 @@ void IzhiNeuron::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 // Simulation step
 //
 tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
-  // if spike occured, generate event
-  if (state[0] >= 30) {
-    // reset
-    state[0] = param[2];
-    state[1] = state[1] + param[3];
-
-    // generate events
-    event_t event;
-    event.diffuse = tdrift;
-    event.type = EVENT_SPIKE;
-    event.source = REMOTE_EDGES | LOCAL_EDGES;
-    event.index = 0;
-    event.data = 0.0;
-    events.push_back(event);
-  }
-  
   // for numerical stability, use timestep (at most) = 1ms
   tick_t tickstep = (tdiff > TICKS_PER_MS ? TICKS_PER_MS : tdiff);
   real_t tstep = ((real_t) tickstep)/TICKS_PER_MS;
@@ -86,6 +70,22 @@ tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
 
   // Clear transient current for next time
   state[2] = 0;
+  
+  // if spike occured, generate event
+  if (state[0] >= 30) {
+    // reset
+    state[0] = param[2];
+    state[1] = state[1] + param[3];
+
+    // generate events
+    event_t event;
+    event.diffuse = tdrift + tickstep;
+    event.type = EVENT_SPIKE;
+    event.source = REMOTE_EDGES | LOCAL_EDGES;
+    event.index = 0;
+    event.data = 0.0;
+    events.push_back(event);
+  }
 
   return tickstep;
 }

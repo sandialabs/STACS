@@ -544,29 +544,41 @@ void Netdata::WriteRecord() {
 void Network::WritePNG(idx_t pngidx) {
   /* File operations */
   FILE *pPNG;
+  FILE *pMap;
   char pngfile[100];
 
   // Open File
   sprintf(pngfile, "%s/png/%s.png.%" PRIidx "", filedir.c_str(), filebase.c_str(), vtxidx[pngidx]);
   pPNG = fopen(pngfile,"w");
-  if (pPNG == NULL) {
+  sprintf(pngfile, "%s/png/%s.map.%" PRIidx "", filedir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  pMap = fopen(pngfile,"w");
+  if (pPNG == NULL || pMap == NULL) {
     CkPrintf("Error opening files for PNG output %" PRIidx "\n", vtxidx[pngidx]);
     CkExit();
   }
 
   // Loop through pngs
-  for (std::size_t p = 0; p < pngs[pngidx].size(); ++p) {
+  CkAssert(pngmaps.size() == pngs[pngidx].size());
+  for (std::size_t p = 0; p < pngmaps.size(); ++p) {
+    // Loop through maps
+    for (std::size_t s = 0; s < pngmaps[p].size(); ++s) {
+      fprintf(pMap, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRItickhex " %" PRItickhex "\n",
+          pngmaps[p][s].diffuse, pngmaps[p][s].source, pngmaps[p][s].origin, pngmaps[p][s].departure, pngmaps[p][s].arrival);
+    }
+    // empty line between maps
+    fprintf(pMap, "\n");
     // Loop through stamps
     for (std::size_t s = 0; s < pngs[pngidx][p].size(); ++s) {
-      fprintf(pPNG, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRItickhex " %" PRItickhex "\n",
-          pngs[pngidx][p][s].diffuse, pngs[pngidx][p][s].source, pngs[pngidx][p][s].origin, pngs[pngidx][p][s].departure, pngs[pngidx][p][s].arrival);
+      fprintf(pPNG, " %" PRItickhex " %" PRIidx "",
+          pngs[pngidx][p][s].diffuse, pngs[pngidx][p][s].source);
     }
-    // empty line between records
+    // newline between stamps
     fprintf(pPNG, "\n");
   }
 
   // Cleanup
   fclose(pPNG);
+  fclose(pMap);
 }
 
 

@@ -222,9 +222,10 @@ void Network::LoadNetwork(mPart *msg) {
   // Polychronization
   pngs.resize(msg->nvtx);
   pngseeds.clear();
-  pngcan.clear();
-  pngaux.clear();
-  pnglog.resize(msg->nvtx);
+  pngtrail.resize(msg->nvtx);
+  pnglog.clear();
+  pngmap.clear();
+  pngmaps.clear();
 
   // Graph distribution information
   for (idx_t i = 0; i < npnet+1; ++i) {
@@ -322,7 +323,7 @@ void Network::LoadNetwork(mPart *msg) {
     }
     // initialize polychronization
     pngs[i].clear();
-    pnglog[i].clear();
+    pngtrail[i].clear();
   }
   CkAssert(msg->nedg == nadjcy);
   CkAssert(msg->nedg == jmodidx);
