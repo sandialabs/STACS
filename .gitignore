@@ -46,7 +46,7 @@ charmrun
 *.part.*
 
 # Record Files
-*.log.*
+*.evtlog.*
 *.record.*
 
 # PNG Files

@@ -2,7 +2,7 @@ npdat: 2 # 2 data files
 npnet: 4 # 4 network partitions
 
 filebase: "testnet"
-filedir: "testnet"
+modeldir: "testnet"
 
 rngseed:  2032
 tmax:      100  # 100 milliseconds

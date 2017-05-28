@@ -324,6 +324,7 @@ void Network::LoadNetwork(mPart *msg) {
     // initialize polychronization
     pngs[i].clear();
     pngtrail[i].clear();
+    ReadPNG(i);
   }
   CkAssert(msg->nedg == nadjcy);
   CkAssert(msg->nedg == jmodidx);

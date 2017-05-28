@@ -18,10 +18,11 @@
 **************************************************************************/
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ std::string filebase;
-extern /*readonly*/ std::string filemod;
-extern /*readonly*/ std::string filedir;
-extern /*readonly*/ std::string recdir;
-extern /*readonly*/ std::string pngdir;
+extern /*readonly*/ std::string fileload;
+extern /*readonly*/ std::string filesave;
+extern /*readonly*/ std::string modeldir;
+extern /*readonly*/ std::string recordir;
+extern /*readonly*/ std::string groupdir;
 
 
 /**************************************************************************
@@ -41,8 +42,8 @@ int Main::ReadDist() {
   line = new char[MAXLINE];
   
   // Open file for reading
-  CkPrintf("Reading network distribution\n");//from %s/%s.dist\n", filedir.c_str(), filebase.c_str());
-  sprintf(csrfile, "%s/%s.dist", filedir.c_str(), filebase.c_str());
+  CkPrintf("Reading network distribution\n");//from %s/%s.dist\n", modeldir.c_str(), filebase.c_str());
+  sprintf(csrfile, "%s/%s.dist", modeldir.c_str(), filebase.c_str());
   pDist = fopen(csrfile,"r");
   if (pDist == NULL || line == NULL) {
     return 1;
@@ -96,7 +97,7 @@ int Main::WriteDist() {
 
   // Open File
   CkPrintf("Writing network distribution\n");
-  sprintf(csrfile, "%s/%s%s.dist", filedir.c_str(), filebase.c_str(), filemod.c_str());//(check ? ".check" : filemod.c_str()));
+  sprintf(csrfile, "%s/%s%s.dist", modeldir.c_str(), filebase.c_str(), filesave.c_str());//(check ? ".check" : filesave.c_str()));
   pDist = fopen(csrfile,"w");
   if (pDist == NULL) {
     printf("Error opening file for writing\n");
@@ -151,13 +152,13 @@ void Netdata::ReadNetwork() {
   line = new char[MAXLINE];
   
   // Open files for reading
-  sprintf(csrfile, "%s/%s.coord.%" PRIidx "", filedir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.coord.%" PRIidx "", modeldir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pCoord = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.adjcy.%" PRIidx "", filedir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.adjcy.%" PRIidx "", modeldir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pAdjcy = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.state.%" PRIidx "", filedir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.state.%" PRIidx "", modeldir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pState = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.event.%" PRIidx "", filedir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.event.%" PRIidx "", modeldir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pEvent = fopen(csrfile,"r");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL ||
       pEvent == NULL || line == NULL) {
@@ -356,13 +357,13 @@ void Netdata::WriteNetwork() {
 
   // Open files for writing
   CkPrintf("Writing network data files %" PRIidx "\n", datidx);
-  sprintf(csrfile, "%s/%s%s.coord.%" PRIidx "", filedir.c_str(), filebase.c_str(), filemod.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.coord.%" PRIidx "", modeldir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
   pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.adjcy.%" PRIidx "", filedir.c_str(), filebase.c_str(), filemod.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.adjcy.%" PRIidx "", modeldir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
   pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.state.%" PRIidx "", filedir.c_str(), filebase.c_str(), filemod.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.state.%" PRIidx "", modeldir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
   pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.event.%" PRIidx "", filedir.c_str(), filebase.c_str(), filemod.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.event.%" PRIidx "", modeldir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
   pEvent = fopen(csrfile,"w");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
     CkPrintf("Error opening files for writing %" PRIidx "\n", datidx);
@@ -471,7 +472,7 @@ void Netdata::WriteRecord() {
 
   // Open File
   if (nevtlog) {
-    sprintf(recfile, "%s/%s/%s.log.%" PRIidx ".%" PRIidx "", filedir.c_str(), recdir.c_str(), filebase.c_str(), datidx, records[0]->iter);
+    sprintf(recfile, "%s/%s/%s.evtlog.%" PRIidx ".%" PRIidx "", modeldir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, datidx);
     pEvtlog = fopen(recfile,"w");
     if (pEvtlog == NULL) {
       CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
@@ -479,7 +480,7 @@ void Netdata::WriteRecord() {
     }
   }
   if (nrecord) {
-    sprintf(recfile, "%s/%s/%s.record.%" PRIidx ".%" PRIidx "", filedir.c_str(), recdir.c_str(), filebase.c_str(), datidx, records[0]->iter);
+    sprintf(recfile, "%s/%s/%s.record.%" PRIidx ".%" PRIidx "", modeldir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, datidx);
     pRecord = fopen(recfile,"w");
     if (pRecord == NULL) {
       CkPrintf("Error opening files for recording %" PRIidx "\n", datidx);
@@ -549,9 +550,9 @@ void Network::WritePNG(idx_t pngidx) {
   char pngfile[100];
 
   // Open File
-  sprintf(pngfile, "%s/%s/%s.png.%" PRIidx "", filedir.c_str(), pngdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  sprintf(pngfile, "%s/%s/%s.png.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
   pPNG = fopen(pngfile,"w");
-  sprintf(pngfile, "%s/%s/%s.map.%" PRIidx "", filedir.c_str(), pngdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  sprintf(pngfile, "%s/%s/%s.map.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
   pMap = fopen(pngfile,"w");
   if (pPNG == NULL || pMap == NULL) {
     CkPrintf("Error opening files for PNG output %" PRIidx "\n", vtxidx[pngidx]);
@@ -582,4 +583,53 @@ void Network::WritePNG(idx_t pngidx) {
   fclose(pMap);
 }
 
+// Reading PNGs from file
+//
+void Network::ReadPNG(idx_t pngidx) {
+  /* File operations */
+  FILE *pPNG;
+  char pngfile[100];
+  char *line;
+  char *oldstr, *newstr;
 
+  // Prepare buffer
+  line = new char[MAXLINE];
+  
+  sprintf(pngfile, "%s/%s/%s.png.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  pPNG = fopen(pngfile,"r");
+  if (line == NULL || pPNG == NULL) {
+    //CkPrintf("Warning: PNG file does not exist %" PRIidx "\n", vtxidx[pngidx]);
+    return;
+  }
+
+  // Each line is a PNG
+  pngs[pngidx].clear();
+  for (;;) {
+    // Read line (stamps)
+    while(fgets(line, MAXLINE, pPNG) && line[0] == '%');
+    if (feof(pPNG)) { break; }
+    oldstr = line;
+    newstr = NULL;
+    std::vector<stamp_t> png;
+    for(;;) {
+      stamp_t stamp;
+      // diffuse
+      stamp.diffuse = strtotick(oldstr, &newstr, 16);
+      // check for end of line
+      if (stamp.diffuse == 0 && oldstr != line)
+        break;
+      oldstr = newstr;
+      // source
+      stamp.source = strtoidx(oldstr, &newstr, 10);
+      oldstr = newstr;
+      // Add to png
+      png.push_back(stamp);
+    }
+    // Add to pngs
+    pngs[pngidx].push_back(png);
+  }
+
+  // Cleanup
+  fclose(pPNG);
+  delete[] line;
+}

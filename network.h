@@ -522,6 +522,8 @@ class Network : public CBase_Network {
     void InitSimStatic(CProxy_Netdata cpdat);
     void CycleSimPlastic();
     void CycleSimStatic();
+    void InitEstStatic(CProxy_Netdata cpdat);
+    void CycleEstStatic();
 
     /* Communication */
     void CreateGroup();
@@ -551,6 +553,7 @@ class Network : public CBase_Network {
     void SeedPNG(mEvent *msg);
     void CyclePNG();
     void EvalPNG(CkReductionMsg *msg);
+    void ReadPNG(idx_t pngidx);
     void WritePNG(idx_t pngidx);
 
 #ifdef STACS_WITH_YARP

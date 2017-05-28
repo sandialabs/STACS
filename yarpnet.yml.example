@@ -2,8 +2,8 @@ npdat: 4 # 4 data files
 npnet: 8 # 8 network partitions
 
 filebase: "yarpnet"
-filedir: "yarpnet"
-recdir: "record"
+modeldir: "yarpnet"
+recordir: "record"
 
 rngseed:  2032
 tmax:    60000  # 1 minutes

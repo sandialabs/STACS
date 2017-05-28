@@ -2,10 +2,11 @@ npdat: 4 # 4 data files
 npnet: 8 # 8 network partitions
 
 filebase: "polynet"
-filemod: ".out"
-filedir: "polynet"
-recdir: "record"
-pngdir: "png"
+fileload: ""
+filesave: ".out"
+modeldir: "polynet"
+recordir: "record"
+groupdir: "group"
 
 rngseed:  2032
 tmax:   180000  # 3 minutes

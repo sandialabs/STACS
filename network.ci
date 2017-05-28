@@ -108,6 +108,8 @@ module network {
     entry void InitSimStatic(CProxy_Netdata cpdat);
     entry void CycleSimPlastic();
     entry void CycleSimStatic();
+    entry void InitEstStatic(CProxy_Netdata cpdat);
+    entry void CycleEstStatic();
     
     entry void GoAhead(mGo *msg);
     entry void CommEvent(mEvent *msg);
