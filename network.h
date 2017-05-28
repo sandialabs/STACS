@@ -85,7 +85,8 @@ struct stamp_t {
   idx_t source; // index of vertex that spiked
 
   bool operator<(const stamp_t & stamp) const {
-    return diffuse < stamp.diffuse;
+    return (diffuse < stamp.diffuse ||
+        (diffuse == stamp.diffuse && source < stamp.source));
   }
   bool operator==(const stamp_t & stamp) const {
     return (diffuse == stamp.diffuse &&

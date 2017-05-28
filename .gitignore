@@ -51,7 +51,7 @@ charmrun
 
 # PNG Files
 *.png.*
-*.map.*
+*.pngmap.*
 
 # Temporary Files
 *.swp

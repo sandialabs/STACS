@@ -546,15 +546,15 @@ void Netdata::WriteRecord() {
 void Network::WritePNG(idx_t pngidx) {
   /* File operations */
   FILE *pPNG;
-  FILE *pMap;
+  FILE *pPNGMap;
   char pngfile[100];
 
   // Open File
   sprintf(pngfile, "%s/%s/%s.png.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
   pPNG = fopen(pngfile,"w");
-  sprintf(pngfile, "%s/%s/%s.map.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
-  pMap = fopen(pngfile,"w");
-  if (pPNG == NULL || pMap == NULL) {
+  sprintf(pngfile, "%s/%s/%s.pngmap.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  pPNGMap = fopen(pngfile,"w");
+  if (pPNG == NULL || pPNGMap == NULL) {
     CkPrintf("Error opening files for PNG output %" PRIidx "\n", vtxidx[pngidx]);
     CkExit();
   }
@@ -564,11 +564,11 @@ void Network::WritePNG(idx_t pngidx) {
   for (std::size_t p = 0; p < pngmaps.size(); ++p) {
     // Loop through maps
     for (std::size_t s = 0; s < pngmaps[p].size(); ++s) {
-      fprintf(pMap, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRItickhex " %" PRItickhex "\n",
+      fprintf(pPNGMap, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRItickhex " %" PRItickhex "\n",
           pngmaps[p][s].diffuse, pngmaps[p][s].source, pngmaps[p][s].origin, pngmaps[p][s].departure, pngmaps[p][s].arrival);
     }
     // empty line between maps
-    fprintf(pMap, "\n");
+    fprintf(pPNGMap, "\n");
     // Loop through stamps
     for (std::size_t s = 0; s < pngs[pngidx][p].size(); ++s) {
       fprintf(pPNG, " %" PRItickhex " %" PRIidx "",
@@ -580,7 +580,7 @@ void Network::WritePNG(idx_t pngidx) {
 
   // Cleanup
   fclose(pPNG);
-  fclose(pMap);
+  fclose(pPNGMap);
 }
 
 // Reading PNGs from file
