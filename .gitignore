@@ -49,9 +49,9 @@ charmrun
 *.evtlog.*
 *.record.*
 
-# PNG Files
-*.png.*
-*.pngmap.*
+# Polychronization Files
+*.group.*
+*.chart.*
 
 # Temporary Files
 *.swp

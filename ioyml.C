@@ -181,7 +181,7 @@ int Main::ReadConfig(std::string configfile) {
     runmode = std::string(RUNMODE_DEFAULT);
     CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
   }
-  if (runmode != RUNMODE_SIM && runmode != RUNMODE_PNG) {
+  if (runmode != RUNMODE_SIM && runmode != RUNMODE_PNG && runmode != RUNMODE_EST) {
     runmode = std::string(RUNMODE_DEFAULT);
     CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
   }

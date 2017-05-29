@@ -545,49 +545,49 @@ void Netdata::WriteRecord() {
 // TODO: Move this to Netdata?
 void Network::WritePNG(idx_t pngidx) {
   /* File operations */
-  FILE *pPNG;
-  FILE *pPNGMap;
+  FILE *pGroup;
+  FILE *pChart;
   char pngfile[100];
 
   // Open File
-  sprintf(pngfile, "%s/%s/%s.png.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
-  pPNG = fopen(pngfile,"w");
-  sprintf(pngfile, "%s/%s/%s.pngmap.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
-  pPNGMap = fopen(pngfile,"w");
-  if (pPNG == NULL || pPNGMap == NULL) {
+  sprintf(pngfile, "%s/%s/%s.group.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  pGroup = fopen(pngfile,"w");
+  sprintf(pngfile, "%s/%s/%s.chart.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  pChart = fopen(pngfile,"w");
+  if (pGroup == NULL || pChart == NULL) {
     CkPrintf("Error opening files for PNG output %" PRIidx "\n", vtxidx[pngidx]);
     CkExit();
   }
 
   // Loop through pngs
-  CkAssert(pngmaps.size() == pngs[pngidx].size());
-  for (std::size_t p = 0; p < pngmaps.size(); ++p) {
+  CkAssert(pngchart.size() == pngs[pngidx].size());
+  for (std::size_t p = 0; p < pngchart.size(); ++p) {
     // Loop through maps
-    for (std::size_t s = 0; s < pngmaps[p].size(); ++s) {
-      fprintf(pPNGMap, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRItickhex " %" PRItickhex "\n",
-          pngmaps[p][s].diffuse, pngmaps[p][s].source, pngmaps[p][s].origin, pngmaps[p][s].departure, pngmaps[p][s].arrival);
+    for (std::size_t s = 0; s < pngchart[p].size(); ++s) {
+      fprintf(pChart, "%" PRItickhex " %" PRIidx " %" PRIidx " %" PRItickhex " %" PRItickhex "\n",
+          pngchart[p][s].diffuse, pngchart[p][s].source, pngchart[p][s].origin, pngchart[p][s].departure, pngchart[p][s].arrival);
     }
     // empty line between maps
-    fprintf(pPNGMap, "\n");
+    fprintf(pChart, "\n");
     // Loop through stamps
     for (std::size_t s = 0; s < pngs[pngidx][p].size(); ++s) {
-      fprintf(pPNG, " %" PRItickhex " %" PRIidx "",
+      fprintf(pGroup, " %" PRItickhex " %" PRIidx "",
           pngs[pngidx][p][s].diffuse, pngs[pngidx][p][s].source);
     }
     // newline between stamps
-    fprintf(pPNG, "\n");
+    fprintf(pGroup, "\n");
   }
 
   // Cleanup
-  fclose(pPNG);
-  fclose(pPNGMap);
+  fclose(pGroup);
+  fclose(pChart);
 }
 
 // Reading PNGs from file
 //
 void Network::ReadPNG(idx_t pngidx) {
   /* File operations */
-  FILE *pPNG;
+  FILE *pGroup;
   char pngfile[100];
   char *line;
   char *oldstr, *newstr;
@@ -595,22 +595,22 @@ void Network::ReadPNG(idx_t pngidx) {
   // Prepare buffer
   line = new char[MAXLINE];
   
-  sprintf(pngfile, "%s/%s/%s.png.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
-  pPNG = fopen(pngfile,"r");
-  if (line == NULL || pPNG == NULL) {
+  sprintf(pngfile, "%s/%s/%s.group.%" PRIidx "", modeldir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[pngidx]);
+  pGroup = fopen(pngfile,"r");
+  if (line == NULL || pGroup == NULL) {
     //CkPrintf("Warning: PNG file does not exist %" PRIidx "\n", vtxidx[pngidx]);
     return;
   }
 
   // Each line is a PNG
-  pngs[pngidx].clear();
-  for (;;) {
+  for (idx_t p = 0;; ++p) {
     // Read line (stamps)
-    while(fgets(line, MAXLINE, pPNG) && line[0] == '%');
-    if (feof(pPNG)) { break; }
+    while(fgets(line, MAXLINE, pGroup) && line[0] == '%');
+    if (feof(pGroup)) { break; }
     oldstr = line;
     newstr = NULL;
     std::vector<stamp_t> png;
+    std::set<idx_t> pngsource;
     for(;;) {
       stamp_t stamp;
       // diffuse
@@ -624,12 +624,21 @@ void Network::ReadPNG(idx_t pngidx) {
       oldstr = newstr;
       // Add to png
       png.push_back(stamp);
+      // Add to source set
+      pngsource.insert(stamp.source);
     }
     // Add to pngs
     pngs[pngidx].push_back(png);
+    // Add to png duration
+    pnglen[pngidx].push_back(png.back().diffuse + 10*TICKS_PER_MS);
+    // Add to map
+    for (std::set<idx_t>::iterator source = pngsource.begin(); source != pngsource.end(); ++source) {
+      pngmap[(*source)].push_back(std::array<idx_t, 2>{{pngidx, p}});
+    }
   }
+  pngwin[pngidx].resize(pngs[pngidx].size());
 
   // Cleanup
-  fclose(pPNG);
+  fclose(pGroup);
   delete[] line;
 }

@@ -10,6 +10,7 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
+extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t nevtday;
 
@@ -128,6 +129,121 @@ void Network::CommEvent(mEvent *msg) {
 
   // Start next cycle
   if (cadjprt[prtiter] == nadjprt) {
+    // Bookkeepping
+    cadjprt[prtiter] = 0;
+    prtiter = (prtiter+1)%2;
+
+    // Increment iteration
+    ++iter;
+
+    // Start a new cycle
+    //thisProxy(prtidx).CycleNetwork();
+    cbcycleprt.send();
+  }
+}
+
+
+// Multicast communication of events (for monitoring)
+//
+void Network::CommStamp(mEvent *msg) {
+  // Increment coordination
+  ++cadjprt[(prtiter + (msg->iter - iter))%2];
+
+  // Event prototype
+  event_t event;
+  tick_t departure;
+  stamp_t stamp;
+
+  // Distribute events
+  for (std::size_t i = 0; i < msg->nevent; ++i) {
+    // Fill in prototype stamp
+    if (msg->type[i] == EVENT_SPIKE && msg->index[i] == msg->source[i]) {
+      stamp.diffuse = msg->diffuse[i];
+      stamp.source = msg->source[i];
+      // distribute to polychronous groups
+      std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = pngmap.find(msg->source[i]);
+      if (targets != pngmap.end()) {
+        for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
+          pngwin[(*target)[0]][(*target)[1]].push_back(stamp);
+        }
+      }
+    }
+    // Fill in prototype event
+    departure = msg->diffuse[i];
+    event.type = msg->type[i];
+    event.source = msg->source[i];
+    event.data = msg->data[i];
+    // Determine local event target(s)
+    // If index == source (multicast to edges)
+    // If index != source (singlecast to edge)
+    // If index < 0 (singlecast to vertex)
+    if (msg->index[i] == msg->source[i]) {
+      // Find target mapping from source
+      std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = adjmap.find(msg->source[i]);
+      if (targets != adjmap.end()) {
+        for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
+          event.diffuse = departure + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
+          event.index = (*target)[1];
+          // Add to event queue or spillover
+          if ((event.diffuse/tstep - msg->iter) < nevtday) {
+            evtcal[(*target)[0]][(event.diffuse/tstep)%nevtday].push_back(event);
+          }
+          else if (event.diffuse/tstep < msg->iter) {
+            evtcal[(*target)[0]][(msg->iter+1)%nevtday].push_back(event);
+          }
+          else {
+            evtcol[(*target)[0]].push_back(event);
+          }
+        }
+      }
+    }
+    else if (msg->index[i] < 0) {
+      // Find local target
+      std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find(-(msg->index[i]+1));
+      if (target != vtxmap.end()) {
+        event.diffuse = departure; // direct events to vertices have no edge delay
+        event.index = 0;
+        // Add to event queue or spillover
+        if ((event.diffuse/tstep - msg->iter) < nevtday) {
+          evtcal[target->second][(event.diffuse/tstep)%nevtday].push_back(event);
+        }
+        else if (event.diffuse/tstep < msg->iter) {
+          evtcal[target->second][(msg->iter+1)%nevtday].push_back(event);
+        }
+        else {
+          evtcol[target->second].push_back(event);
+        }
+      }
+    }
+    else {
+      // Find local target
+      std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find(msg->index[i]);
+      if (target != vtxmap.end()) {
+        // Find target mapping from source
+        for (std::size_t j = 0; j < adjcy[target->second].size(); ++j) {
+          if (adjcy[target->second][j] == msg->source[i]) {
+            event.diffuse = departure + stick[target->second][j+1][0]; // delay always first stick of edge
+            event.index = j+1; // 0'th entry is vertex
+            // Add to event queue or spillover
+            if ((event.diffuse/tstep - msg->iter) < nevtday) {
+              evtcal[target->second][(event.diffuse/tstep)%nevtday].push_back(event);
+            }
+            else if (event.diffuse/tstep < msg->iter) {
+              evtcal[target->second][(msg->iter+1)%nevtday].push_back(event);
+            }
+            else {
+              evtcol[target->second].push_back(event);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  delete msg;
+
+  // Start next cycle
+  if (cadjprt[prtiter] == npnet) {
     // Bookkeepping
     cadjprt[prtiter] = 0;
     prtiter = (prtiter+1)%2;

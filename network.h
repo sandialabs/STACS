@@ -69,7 +69,7 @@ struct record_t {
 
 // Record list
 //
-struct track_t {
+struct trace_t {
   tick_t trec;
   tick_t tfreq;
   std::vector<idx_t> type;
@@ -531,6 +531,7 @@ class Network : public CBase_Network {
     void GoAhead(mGo *msg);
     mEvent* BuildEvent();
     void CommEvent(mEvent *msg);
+    void CommStamp(mEvent *msg);
     void MarkEvent();
     
     /* Saving */
@@ -599,14 +600,18 @@ class Network : public CBase_Network {
     std::vector<event_t> evtlog; // event logging
     std::vector<bool> evtloglist; // types of events to log
     std::vector<record_t> record; // record keeping
-    std::vector<track_t> recordlist; // what to record
+    std::vector<trace_t> recordlist; // what to record
     /* Polychronization */
     std::vector<std::vector<std::vector<stamp_t>>> pngs; // PNGs per vertex (as mother)
+    std::vector<std::vector<tick_t>> pnglen; // PNG duration per vertex (as mother)
+    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> pngmap; // mapping from global index to vector of target PNGs
+    std::vector<std::vector<std::deque<stamp_t>>> pngwin; // Sliding window of stamps per PNG vertex (as mother)
+    std::vector<event_t> pnglog; // logging PNG activation
     std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex (seed events)
     std::vector<std::deque<trail_t>> pngtrail; // sliding window of contributing spike-timing events per vertex
-    std::vector<route_t> pnglog; // Generated spike-timing routes during computation per partition
-    std::vector<route_t> pngmap; // Candidate PNG (evaluated on reduction)
-    std::vector<std::vector<route_t>> pngmaps; // Collection of PNG routes for a given vertex
+    std::vector<route_t> pngtrack; // Generated spike-timing routes during computation per partition
+    std::vector<route_t> pngroute; // Candidate PNG (evaluated on reduction)
+    std::vector<std::vector<route_t>> pngchart; // Collection of PNG routes for a given vertex
     /* Random Number Generation */
     std::mt19937 rngine;
     std::uniform_real_distribution<real_t> *unifdist;

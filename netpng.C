@@ -74,7 +74,7 @@ void Network::FindPNG() {
         // Bookkeeping
         idx_t i = mother->second;
         pngs[i].clear();
-        pngmaps.clear();
+        pngchart.clear();
 
         // Skip vertices with less than three
         // TODO: make the number of anchor vertices configurable
@@ -194,17 +194,17 @@ void Network::ComputePNG(idx_t nseeds, idx_t pngidx) {
 void Network::ComputePNG() {
   // Loop through PNG seeds
   if (ccomp < ncomp) {
-    pngmap.clear();
-    pnglog.clear();
+    pngroute.clear();
+    pngtrack.clear();
     if (!pngseeds.empty()) {
       // Initialize candidate PNG
-      pngmap.resize(pngseeds[ccomp].size());
+      pngroute.resize(pngseeds[ccomp].size());
       for (std::size_t i = 0; i < pngseeds[ccomp].size(); ++i) {
-        pngmap[i].diffuse = pngseeds[ccomp][i].diffuse;
-        pngmap[i].source = pngseeds[ccomp][i].source;
-        pngmap[i].origin = -1;
-        pngmap[i].departure = 0;
-        pngmap[i].arrival = 0;
+        pngroute[i].diffuse = pngseeds[ccomp][i].diffuse;
+        pngroute[i].source = pngseeds[ccomp][i].source;
+        pngroute[i].origin = -1;
+        pngroute[i].departure = 0;
+        pngroute[i].arrival = 0;
       }
       // Seed spikes for simulation
       mEvent *mevent = BuildPNGSeed(pngseeds[ccomp]);
@@ -217,11 +217,13 @@ void Network::ComputePNG() {
     if (!pngseeds.empty() && mother != vtxmap.end()) {
       idx_t pngidx = mother->second;
       CkPrintf("  Found %d PNGs\n", pngs[pngidx].size());
-      // Write to file
-      WritePNG(pngidx);
+      if (pngs[pngidx].size()) {
+        // Write to file
+        WritePNG(pngidx);
+      }
       // Clear found pngs after writing
       pngs[pngidx].clear();
-      pngmaps.clear();
+      pngchart.clear();
     }
     // Return control to main loop
     thisProxy(prtidx).FindPNG();
@@ -233,28 +235,28 @@ void Network::ComputePNG() {
 void Network::EvalPNG(CkReductionMsg *msg) {
   // Add to png candidate
   for (std::size_t i = 0; i < (msg->getSize())/sizeof(route_t); ++i) {
-    pngmap.push_back(*((route_t *)msg->getData()+i));
+    pngroute.push_back(*((route_t *)msg->getData()+i));
   }
   delete msg;
 
   //CkPrintf("Evaluating\n");
   // Sorting
-  std::sort(pngmap.begin(), pngmap.end());
+  std::sort(pngroute.begin(), pngroute.end());
 
   // Max path of png should be longer than min path threshold (7)
   std::unordered_map<idx_t, int> pngpath;
   int maxpath = 0;
-  for (std::size_t i = 0; i < pngmap.size(); ++i) {
-    pngpath[pngmap[i].source] = std::max(pngpath[pngmap[i].source], 1+pngpath[pngmap[i].origin]);
-    maxpath = std::max(maxpath, pngpath[pngmap[i].source]);
+  for (std::size_t i = 0; i < pngroute.size(); ++i) {
+    pngpath[pngroute[i].source] = std::max(pngpath[pngroute[i].source], 1+pngpath[pngroute[i].origin]);
+    maxpath = std::max(maxpath, pngpath[pngroute[i].source]);
   }
   if (maxpath >= 7) {
     // Anchors should contribute to more than just the mother neuron
     bool alluseful = true;
     for (std::size_t j = 0; j < pngseeds[ccomp-1].size(); ++j) {
       int useful = 0;
-      for (std::size_t i = 0; i < pngmap.size(); ++i) {
-        if (pngmap[i].origin == pngseeds[ccomp-1][j].source) {
+      for (std::size_t i = 0; i < pngroute.size(); ++i) {
+        if (pngroute[i].origin == pngseeds[ccomp-1][j].source) {
           if (++useful >= 2) { break; }
         }
       }
@@ -267,13 +269,13 @@ void Network::EvalPNG(CkReductionMsg *msg) {
       std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx-1);
       idx_t pngidx = mother->second;
       std::set<stamp_t> pngset;
-      for (std::size_t i = 0; i < pngmap.size(); ++i) {
-        pngset.insert((stamp_t){pngmap[i].diffuse, pngmap[i].source});
+      for (std::size_t i = 0; i < pngroute.size(); ++i) {
+        pngset.insert((stamp_t){pngroute[i].diffuse, pngroute[i].source});
       }
       std::vector<stamp_t> pngvec;
       pngvec.assign(pngset.begin(), pngset.end());
       pngs[pngidx].push_back(pngvec);
-      pngmaps.push_back(pngmap);
+      pngchart.push_back(pngroute);
     }
   }
 
@@ -305,7 +307,7 @@ void Network::CyclePNG() {
     // Coordination after reset
     // Reduce PNG information
     CkCallback *cb = new CkCallback(CkIndex_Network::EvalPNG(NULL), evalidx, thisProxy);
-    contribute(pnglog.size()*sizeof(route_t), pnglog.data(), net_png, *cb);
+    contribute(pngtrack.size()*sizeof(route_t), pngtrack.data(), net_png, *cb);
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
@@ -425,7 +427,7 @@ void Network::CyclePNG() {
                 route.origin = pngtrail[i][j].origin;
                 route.departure = pngtrail[i][j].departure;
                 route.arrival = pngtrail[i][j].arrival;
-                pnglog.push_back(route);
+                pngtrack.push_back(route);
               }
             }
             // Get information

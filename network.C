@@ -221,11 +221,15 @@ void Network::LoadNetwork(mPart *msg) {
   evtrpc.clear();
   // Polychronization
   pngs.resize(msg->nvtx);
+  pnglen.resize(msg->nvtx);
+  pngmap.clear();
+  pngwin.resize(msg->nvtx);
+  pnglog.clear();
   pngseeds.clear();
   pngtrail.resize(msg->nvtx);
-  pnglog.clear();
-  pngmap.clear();
-  pngmaps.clear();
+  pngtrack.clear();
+  pngroute.clear();
+  pngchart.clear();
 
   // Graph distribution information
   for (idx_t i = 0; i < npnet+1; ++i) {
@@ -323,7 +327,8 @@ void Network::LoadNetwork(mPart *msg) {
     }
     // initialize polychronization
     pngs[i].clear();
-    pngtrail[i].clear();
+    pnglen[i].clear();
+    pngwin[i].clear();
     ReadPNG(i);
   }
   CkAssert(msg->nedg == nadjcy);

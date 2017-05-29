@@ -185,6 +185,20 @@ void Main::Init() {
       cbcycle = CkCallback(CkIndex_Network::CyclePNG(), network);
       network.InitPNG(netdata);
     }
+    if (runmode == RUNMODE_EST) {
+      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+               "  Total Simulation Time    (tmax): %" PRIrealms "ms\n"
+               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+               "  Recording Interval    (trecord): %" PRIrealms "ms\n"
+               "  Display Interval     (tdisplay): %" PRIrealms "ms\n",
+               rngseed, ((real_t)(tmax/TICKS_PER_MS)),
+               ((real_t)(tstep/TICKS_PER_MS)), ((real_t)(tqueue/TICKS_PER_MS)),
+               ((real_t)(trecord/TICKS_PER_MS)), ((real_t)(tdisplay/TICKS_PER_MS)));
+      // Set compute cycle
+      cbcycle = CkCallback(CkIndex_Network::CycleEstStatic(), network);
+      network.InitEstStatic(netdata);
+    }
     
 #ifdef STACS_WITH_YARP
     // Open RPC port
@@ -255,6 +269,10 @@ void Main::Stop() {
     ++nhalt;
   }
   else if (runmode == RUNMODE_PNG) {
+    network.FinalizeNetwork();
+    ++nhalt;
+  }
+  else if (runmode == RUNMODE_EST) {
     network.FinalizeNetwork();
     ++nhalt;
   }

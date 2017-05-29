@@ -113,6 +113,7 @@ module network {
     
     entry void GoAhead(mGo *msg);
     entry void CommEvent(mEvent *msg);
+    entry void CommStamp(mEvent *msg);
     entry void CommRPC(mRPC *msg);
    
     entry void SaveNetwork();

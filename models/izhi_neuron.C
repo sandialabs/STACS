@@ -38,6 +38,7 @@ class IzhiNeuron : public NetModelTmpl < 10, IzhiNeuron > {
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
+    void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
     
     /* Protocol */
     void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick);
@@ -94,6 +95,15 @@ tick_t IzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
 //
 void IzhiNeuron::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   //CkPrintf("Jumping Vtx\n");
+  if (event.type == EVENT_STIM) {
+    // Add stim to applied current
+    state[0][3] += event.data;
+  }
+}
+
+// Simulation hop
+//
+void IzhiNeuron::Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   if (event.type == EVENT_STIM) {
     // Add stim to applied current
     state[0][3] += event.data;

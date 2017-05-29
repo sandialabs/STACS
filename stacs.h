@@ -20,6 +20,7 @@
 
 #define RUNMODE_SIM     "sim"
 #define RUNMODE_PNG     "png"
+#define RUNMODE_EST     "est"
 #define RUNMODE_DEFAULT "sim"
 
 #define RPCPORTNAME_DEFAULT "/stacs/rpc"

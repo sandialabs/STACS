@@ -139,6 +139,23 @@ void Network::CycleEstStatic() {
         ++event;
       }
 
+      // Polychronization
+      for (std::size_t p = 0; p < pngs[i].size(); ++p) {
+        // Pop out any old stamps
+        while (!pngwin[i][p].empty()) {
+          if (pngwin[i][p].front().diffuse + pnglen[i][p] <= tdrift) {
+            pngwin[i][p].pop_front();
+          }
+          else {
+            break;
+          }
+        }
+        // Check for threshold number of stamps
+        // TODO: Threshold based off of excitatory neurons only
+        if (pngwin[i][p].size() > (pngs[i][p].size() / 2)) {
+        }
+      }
+
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
@@ -251,9 +268,10 @@ void Network::CycleEstStatic() {
     }
     //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
 
-    // Send messages to neighbors
+    // Send messages to entire network
+    // TODO: Reduce communication due to monitoring
     mEvent *mevent = BuildEvent();
-    netgroup.CommEvent(mevent);
+    thisProxy.CommStamp(mevent);
 
     // Increment simulated time
     tsim += tstep;

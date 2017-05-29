@@ -32,6 +32,7 @@ class IzhiSynAmpl : public NetModelTmpl < 11, IzhiSynAmpl > {
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
+    void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
 
 
@@ -48,6 +49,16 @@ tick_t IzhiSynAmpl::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state
 // Simulation jump
 //
 void IzhiSynAmpl::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
+  // External stim event
+  if (event.type == EVENT_STIM && event.source >= 0) {
+    // Add stim to applied current
+    state[0][auxidx[0].stateidx[0]] += event.data;
+  }
+}
+
+// Simulation hop
+//
+void IzhiSynAmpl::Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   // External stim event
   if (event.type == EVENT_STIM && event.source >= 0) {
     // Add stim to applied current
