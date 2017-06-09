@@ -153,6 +153,25 @@ void Network::CycleEstStatic() {
         // Check for threshold number of stamps
         // TODO: Threshold based off of excitatory neurons only
         if (pngwin[i][p].size() > (pngs[i][p].size() / 2)) {
+          // Compute group activation
+          int nactive = 0;
+          std::deque<stamp_t>::iterator pngcan = pngwin[i][p].begin();
+          for (std::size_t t = 0; t < pngs[i][p].size(); ++t) {
+            while (pngcan != pngwin[i][p].end()) {
+              if ((pngcan->diffuse + pnglen[i][p] - tdrift + 2 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
+                  (pngcan->diffuse + pnglen[i][p] - tdrift + TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
+                  (pngcan->diffuse + pnglen[i][p] - tdrift == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source)) {
+                ++nactive;
+              }
+              else if (pngcan->diffuse + pnglen[i][p] - tdrift > pngs[i][p][t].diffuse) {
+                break;
+              }
+              ++pngcan;
+            }
+          }
+          if (nactive > (pngs[i][p].size() / 2)) {
+            CkPrintf("PNG %d, %d, %d activated\n", prtidx, i, p);
+          }
         }
       }
 
