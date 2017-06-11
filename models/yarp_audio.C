@@ -45,7 +45,7 @@ class YarpAudioPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
       for (std::size_t s = 0; s < nnewsample; ++s) {
         samplebuffer[noldsample+s] = ((real_t)((sample_t)ssig.get(s)))/32768.0;
       }
-        CkPrintf("Sample samples: %f, %f, %f, %f, %f\n", samplebuffer[50], samplebuffer[100], samplebuffer[150], samplebuffer[200], samplebuffer[250]);
+      //CkPrintf("Sample samples: %f, %f, %f, %f, %f\n", samplebuffer[50], samplebuffer[100], samplebuffer[150], samplebuffer[200], samplebuffer[250]);
       // Split samples into windows
       int nwindow = (((int)samplebuffer.size()) - noverlap)/(ninput - noverlap);
       for (int w = 0; w < nwindow; ++w) {
@@ -213,23 +213,23 @@ tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
     // total time of 32ms
     for (idx_t i = 0; i < (idx_t) param[0]; ++i) {
       event.index = i;
-      event.diffuse = tdrift;
-      event.data = (mel[i] + 16.0)/8;
+      event.diffuse = tdrift + 4 * TICKS_PER_MS;
+      event.data = (mel[i] + 16.0)/3;
       events.push_back(event);
       event.diffuse = tdrift + 8 * TICKS_PER_MS;
-      event.data = (mel[i] + 16.0)/8;
+      event.data = (mel[i] + 16.0)/3;
       events.push_back(event);
       event.diffuse = tdrift + 12 * TICKS_PER_MS;
-      event.data = (mel[i] + 16.0)/4;
+      event.data = (mel[i] + 16.0)/3;
       events.push_back(event);
       event.diffuse = tdrift + 20 * TICKS_PER_MS;
-      event.data = -(mel[i] + 16.0)/4;
+      event.data = -(mel[i] + 16.0)/3;
       events.push_back(event);
       event.diffuse = tdrift + 24 * TICKS_PER_MS;
-      event.data = -(mel[i] + 16.0)/8;
+      event.data = -(mel[i] + 16.0)/3;
       events.push_back(event);
-      event.diffuse = tdrift + 32 * TICKS_PER_MS;
-      event.data = -(mel[i] + 16.0)/8;
+      event.diffuse = tdrift + 28 * TICKS_PER_MS;
+      event.data = -(mel[i] + 16.0)/3;
       events.push_back(event);
     }
   }
