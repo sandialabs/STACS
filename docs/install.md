@@ -4,7 +4,7 @@ The following is the installation sequence used on a small networked machine run
 
 This is after the network filesystem has been set up at `$NETDIR`:  
 
-	sudo apt-get install build-essential gfortran cmake cmake-curses-gui git
+	sudo apt-get install build-essential gfortran cmake cmake-curses-gui git libfftw3-dev
 
 Downloading tarballs into `$NETDIR`
 
