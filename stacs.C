@@ -27,6 +27,7 @@
 /*readonly*/ tick_t trecord;
 /*readonly*/ tick_t tdisplay;
 /*readonly*/ idx_t nevtday;
+/*readonly*/ int pnglength;
 /*readonly*/ idx_t comprtmin;
 /*readonly*/ idx_t comprtmax;
 

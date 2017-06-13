@@ -33,6 +33,7 @@ extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
+extern /*readonly*/ int pnglength;
 extern /*readonly*/ idx_t comprtmin;
 extern /*readonly*/ idx_t comprtmax;
 
@@ -247,6 +248,12 @@ int Main::ReadConfig(std::string configfile) {
       CkPrintf("  pnganchor: %s\n", e.what());
       return 1;
     }
+  }
+  // Polychronization minimum group path
+  try {
+    pnglength = config["pnglength"].as<int>();
+  } catch (YAML::RepresentationException& e) {
+    pnglength = 7;
   }
   // Polychronization compute min partition (inclusive)
   try {

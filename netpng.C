@@ -13,6 +13,7 @@
 extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t nevtday;
+extern /*readonly*/ int pnglength;
 
 
 /**************************************************************************
@@ -250,7 +251,7 @@ void Network::EvalPNG(CkReductionMsg *msg) {
     pngpath[pngroute[i].source] = std::max(pngpath[pngroute[i].source], 1+pngpath[pngroute[i].origin]);
     maxpath = std::max(maxpath, pngpath[pngroute[i].source]);
   }
-  if (maxpath >= 7) {
+  if (maxpath >= pnglength) {
     // Anchors should contribute to more than just the mother neuron
     bool alluseful = true;
     for (std::size_t j = 0; j < pngseeds[ccomp-1].size(); ++j) {
