@@ -150,15 +150,24 @@ void Network::CycleEstStatic() {
             break;
           }
         }
+        // Template event
+        event_t pngevent;
+        pngevent.diffuse = tdrift;
+        pngevent.type = EVENT_GROUP;
+        pngevent.data = 0.0;
         // Check for threshold number of stamps
-        // TODO: Threshold based off of excitatory neurons only
+        // TODO: Threshold based off of excitatory neurons only?
         if (pngwin[i][p].size() > (pngs[i][p].size() / 2)) {
           // Compute group activation
           int nactive = 0;
           std::deque<stamp_t>::iterator pngcan = pngwin[i][p].begin();
           for (std::size_t t = 0; t < pngs[i][p].size(); ++t) {
             while (pngcan != pngwin[i][p].end()) {
-              if ((pngcan->diffuse + pnglen[i][p] - tdrift + 2 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
+              // TODO: Refine the acceptable jitter
+              if ((pngcan->diffuse + pnglen[i][p] - tdrift + 5 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
+                  (pngcan->diffuse + pnglen[i][p] - tdrift + 4 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
+                  (pngcan->diffuse + pnglen[i][p] - tdrift + 3 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
+                  (pngcan->diffuse + pnglen[i][p] - tdrift + 2 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
                   (pngcan->diffuse + pnglen[i][p] - tdrift + TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
                   (pngcan->diffuse + pnglen[i][p] - tdrift == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source)) {
                 ++nactive;
@@ -170,7 +179,13 @@ void Network::CycleEstStatic() {
             }
           }
           if (nactive > (pngs[i][p].size() / 2)) {
-            CkPrintf("PNG %d, %d, %d activated\n", prtidx, i, p);
+            CkPrintf("PNG %d, %d activated\n", vtxidx[i], p);
+            // Record group activation
+            pngevent.source = vtxidx[i];
+            pngevent.index = p;
+            evtlog.push_back(pngevent);
+            // Clear window for repeats
+            pngwin[i][p].clear();
           }
         }
       }
