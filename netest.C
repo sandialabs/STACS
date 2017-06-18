@@ -183,6 +183,7 @@ void Network::CycleEstStatic() {
             // Record group activation
             pngevent.source = vtxidx[i];
             pngevent.index = p;
+            pngevent.data = ((real_t)(pnglen[i][p]/TICKS_PER_MS));
             evtlog.push_back(pngevent);
             // Clear window for repeats
             pngwin[i][p].clear();
