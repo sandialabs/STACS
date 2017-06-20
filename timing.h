@@ -16,5 +16,6 @@
 #define TCHECK_DEFAULT     50.0 // 50ms
 #define TRECORD_DEFAULT    25.0 // 25ms
 #define TDISPLAY_DEFAULT    1.0 // 1ms
+#define TTRIAL_DEFAULT    500.0 // 500ms
 
 #endif //__STACS_TIMING_H__

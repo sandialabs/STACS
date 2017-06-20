@@ -31,6 +31,7 @@
 /*readonly*/ idx_t comprtmin;
 /*readonly*/ idx_t comprtmax;
 /*readonly*/ idx_t ntrials;
+/*readonly*/ tick_t ttrial;
 
 
 /**************************************************************************

@@ -17,6 +17,7 @@ extern /*readonly*/ tick_t tcheck;
 extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
 extern /*readonly*/ idx_t ntrials;
+extern /*readonly*/ tick_t ttrial;
 
 
 /**************************************************************************
@@ -102,8 +103,8 @@ void Network::CycleEstStatic() {
     cadjprt[1] = 0;
     prtiter = 0;
     
-    // One second
-    tcomp = tstep * 1000;
+    // Time to measure pngs
+    tcomp = ttrial;
     
     for (std::size_t i = 0; i < pngwin.size(); ++i) {
       for (std::size_t p = 0; p < pngwin[i].size(); ++p) {

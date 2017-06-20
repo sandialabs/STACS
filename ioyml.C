@@ -37,6 +37,7 @@ extern /*readonly*/ int pnglength;
 extern /*readonly*/ idx_t comprtmin;
 extern /*readonly*/ idx_t comprtmax;
 extern /*readonly*/ idx_t ntrials;
+extern /*readonly*/ tick_t ttrial;
 
 
 /**************************************************************************
@@ -273,12 +274,20 @@ int Main::ReadConfig(std::string configfile) {
     CkPrintf("  comprtmin/max out of bounds (0 to %" PRIidx ") inclusive\n", npnet-1);
     return 1;
   }
+  
   // Number of trials to estimate
   try {
     ntrials = config["ntrials"].as<idx_t>();
   } catch (YAML::RepresentationException& e) {
     ntrials = 0;
   }
+  // Time of trials
+  try {
+    treal = config["ttrial"].as<real_t>();
+  } catch (YAML::RepresentationException& e) {
+    treal = TTRIAL_DEFAULT;
+  }
+  ttrial = (tick_t)(treal*TICKS_PER_MS);
 
   // Return success
   return 0;
