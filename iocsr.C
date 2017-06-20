@@ -642,3 +642,37 @@ void Network::ReadPNG(idx_t pngidx) {
   fclose(pGroup);
   delete[] line;
 }
+
+
+/**************************************************************************
+* Estimation information
+**************************************************************************/
+
+// Writing Records to file
+//
+void Network::WriteEstimate(idx_t estidx) {
+  /* File operations */
+  FILE *pEstlog;
+  char recfile[100];
+
+  // Only save when data exists
+  if (pnglist.size()) {
+    // Open File
+    sprintf(recfile, "%s/%s/%s.pnglog.%" PRIidx "", modeldir.c_str(), recordir.c_str(), filebase.c_str(), estidx);
+    pEstlog = fopen(recfile,"w");
+    if (pEstlog == NULL) {
+      CkPrintf("Error opening files for recording\n");
+      CkExit();
+    }
+
+    // Loop through events
+    for (idx_t e = 0; e < pnglist.size(); ++e) {
+      fprintf(pEstlog, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealsec "\n",
+          pnglist[e].type, pnglist[e].diffuse, pnglist[e].source, pnglist[e].index, pnglist[e].data);
+    }
+
+    // Cleanup
+    fclose(pEstlog);
+  }
+}
+

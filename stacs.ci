@@ -22,6 +22,7 @@ mainmodule stacs {
   readonly int pnglength;
   readonly idx_t comprtmin;
   readonly idx_t comprtmax;
+  readonly idx_t ntrials;
   
   message mVtxs {
     idx_t vtxdist[];

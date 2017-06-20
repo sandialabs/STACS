@@ -14,44 +14,20 @@ extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ tick_t tcheck;
+extern /*readonly*/ tick_t trecord;
 extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
-extern /*readonly*/ idx_t ntrials;
-
 
 /**************************************************************************
-* Reduction for Events
-**************************************************************************/
-
-CkReduction::reducerType net_event;
-/*initnode*/
-void registerNetEvent(void) {
-  net_event = CkReduction::addReducer(netEvent);
-}
-
-CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs) {
-  std::vector<event_t> ret;
-  ret.clear();
-  for (int i = 0; i < nMsg; i++) {
-    for (std::size_t j = 0; j < msgs[i]->getSize()/sizeof(event_t); ++j) {
-      // Extract data and reduce 
-      ret.push_back(*((event_t *)msgs[i]->getData() + j));
-    }
-  }
-  return CkReductionMsg::buildNew(ret.size()*sizeof(event_t), ret.data());
-}
-
-
-/**************************************************************************
-* Network Estimation Initialization
+* Network Moniter Initialization
 **************************************************************************/
 
 // Coordination with NetData chare array
 //
-void Network::InitEstStatic(CProxy_Netdata cpdat) {
+void Network::InitMonStatic(CProxy_Netdata cpdat) {
   // Set proxies
   netdata = cpdat;
-  cbcycleprt = CkCallback(CkIndex_Network::CycleEstStatic(), prtidx, thisProxy);
+  cbcycleprt = CkCallback(CkIndex_Network::CycleMonStatic(), prtidx, thisProxy);
   
   // Request network part from input
   CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
@@ -60,70 +36,16 @@ void Network::InitEstStatic(CProxy_Netdata cpdat) {
 
 
 /**************************************************************************
-* Estimation Recording
-**************************************************************************/
-
-// Send Estimates for writing
-//
-void Network::SaveEstimate(CkReductionMsg *msg) {
-  // Add to png list
-  pnglist.clear();
-  for (std::size_t i = 0; i < (msg->getSize())/sizeof(route_t); ++i) {
-    pnglist.push_back(*((event_t *)msg->getData()+i));
-  }
-  delete msg;
-
-  // Sorting
-  std::sort(pnglist.begin(), pnglist.end());
-
-  // Write estimate
-  WriteEstimate(evalidx-1);
-  
-  // Start a new cycle (checked data sent)
-  thisProxy.CycleEstStatic();
-}
-
-
-/**************************************************************************
-* Network Estimation Cycle (no plasticity)
+* Network Monitor Cycle (no plasticity)
 **************************************************************************/
 
 // Main control flow
 //
-void Network::CycleEstStatic() {
-  // Check if computation is complete
-  if (tsim >= tcomp) {
-    // Reset network
-    ResetNetwork();
-    tsim = 0;
-    tleap = 0;
-    iter = 0;
-    cadjprt[0] = 0;
-    cadjprt[1] = 0;
-    prtiter = 0;
-    
-    // One second
-    tcomp = tstep * 1000;
-    
-    for (std::size_t i = 0; i < pngwin.size(); ++i) {
-      for (std::size_t p = 0; p < pngwin[i].size(); ++p) {
-        pngwin[i][p].clear();
-      }
-    }
-    
-    // Coordination after reset
-    if (evalidx < ntrials) {
-      // Reduce PNG information
-      CkCallback *cb = new CkCallback(CkIndex_Network::SaveEstimate(NULL), 0, thisProxy);
-      contribute(pnglog.size()*sizeof(event_t), pnglog.data(), net_event, *cb);
-
-      pnglog.clear();
-      ++evalidx;
-    }
-    else {
-      // return control to main
-      contribute(0, NULL, CkReduction::nop);
-    }
+void Network::CycleMonStatic() {
+  // Check if simulation time is complete
+  if (tsim >= tmax) {
+    // return control to main
+    contribute(0, NULL, CkReduction::nop);
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
@@ -140,11 +62,20 @@ void Network::CycleEstStatic() {
     contribute(0, NULL, CkReduction::nop);
   }
 #endif
+  // Recording
+  else if (iter == reciter) {
+    // Bookkeeping
+    reciter = reciter + (idx_t) (trecord/tstep);
+
+    // Send records
+    thisProxy(prtidx).SaveRecord();
+  }
   // Simulate next cycle
   else {
     // Display iteration information
-    if (tsim == 0 && prtidx == 0) {
-      CkPrintf("  Estimating iteration %" PRIidx "\n", evalidx);
+    if (tsim >= tdisp && prtidx == 0) {
+      tdisp = tsim + tdisplay;
+      CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
       //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
     }
     
@@ -379,7 +310,7 @@ void Network::CycleEstStatic() {
 
     // Increment simulated time
     tsim += tstep;
-    
+
     // Store new records
     StoreRecord();
   }

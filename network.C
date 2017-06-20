@@ -225,6 +225,7 @@ void Network::LoadNetwork(mPart *msg) {
   pngmap.clear();
   pngwin.resize(msg->nvtx);
   pnglog.clear();
+  pnglist.clear();
   pngseeds.clear();
   pngtrail.resize(msg->nvtx);
   pngtrack.clear();

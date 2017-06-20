@@ -36,6 +36,7 @@ extern /*readonly*/ idx_t nevtday;
 extern /*readonly*/ int pnglength;
 extern /*readonly*/ idx_t comprtmin;
 extern /*readonly*/ idx_t comprtmax;
+extern /*readonly*/ idx_t ntrials;
 
 
 /**************************************************************************
@@ -182,7 +183,8 @@ int Main::ReadConfig(std::string configfile) {
     runmode = std::string(RUNMODE_DEFAULT);
     CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
   }
-  if (runmode != RUNMODE_SIM && runmode != RUNMODE_PNG && runmode != RUNMODE_EST) {
+  if (runmode != RUNMODE_SIM && runmode != RUNMODE_PNG &&
+      runmode != RUNMODE_EST && runmode != RUNMODE_MON) {
     runmode = std::string(RUNMODE_DEFAULT);
     CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
   }
@@ -270,6 +272,12 @@ int Main::ReadConfig(std::string configfile) {
   if (comprtmin < 0 || comprtmin >= npnet || comprtmax < 0 || comprtmax >= npnet) {
     CkPrintf("  comprtmin/max out of bounds (0 to %" PRIidx ") inclusive\n", npnet-1);
     return 1;
+  }
+  // Number of trials to estimate
+  try {
+    ntrials = config["ntrials"].as<idx_t>();
+  } catch (YAML::RepresentationException& e) {
+    ntrials = 0;
   }
 
   // Return success

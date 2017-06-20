@@ -48,6 +48,7 @@ charmrun
 # Record Files
 *.evtlog.*
 *.record.*
+*.pnglog.*
 
 # Polychronization Files
 *.group.*

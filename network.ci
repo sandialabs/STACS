@@ -2,6 +2,7 @@ module network {
   initnode void registerMinTick(void);
   initnode void registerNetDist(void);
   initnode void registerNetPNG(void);
+  initnode void registerNetEvent(void);
 
   message mDist {
     idx_t vtxdist[];
@@ -110,6 +111,8 @@ module network {
     entry void CycleSimStatic();
     entry void InitEstStatic(CProxy_Netdata cpdat);
     entry void CycleEstStatic();
+    entry void InitMonStatic(CProxy_Netdata cpdat);
+    entry void CycleMonStatic();
     
     entry void GoAhead(mGo *msg);
     entry void CommEvent(mEvent *msg);
@@ -122,6 +125,7 @@ module network {
     
     entry void SaveRecord();
     entry void SaveFinalRecord();
+    entry void SaveEstimate(CkReductionMsg *msg);
     
     entry void InitPNG(CProxy_Netdata cpdat);
     entry void FindPNG();

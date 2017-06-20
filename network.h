@@ -141,6 +141,11 @@ CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs);
 void registerNetPNG(void);
 CkReductionMsg *netPNG(int nMsg, CkReductionMsg **msgs);
 
+// Events List Reduction
+//
+void registerNetEvent(void);
+CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs);
+
 
 /**************************************************************************
 * Charm++ Messages
@@ -525,6 +530,8 @@ class Network : public CBase_Network {
     void CycleSimStatic();
     void InitEstStatic(CProxy_Netdata cpdat);
     void CycleEstStatic();
+    void InitMonStatic(CProxy_Netdata cpdat);
+    void CycleMonStatic();
 
     /* Communication */
     void CreateGroup();
@@ -545,6 +552,8 @@ class Network : public CBase_Network {
     void StoreRecord();
     void SaveRecord();
     void SaveFinalRecord();
+    void SaveEstimate(CkReductionMsg *msg);
+    void WriteEstimate(idx_t estidx);
 
     /* Polychronization */
     void InitPNG(CProxy_Netdata cpdat);
@@ -607,6 +616,7 @@ class Network : public CBase_Network {
     std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> pngmap; // mapping from global index to vector of target PNGs
     std::vector<std::vector<std::deque<stamp_t>>> pngwin; // Sliding window of stamps per PNG vertex (as mother)
     std::vector<event_t> pnglog; // logging PNG activation
+    std::vector<event_t> pnglist; // listing of PNG activations
     std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex (seed events)
     std::vector<std::deque<trail_t>> pngtrail; // sliding window of contributing spike-timing events per vertex
     std::vector<route_t> pngtrack; // Generated spike-timing routes during computation per partition

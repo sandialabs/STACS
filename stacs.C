@@ -30,6 +30,7 @@
 /*readonly*/ int pnglength;
 /*readonly*/ idx_t comprtmin;
 /*readonly*/ idx_t comprtmax;
+/*readonly*/ idx_t ntrials;
 
 
 /**************************************************************************
@@ -188,6 +189,17 @@ void Main::Init() {
     }
     if (runmode == RUNMODE_EST) {
       CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+               "  Classes estimated     (ntrials): %" PRIidx "\n",
+               rngseed, ((real_t)(tstep/TICKS_PER_MS)),
+               ((real_t)(tqueue/TICKS_PER_MS)), ntrials);
+      // Set compute cycle
+      cbcycle = CkCallback(CkIndex_Network::CycleEstStatic(), network);
+      network.InitEstStatic(netdata);
+    }
+    if (runmode == RUNMODE_MON) {
+      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
                "  Total Simulation Time    (tmax): %" PRIrealms "ms\n"
                "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
                "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
@@ -197,8 +209,8 @@ void Main::Init() {
                ((real_t)(tstep/TICKS_PER_MS)), ((real_t)(tqueue/TICKS_PER_MS)),
                ((real_t)(trecord/TICKS_PER_MS)), ((real_t)(tdisplay/TICKS_PER_MS)));
       // Set compute cycle
-      cbcycle = CkCallback(CkIndex_Network::CycleEstStatic(), network);
-      network.InitEstStatic(netdata);
+      cbcycle = CkCallback(CkIndex_Network::CycleMonStatic(), network);
+      network.InitMonStatic(netdata);
     }
     
 #ifdef STACS_WITH_YARP
@@ -269,12 +281,14 @@ void Main::Stop() {
     network.SaveFinalRecord();
     ++nhalt;
   }
-  else if (runmode == RUNMODE_PNG) {
+  else if (runmode == RUNMODE_PNG || runmode == RUNMODE_EST) {
     network.FinalizeNetwork();
     ++nhalt;
   }
-  else if (runmode == RUNMODE_EST) {
+  else if (runmode == RUNMODE_MON) {
     network.FinalizeNetwork();
+    ++nhalt;
+    network.SaveFinalRecord();
     ++nhalt;
   }
   
