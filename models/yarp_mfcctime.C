@@ -154,7 +154,7 @@ class YarpMFCCTime : public NetModelTmpl < 103, YarpMFCCTime > {
     /* Constructor */
     YarpMFCCTime() {
       // parameters
-      paramlist.resize(1);
+      paramlist.resize(2);
       paramlist[0] = "nmel";
       paramlist[1] = "ampl";
       // states
