@@ -197,11 +197,13 @@ class YarpPhone : public NetModelTmpl < 102, YarpPhone > {
 // Reset model
 //
 void YarpPhone::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+#ifdef STACS_WITH_YARP
   // Request new phone
   yarp::os::Bottle& b = preq->prepare();
   b.clear();
   b.addInt((int) port->mels.size());
   preq->write();
+#endif
 }
 
 // Simulation step
