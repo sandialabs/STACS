@@ -77,8 +77,8 @@ void Network::SaveEstimate(CkReductionMsg *msg) {
   // Sorting
   std::sort(pnglist.begin(), pnglist.end());
 
-  // Write estimate
-  WriteEstimate(evalidx-1);
+  // Write estimate (account for offset)
+  WriteEstimate(evalidx-2);
   
   // Start a new cycle (checked data sent)
   thisProxy.CycleEstStatic();
@@ -114,12 +114,13 @@ void Network::CycleEstStatic() {
     
     // Coordination after reset
     if (evalidx < ntrials) {
+      ++evalidx;
+
       // Reduce PNG information
       CkCallback *cb = new CkCallback(CkIndex_Network::SaveEstimate(NULL), 0, thisProxy);
       contribute(pnglog.size()*sizeof(event_t), pnglog.data(), net_event, *cb);
 
       pnglog.clear();
-      ++evalidx;
     }
     else {
       // return control to main
@@ -145,7 +146,7 @@ void Network::CycleEstStatic() {
   else {
     // Display iteration information
     if (tsim == 0 && prtidx == 0) {
-      CkPrintf("  Estimating iteration %" PRIidx "\n", evalidx);
+      CkPrintf("  Estimating iteration %" PRIidx "\n", evalidx-1);
       //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
     }
     
