@@ -156,6 +156,18 @@ void Main::Init() {
         network.InitSimStatic(netdata);
       }
     }
+    else if (runmode == RUNMODE_EPS) {
+      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+               "  Time per Episode       (ttrial): %" PRIrealms "ms\n"
+               "  Number of Episodes    (ntrials): %" PRIidx "\n",
+               rngseed, ((real_t)(tstep/TICKS_PER_MS)),
+               ((real_t)(tqueue/TICKS_PER_MS)), ((real_t)(ttrial/TICKS_PER_MS)), ntrials);
+      // Set compute cycle
+      cbcycle = CkCallback(CkIndex_Network::CycleEpsPlastic(), network);
+      network.InitEpsPlastic(netdata);
+    }
     else if (runmode == RUNMODE_PNG) {
       std::string pnginfo;
       // collect active models
@@ -188,7 +200,7 @@ void Main::Init() {
       cbcycle = CkCallback(CkIndex_Network::CyclePNG(), network);
       network.InitPNG(netdata);
     }
-    if (runmode == RUNMODE_EST) {
+    else if (runmode == RUNMODE_EST) {
       CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
                "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
                "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
@@ -199,7 +211,7 @@ void Main::Init() {
       cbcycle = CkCallback(CkIndex_Network::CycleEstStatic(), network);
       network.InitEstStatic(netdata);
     }
-    if (runmode == RUNMODE_MON) {
+    else if (runmode == RUNMODE_MON) {
       CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
                "  Total Simulation Time    (tmax): %" PRIrealms "ms\n"
                "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
@@ -280,6 +292,10 @@ void Main::Stop() {
       ++nhalt;
     }
     network.SaveFinalRecord();
+    ++nhalt;
+  }
+  else if (runmode == RUNMODE_EPS) {
+    network.SaveFinalNetwork();
     ++nhalt;
   }
   else if (runmode == RUNMODE_PNG || runmode == RUNMODE_EST) {

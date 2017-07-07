@@ -19,6 +19,7 @@
 #endif
 
 #define RUNMODE_SIM     "sim"
+#define RUNMODE_EPS     "eps"
 #define RUNMODE_PNG     "png"
 #define RUNMODE_EST     "est"
 #define RUNMODE_MON     "mon"

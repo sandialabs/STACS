@@ -528,6 +528,8 @@ class Network : public CBase_Network {
     void InitSimStatic(CProxy_Netdata cpdat);
     void CycleSimPlastic();
     void CycleSimStatic();
+    void InitEpsPlastic(CProxy_Netdata cpdat);
+    void CycleEpsPlastic();
     void InitEstStatic(CProxy_Netdata cpdat);
     void CycleEstStatic();
     void InitMonStatic(CProxy_Netdata cpdat);
@@ -554,6 +556,7 @@ class Network : public CBase_Network {
     void SaveFinalRecord();
     void SaveEstimate(CkReductionMsg *msg);
     void WriteEstimate(idx_t estidx);
+    void SaveEpisode();
 
     /* Polychronization */
     void InitPNG(CProxy_Netdata cpdat);

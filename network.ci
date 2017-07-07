@@ -109,6 +109,8 @@ module network {
     entry void InitSimStatic(CProxy_Netdata cpdat);
     entry void CycleSimPlastic();
     entry void CycleSimStatic();
+    entry void InitEpsPlastic(CProxy_Netdata cpdat);
+    entry void CycleEpsPlastic();
     entry void InitEstStatic(CProxy_Netdata cpdat);
     entry void CycleEstStatic();
     entry void InitMonStatic(CProxy_Netdata cpdat);
@@ -126,6 +128,7 @@ module network {
     entry void SaveRecord();
     entry void SaveFinalRecord();
     entry void SaveEstimate(CkReductionMsg *msg);
+    entry void SaveEpisode();
     
     entry void InitPNG(CProxy_Netdata cpdat);
     entry void FindPNG();
