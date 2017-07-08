@@ -47,7 +47,7 @@ Main::Main(CkArgMsg *msg) {
   // Command line arguments
   std::string configfile;
   if (msg->argc < 2) {
-    configfile = "config.yml"; // default
+    configfile = "networks/dummy.yml"; // default
   }
   else {
     configfile = msg->argv[1];
