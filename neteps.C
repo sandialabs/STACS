@@ -68,9 +68,10 @@ void Network::CycleEpsPlastic() {
       ++evalidx;
 
       // Start a new cycle (checked data sent)
+      thisProxy(prtidx).SaveRecord();
       //cbcycleprt.send();
-      CkCallback *cb = new CkCallback(CkIndex_Network::SaveEpisode(), 0, thisProxy);
-      contribute(0, NULL, CkReduction::nop, *cb);
+      //CkCallback *cb = new CkCallback(CkIndex_Network::SaveEpisode(), 0, thisProxy);
+      //contribute(0, NULL, CkReduction::nop, *cb);
     }
     else {
       // return control to main
@@ -281,7 +282,6 @@ void Network::CycleEpsPlastic() {
     tsim += tstep;
     
     // Store new records
-    evtlog.clear();
-    record.clear();
+    StoreRecord();
   }
 }
