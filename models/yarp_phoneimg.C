@@ -47,6 +47,7 @@ class YarpPhoneImgPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
       //CkPrintf("Sample samples: %f, %f, %f, %f, %f\n", samplebuffer[50], samplebuffer[100], samplebuffer[150], samplebuffer[200], samplebuffer[250]);
       // Split samples into windows
       int nwindow = (((int)samplebuffer.size()) - noverlap)/(ninput - noverlap);
+      mels.clear();
       for (int w = 0; w < nwindow; ++w) {
         // Find power spectral density of window
         double* inputbuffer = static_cast<double*>(fftw_malloc(ninput * sizeof(double)));
@@ -169,7 +170,7 @@ class YarpPhoneImg : public NetModelTmpl < 105, YarpPhoneImg > {
       portlist[0] = "in";
 
       // Local variables
-      tsample = 0 * TICKS_PER_MS;
+      tsample = 0;
     }
 
     /* Simulation */
@@ -199,12 +200,15 @@ class YarpPhoneImg : public NetModelTmpl < 105, YarpPhoneImg > {
 //
 void YarpPhoneImg::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 #ifdef STACS_WITH_YARP
-  // Request new phone
-  yarp::os::Bottle& b = preq->prepare();
-  b.clear();
-  b.addInt((int) port->mels.size());
-  preq->write();
+  if (tsample == 0 && !(port->mels.size())) {
+    // Request new phone
+    yarp::os::Bottle& b = preq->prepare();
+    b.clear();
+    b.addInt((int) port->mels.size());
+    preq->write();
+  }
 #endif
+  tsample = 0;
 }
 
 // Simulation step
@@ -212,14 +216,14 @@ void YarpPhoneImg::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick)
 tick_t YarpPhoneImg::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
 #ifdef STACS_WITH_YARP
   // Grab data from port if available
-  if (port->mels.size()) {
+  if (tsample == 0 && port->mels.size()) {
+    tsample = TICKS_PER_MS;
     std::vector<real_t> mel = port->mels.front();
     for (std::size_t ms = 1; ms < port->mels.size(); ++ms) {
       for (std::size_t m = 0; m < mel.size(); ++m) {
         mel[m] = (mel[m]*ms + port->mels[ms][m])/(ms+1);
       }
     }
-    port->mels.clear();
     //CkPrintf("Popping front of deque.\n");
     // generate events
     event_t event;
@@ -330,6 +334,11 @@ tick_t YarpPhoneImg::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
         events.push_back(event);
       }
     }
+    // Request new phone
+    yarp::os::Bottle& b = preq->prepare();
+    b.clear();
+    b.addInt((int) port->mels.size());
+    preq->write();
   }
 #endif
   return tdiff;
