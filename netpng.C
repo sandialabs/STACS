@@ -49,6 +49,9 @@ void Network::InitPNG(CProxy_Netdata cpdat) {
   // Set proxies
   netdata = cpdat;
   cbcycleprt = CkCallback(CkIndex_Network::CyclePNG(), prtidx, thisProxy);
+
+  // Initialization
+  evalidx = 0;
   
   // Request network part from input
   CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);

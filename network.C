@@ -359,7 +359,6 @@ void Network::LoadNetwork(mPart *msg) {
   // Set up computation
   compidx = vtxdist[comprtmin];
   compendx = vtxdist[comprtmax+1];
-  evalidx = 0;
   ccomp = 0;
   ncomp = 0;
   tcomp = 0;

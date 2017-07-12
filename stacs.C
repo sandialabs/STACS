@@ -134,39 +134,47 @@ void Main::Init() {
     network.ckSetReductionClient(cb);
 
     if (runmode == RUNMODE_SIM) {
-      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
-               "  Total Simulation Time    (tmax): %" PRIrealms "ms\n"
-               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
-               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
-               "  Checkpointing Interval (tcheck): %" PRIrealms "ms\n"
-               "  Recording Interval    (trecord): %" PRIrealms "ms\n"
-               "  Display Interval     (tdisplay): %" PRIrealms "ms\n"
-               "  Network Plasticity (plasticity): %s\n",
-               rngseed, ((real_t)(tmax/TICKS_PER_MS)),
-               ((real_t)(tstep/TICKS_PER_MS)), ((real_t)(tqueue/TICKS_PER_MS)),
-               ((real_t)(tcheck/TICKS_PER_MS)), ((real_t)(trecord/TICKS_PER_MS)),
-               ((real_t)(tdisplay/TICKS_PER_MS)), (plasticity ? "on" : "off"));
-      // Set compute cycle
-      if (plasticity) {
-        cbcycle = CkCallback(CkIndex_Network::CycleSimPlastic(), network);
-        network.InitSimPlastic(netdata);
+      if (episodic) {
+        CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+                 "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+                 "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+                 "  Time per Episode       (ttrial): %" PRIrealms "ms\n"
+                 "  Number of Episodes    (ntrials): %" PRIidx "\n",
+                 rngseed, ((real_t)(tstep/TICKS_PER_MS)),
+                 ((real_t)(tqueue/TICKS_PER_MS)), ((real_t)(ttrial/TICKS_PER_MS)), ntrials);
+        // Set compute cycle
+        if (plasticity) {
+          cbcycle = CkCallback(CkIndex_Network::CycleSimEpsPls(), network);
+          network.InitSimEpsPls(netdata);
+        }
+        else {
+          cbcycle = CkCallback(CkIndex_Network::CycleSimEpsRgd(), network);
+          network.InitSimEpsRgd(netdata);
+        }
       }
       else {
-        cbcycle = CkCallback(CkIndex_Network::CycleSimStatic(), network);
-        network.InitSimStatic(netdata);
+        CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+                 "  Total Simulation Time    (tmax): %" PRIrealms "ms\n"
+                 "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+                 "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+                 "  Checkpointing Interval (tcheck): %" PRIrealms "ms\n"
+                 "  Recording Interval    (trecord): %" PRIrealms "ms\n"
+                 "  Display Interval     (tdisplay): %" PRIrealms "ms\n"
+                 "  Network Plasticity (plasticity): %s\n",
+                 rngseed, ((real_t)(tmax/TICKS_PER_MS)),
+                 ((real_t)(tstep/TICKS_PER_MS)), ((real_t)(tqueue/TICKS_PER_MS)),
+                 ((real_t)(tcheck/TICKS_PER_MS)), ((real_t)(trecord/TICKS_PER_MS)),
+                 ((real_t)(tdisplay/TICKS_PER_MS)), (plasticity ? "on" : "off"));
+        // Set compute cycle
+        if (plasticity) {
+          cbcycle = CkCallback(CkIndex_Network::CycleSimCntPls(), network);
+          network.InitSimCntPls(netdata);
+        }
+        else {
+          cbcycle = CkCallback(CkIndex_Network::CycleSimCntRgd(), network);
+          network.InitSimCntRgd(netdata);
+        }
       }
-    }
-    else if (runmode == RUNMODE_EPS) {
-      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
-               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
-               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
-               "  Time per Episode       (ttrial): %" PRIrealms "ms\n"
-               "  Number of Episodes    (ntrials): %" PRIidx "\n",
-               rngseed, ((real_t)(tstep/TICKS_PER_MS)),
-               ((real_t)(tqueue/TICKS_PER_MS)), ((real_t)(ttrial/TICKS_PER_MS)), ntrials);
-      // Set compute cycle
-      cbcycle = CkCallback(CkIndex_Network::CycleEpsPlastic(), network);
-      network.InitEpsPlastic(netdata);
     }
     else if (runmode == RUNMODE_PNG) {
       std::string pnginfo;
@@ -201,29 +209,31 @@ void Main::Init() {
       network.InitPNG(netdata);
     }
     else if (runmode == RUNMODE_EST) {
-      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
-               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
-               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
-               "  Classes estimated     (ntrials): %" PRIidx "\n",
-               rngseed, ((real_t)(tstep/TICKS_PER_MS)),
-               ((real_t)(tqueue/TICKS_PER_MS)), ntrials);
-      // Set compute cycle
-      cbcycle = CkCallback(CkIndex_Network::CycleEstStatic(), network);
-      network.InitEstStatic(netdata);
-    }
-    else if (runmode == RUNMODE_MON) {
-      CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
-               "  Total Simulation Time    (tmax): %" PRIrealms "ms\n"
-               "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
-               "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
-               "  Recording Interval    (trecord): %" PRIrealms "ms\n"
-               "  Display Interval     (tdisplay): %" PRIrealms "ms\n",
-               rngseed, ((real_t)(tmax/TICKS_PER_MS)),
-               ((real_t)(tstep/TICKS_PER_MS)), ((real_t)(tqueue/TICKS_PER_MS)),
-               ((real_t)(trecord/TICKS_PER_MS)), ((real_t)(tdisplay/TICKS_PER_MS)));
-      // Set compute cycle
-      cbcycle = CkCallback(CkIndex_Network::CycleMonStatic(), network);
-      network.InitMonStatic(netdata);
+      if (episodic) {
+        CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+                 "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+                 "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+                 "  Classes estimated     (ntrials): %" PRIidx "\n",
+                 rngseed, ((real_t)(tstep/TICKS_PER_MS)),
+                 ((real_t)(tqueue/TICKS_PER_MS)), ntrials);
+        // Set compute cycle
+        cbcycle = CkCallback(CkIndex_Network::CycleEstEps(), network);
+        network.InitEstEps(netdata);
+      }
+      else {
+        CkPrintf("  Random Generator Seed (rngseed): %" PRIidx "\n"
+                 "  Total Simulation Time    (tmax): %" PRIrealms "ms\n"
+                 "  Simulation Time Step    (tstep): %" PRIrealms "ms\n"
+                 "  Event Queue Length     (tqueue): %" PRIrealms "ms\n"
+                 "  Recording Interval    (trecord): %" PRIrealms "ms\n"
+                 "  Display Interval     (tdisplay): %" PRIrealms "ms\n",
+                 rngseed, ((real_t)(tmax/TICKS_PER_MS)),
+                 ((real_t)(tstep/TICKS_PER_MS)), ((real_t)(tqueue/TICKS_PER_MS)),
+                 ((real_t)(trecord/TICKS_PER_MS)), ((real_t)(tdisplay/TICKS_PER_MS)));
+        // Set compute cycle
+        cbcycle = CkCallback(CkIndex_Network::CycleEstCnt(), network);
+        network.InitEstCnt(netdata);
+      }
     }
     
 #ifdef STACS_WITH_YARP
@@ -294,15 +304,11 @@ void Main::Stop() {
     network.SaveFinalRecord();
     ++nhalt;
   }
-  else if (runmode == RUNMODE_EPS) {
-    network.SaveFinalNetwork();
-    ++nhalt;
-  }
-  else if (runmode == RUNMODE_PNG || runmode == RUNMODE_EST) {
+  else if (runmode == RUNMODE_PNG) {
     network.FinalizeNetwork();
     ++nhalt;
   }
-  else if (runmode == RUNMODE_MON) {
+  else if (runmode == RUNMODE_EST) {
     network.FinalizeNetwork();
     ++nhalt;
     network.SaveFinalRecord();

@@ -184,9 +184,7 @@ int Main::ReadConfig(std::string configfile) {
     runmode = std::string(RUNMODE_DEFAULT);
     CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
   }
-  if (runmode != RUNMODE_SIM && runmode != RUNMODE_PNG &&
-      runmode != RUNMODE_EST && runmode != RUNMODE_MON &&
-      runmode != RUNMODE_EPS) {
+  if (runmode != RUNMODE_SIM && runmode != RUNMODE_PNG && runmode != RUNMODE_EST) {
     runmode = std::string(RUNMODE_DEFAULT);
     CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
   }
@@ -196,6 +194,13 @@ int Main::ReadConfig(std::string configfile) {
   } catch (YAML::RepresentationException& e) {
     plasticity = PLASTICITY_DEFAULT;
     CkPrintf("  plasticity not defined, defaulting to: %s\n", (plasticity ? "true" : "false"));
+  }
+  // Network plasticity
+  try {
+    episodic = config["episodic"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    episodic = EPISODIC_DEFAULT;
+    CkPrintf("  episodic not defined, defaulting to: %s\n", (episodic ? "true" : "false"));
   }
 #ifdef STACS_WITH_YARP
   // RPC port

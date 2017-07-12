@@ -19,15 +19,14 @@
 #endif
 
 #define RUNMODE_SIM     "sim"
-#define RUNMODE_EPS     "eps"
 #define RUNMODE_PNG     "png"
 #define RUNMODE_EST     "est"
-#define RUNMODE_MON     "mon"
 #define RUNMODE_DEFAULT "sim"
 
 #define RPCPORTNAME_DEFAULT "/stacs/rpc"
 #define STARTPAUSED_DEFAULT true // Start paused
 #define PLASTICITY_DEFAULT  true // Plasticity on
+#define EPISODIC_DEFAULT    false // Episodic off
 
 /**************************************************************************
 * Data structures
@@ -123,6 +122,7 @@ class Main : public CBase_Main {
     std::vector<model_t> models;
     std::string runmode;
     bool plasticity;
+    bool episodic;
     /* Polychronization */
     std::vector<std::string> pngactives;
     std::vector<std::string> pngmothers;

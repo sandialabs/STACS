@@ -524,16 +524,20 @@ class Network : public CBase_Network {
     void LoadNetwork(mPart *msg);
     
     /* Simulation */
-    void InitSimPlastic(CProxy_Netdata cpdat);
-    void InitSimStatic(CProxy_Netdata cpdat);
-    void CycleSimPlastic();
-    void CycleSimStatic();
-    void InitEpsPlastic(CProxy_Netdata cpdat);
-    void CycleEpsPlastic();
-    void InitEstStatic(CProxy_Netdata cpdat);
-    void CycleEstStatic();
-    void InitMonStatic(CProxy_Netdata cpdat);
-    void CycleMonStatic();
+    void InitSimCntPls(CProxy_Netdata cpdat);
+    void InitSimCntRgd(CProxy_Netdata cpdat);
+    void InitSimEpsPls(CProxy_Netdata cpdat);
+    void InitSimEpsRgd(CProxy_Netdata cpdat);
+    void CycleSimCntPls();
+    void CycleSimCntRgd();
+    void CycleSimEpsPls();
+    void CycleSimEpsRgd();
+    
+    /* Estimation */
+    void InitEstCnt(CProxy_Netdata cpdat);
+    void InitEstEps(CProxy_Netdata cpdat);
+    void CycleEstCnt();
+    void CycleEstEps();
 
     /* Communication */
     void CreateGroup();
@@ -556,7 +560,6 @@ class Network : public CBase_Network {
     void SaveFinalRecord();
     void SaveEstimate(CkReductionMsg *msg);
     void WriteEstimate(idx_t estidx);
-    void SaveEpisode();
 
     /* Polychronization */
     void InitPNG(CProxy_Netdata cpdat);

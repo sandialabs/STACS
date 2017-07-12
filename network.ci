@@ -105,16 +105,19 @@ module network {
     entry Network(mModel *msg);
     entry void LoadNetwork(mPart *msg);
     
-    entry void InitSimPlastic(CProxy_Netdata cpdat);
-    entry void InitSimStatic(CProxy_Netdata cpdat);
-    entry void CycleSimPlastic();
-    entry void CycleSimStatic();
-    entry void InitEpsPlastic(CProxy_Netdata cpdat);
-    entry void CycleEpsPlastic();
-    entry void InitEstStatic(CProxy_Netdata cpdat);
-    entry void CycleEstStatic();
-    entry void InitMonStatic(CProxy_Netdata cpdat);
-    entry void CycleMonStatic();
+    entry void InitSimCntPls(CProxy_Netdata cpdat);
+    entry void InitSimCntRgd(CProxy_Netdata cpdat);
+    entry void InitSimEpsPls(CProxy_Netdata cpdat);
+    entry void InitSimEpsRgd(CProxy_Netdata cpdat);
+    entry void CycleSimCntPls();
+    entry void CycleSimCntRgd();
+    entry void CycleSimEpsPls();
+    entry void CycleSimEpsRgd();
+    
+    entry void InitEstCnt(CProxy_Netdata cpdat);
+    entry void InitEstEps(CProxy_Netdata cpdat);
+    entry void CycleEstCnt();
+    entry void CycleEstEps();
     
     entry void GoAhead(mGo *msg);
     entry void CommEvent(mEvent *msg);
@@ -128,7 +131,6 @@ module network {
     entry void SaveRecord();
     entry void SaveFinalRecord();
     entry void SaveEstimate(CkReductionMsg *msg);
-    entry void SaveEpisode();
     
     entry void InitPNG(CProxy_Netdata cpdat);
     entry void FindPNG();
