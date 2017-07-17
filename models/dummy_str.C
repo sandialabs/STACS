@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DummyStr : public NetModelTmpl < 3, DummyStr > {
+class DummyStr : public ModelTmpl < 3, DummyStr > {
   public:
     /* Constructor */
     DummyStr() {

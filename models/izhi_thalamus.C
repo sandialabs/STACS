@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiThalamus : public NetModelTmpl < 100, IzhiThalamus > {
+class IzhiThalamus : public ModelTmpl < 100, IzhiThalamus > {
   public:
     /* Constructor */
     IzhiThalamus() {

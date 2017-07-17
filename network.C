@@ -10,17 +10,16 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ CkGroupID mCastGrpId;
-extern /*readonly*/ idx_t npdat;
-extern /*readonly*/ idx_t npnet;
-extern /*readonly*/ idx_t rngseed;
-extern /*readonly*/ tick_t tmax;
+extern /*readonly*/ unsigned randseed;
+extern /*readonly*/ int netparts;
+extern /*readonly*/ int netfiles;
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ tick_t tcheck;
-extern /*readonly*/ tick_t trecord;
-extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
-extern /*readonly*/ idx_t comprtmin;
-extern /*readonly*/ idx_t comprtmax;
+extern /*readonly*/ idx_t intdisp;
+extern /*readonly*/ idx_t intrec;
+extern /*readonly*/ idx_t intsave;
+extern /*readonly*/ tick_t tmax;
+extern /*readonly*/ idx_t grpvtxmin;
 
 
 /**************************************************************************
@@ -58,46 +57,46 @@ CkReductionMsg *minTick(int nMsg, CkReductionMsg **msgs) {
 //
 Network::Network(mModel *msg) {
   // Bookkeeping
-  prtidx = thisIndex;
-  // Network part (prtidx) to in/out file (datidx) conversion
+  partidx = thisIndex;
+  // Network part (partidx) to in/out file (fileidx) conversion
   // (with excess parts located modulo at the beginning)
-  idx_t datdiv = npnet/npdat;
-  idx_t datrem = npnet%npdat;
-  datidx = (prtidx-( ((prtidx+1)/(datdiv+1))>datrem ? datrem:((prtidx+1)/(datdiv+1)) ))/datdiv;
+  int datdiv = netparts/netfiles;
+  int datrem = netparts%netfiles;
+  fileidx = (partidx-( ((partidx+1)/(datdiv+1))>datrem ? datrem:((partidx+1)/(datdiv+1)) ))/datdiv;
   
   // Set up random number generator
-  rngine.seed(rngseed+prtidx);
+  rngine.seed(randseed+partidx);
   unifdist = new std::uniform_real_distribution<real_t> (0.0, 1.0);
 
   // Network Models
-  for (std::size_t i = 0; i < netmodel.size(); ++i) {
-    delete netmodel[i];
+  for (std::size_t i = 0; i < model.size(); ++i) {
+    delete model[i];
   }
   // Set up containers
-  netmodel.clear();
+  model.clear();
   // "none" model
-  netmodel.push_back(NetModelFactory::getNetModel()->Create(0));
+  model.push_back(ModelFactory::newModel()->Create(0));
   // TODO: Roll this into model creation perhaps
-  netmodel[0]->setPNGActive(false);
-  netmodel[0]->setPNGMother(false);
-  netmodel[0]->setPNGAnchor(false);
+  model[0]->setActive(false);
+  model[0]->setMother(false);
+  model[0]->setAnchor(false);
   // User defined models
   for (idx_t i = 1; i < msg->nmodel+1; ++i) {
     // Create model object
-    netmodel.push_back(NetModelFactory::getNetModel()->Create(msg->modtype[i-1]));
-    CkAssert(netmodel[i]->getNState() == msg->nstate[i-1]);
-    CkAssert(netmodel[i]->getNStick() == msg->nstick[i-1]);
-    CkAssert(netmodel[i]->getNParam() == msg->xparam[i] - msg->xparam[i-1]);
-    netmodel[i]->setParam(msg->param + msg->xparam[i-1]);
-    netmodel[i]->setPort(msg->port + msg->xport[i-1]);
-    netmodel[i]->setRandom(unifdist, &rngine);
-    netmodel[i]->setPNGActive(msg->pngactive[i-1]);
-    netmodel[i]->setPNGMother(msg->pngmother[i-1]);
-    netmodel[i]->setPNGAnchor(msg->pnganchor[i-1]);
+    model.push_back(ModelFactory::newModel()->Create(msg->modtype[i-1]));
+    CkAssert(model[i]->getNState() == msg->nstate[i-1]);
+    CkAssert(model[i]->getNStick() == msg->nstick[i-1]);
+    CkAssert(model[i]->getNParam() == msg->xparam[i] - msg->xparam[i-1]);
+    model[i]->setParam(msg->param + msg->xparam[i-1]);
+    model[i]->setPort(msg->port + msg->xport[i-1]);
+    model[i]->setRandom(unifdist, &rngine);
+    model[i]->setActive(msg->grpactive[i-1]);
+    model[i]->setMother(msg->grpmother[i-1]);
+    model[i]->setAnchor(msg->grpanchor[i-1]);
 
     // Print out model information
     /*
-    if (prtidx == 0) {
+    if (partidx == 0) {
       std::string params;
       // collect params
       for (idx_t j = msg->xparam[i-1]; j < msg->xparam[i]; ++j) {
@@ -105,7 +104,7 @@ Network::Network(mModel *msg) {
         param << " " << msg->param[j];
         params.append(param.str());
       }
-      CkPrintf("  Network model: %" PRIidx "   ModType: %" PRIidx "   Params:%s\n", i, netmodel[i]->getModType(), params.c_str());
+      CkPrintf("  Network model: %" PRIidx "   ModType: %" PRIidx "   Params:%s\n", i, model[i]->getModType(), params.c_str());
     }
     */
   }
@@ -122,33 +121,33 @@ Network::Network(mModel *msg) {
   delete msg;
 
   // set up auxiliary state
-  edgaux.resize(netmodel.size());
-  for (std::size_t j = 1; j < netmodel.size(); ++j) {
-    if (netmodel[j]->getNAux()) {
-      edgaux[j].resize(netmodel.size());
-      std::vector<std::string> auxstate = netmodel[j]->getAuxState();
-      std::vector<std::string> auxstick = netmodel[j]->getAuxStick();
-      for (std::size_t i = 1; i < netmodel.size(); ++i) {
+  edgaux.resize(model.size());
+  for (std::size_t j = 1; j < model.size(); ++j) {
+    if (model[j]->getNAux()) {
+      edgaux[j].resize(model.size());
+      std::vector<std::string> auxstate = model[j]->getAuxState();
+      std::vector<std::string> auxstick = model[j]->getAuxStick();
+      for (std::size_t i = 1; i < model.size(); ++i) {
         edgaux[j][i].resize(1);
         edgaux[j][i][0].index = 0;
         edgaux[j][i][0].stateidx.resize(auxstate.size());
         for (std::size_t s = 0; s < auxstate.size(); ++s) {
-          edgaux[j][i][0].stateidx[s] = netmodel[i]->getStateIdx(auxstate[s]);
+          edgaux[j][i][0].stateidx[s] = model[i]->getStateIdx(auxstate[s]);
         }
         edgaux[j][i][0].stickidx.resize(auxstick.size());
         for (std::size_t s = 0; s < auxstick.size(); ++s) {
-          edgaux[j][i][0].stickidx[s] = netmodel[i]->getStateIdx(auxstick[s]);
+          edgaux[j][i][0].stickidx[s] = model[i]->getStateIdx(auxstick[s]);
         }
       }
     }
   }
   // set up periodic events
   evtleap.clear();
-  leaplist.resize(netmodel.size(), false);
-  leapidx.resize(netmodel.size());
+  leaplist.resize(model.size(), false);
+  leapidx.resize(model.size());
   events.clear();
-  for (std::size_t n = 1; n < netmodel.size(); ++n) {
-    netmodel[n]->Leap(events);
+  for (std::size_t n = 1; n < model.size(); ++n) {
+    model[n]->Leap(events);
     if (events.size()) {
       leaplist[n] = true;
       for (std::size_t e = 0; e < events.size(); ++e) {
@@ -179,8 +178,8 @@ Network::Network(CkMigrateMessage *msg) {
 // Network destructor
 //
 Network::~Network() {
-  for (std::size_t i = 0; i < netmodel.size(); ++i) {
-    delete netmodel[i];
+  for (std::size_t i = 0; i < model.size(); ++i) {
+    delete model[i];
   }
 }
 
@@ -200,10 +199,10 @@ void Network::LoadNetwork(mPart *msg) {
   idx_t nevent;  // events
 
   // Copy over part data
-  CkAssert(msg->prtidx == prtidx);
+  CkAssert(msg->partidx == partidx);
 
   // Setup data vectors
-  vtxdist.resize(npnet+1);
+  vtxdist.resize(netparts+1);
   vtxidx.resize(msg->nvtx);
   vtxmap.clear();
   vtxmodidx.resize(msg->nvtx);
@@ -220,20 +219,19 @@ void Network::LoadNetwork(mPart *msg) {
   evtext.clear();
   evtrpc.clear();
   // Polychronization
-  pngs.resize(msg->nvtx);
-  pnglen.resize(msg->nvtx);
-  pngmap.clear();
-  pngwin.resize(msg->nvtx);
-  pnglog.clear();
-  pnglist.clear();
-  pngseeds.clear();
-  pngtrail.resize(msg->nvtx);
-  pngtrack.clear();
-  pngroute.clear();
-  pngchart.clear();
+  grpstamps.resize(msg->nvtx);
+  grpdur.resize(msg->nvtx);
+  grpmap.clear();
+  grpwindow.resize(msg->nvtx);
+  grplog.clear();
+  grpseeds.clear();
+  grptraces.resize(msg->nvtx);
+  grpleg.clear();
+  grproute.clear();
+  grproutes.clear();
 
   // Graph distribution information
-  for (idx_t i = 0; i < npnet+1; ++i) {
+  for (int i = 0; i < netparts+1; ++i) {
     // vtxdist
     vtxdist[i] = msg->vtxdist[i];
   }
@@ -247,8 +245,8 @@ void Network::LoadNetwork(mPart *msg) {
 
   // Get adjacency matrix
   for (idx_t i = 0; i < adjcy.size(); ++i) {
-    vtxidx[i] = vtxdist[prtidx] + i;
-    vtxmap[vtxdist[prtidx] + i] = i;
+    vtxidx[i] = vtxdist[partidx] + i;
+    vtxmap[vtxdist[partidx] + i] = i;
     vtxmodidx[i] = msg->vtxmodidx[i];
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
@@ -261,10 +259,10 @@ void Network::LoadNetwork(mPart *msg) {
     evtcal[i].resize(nevtday);
     nadjcy += adjcy[i].size();
     // copy over vertex data
-    state[i][0] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + netmodel[vtxmodidx[i]]->getNState());
-    jstate += netmodel[vtxmodidx[i]]->getNState();
-    stick[i][0] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + netmodel[vtxmodidx[i]]->getNStick());
-    jstick += netmodel[vtxmodidx[i]]->getNStick();
+    state[i][0] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + model[vtxmodidx[i]]->getNState());
+    jstate += model[vtxmodidx[i]]->getNState();
+    stick[i][0] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + model[vtxmodidx[i]]->getNStick());
+    jstick += model[vtxmodidx[i]]->getNStick();
     if (leaplist[vtxmodidx[i]]) {
       leapidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
     }
@@ -277,30 +275,30 @@ void Network::LoadNetwork(mPart *msg) {
         // map of targets (edge model in part)
         adjmap[adjcy[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
       }
-      state[i][j+1] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + netmodel[edgmodidx[i][j]]->getNState());
-      jstate += netmodel[edgmodidx[i][j]]->getNState();
-      stick[i][j+1] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + netmodel[edgmodidx[i][j]]->getNStick());
-      jstick += netmodel[edgmodidx[i][j]]->getNStick();
+      state[i][j+1] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + model[edgmodidx[i][j]]->getNState());
+      jstate += model[edgmodidx[i][j]]->getNState();
+      stick[i][j+1] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + model[edgmodidx[i][j]]->getNStick());
+      jstick += model[edgmodidx[i][j]]->getNStick();
       if (leaplist[edgmodidx[i][j]]) {
         leapidx[edgmodidx[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
       }
     }
     // set up auxiliary state
     vtxaux[i].clear();
-    if (netmodel[vtxmodidx[i]]->getNAux()) {
-      std::vector<std::string> auxstate = netmodel[vtxmodidx[i]]->getAuxState();
-      std::vector<std::string> auxstick = netmodel[vtxmodidx[i]]->getAuxStick();
+    if (model[vtxmodidx[i]]->getNAux()) {
+      std::vector<std::string> auxstate = model[vtxmodidx[i]]->getAuxState();
+      std::vector<std::string> auxstick = model[vtxmodidx[i]]->getAuxStick();
       for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
         if (edgmodidx[i][j]) {
           vtxaux[i].push_back(auxidx_t());
           vtxaux[i].back().index = j+1;
           vtxaux[i].back().stateidx.resize(auxstate.size());
           for (std::size_t s = 0; s < auxstate.size(); ++s) {
-            vtxaux[i].back().stateidx[s] = netmodel[edgmodidx[i][j]]->getStateIdx(auxstate[s]);
+            vtxaux[i].back().stateidx[s] = model[edgmodidx[i][j]]->getStateIdx(auxstate[s]);
           }
           vtxaux[i].back().stickidx.resize(auxstick.size());
           for (std::size_t s = 0; s < auxstick.size(); ++s) {
-            vtxaux[i].back().stickidx[s] = netmodel[edgmodidx[i][j]]->getStateIdx(auxstick[s]);
+            vtxaux[i].back().stickidx[s] = model[edgmodidx[i][j]]->getStateIdx(auxstick[s]);
           }
         }
       }
@@ -323,14 +321,14 @@ void Network::LoadNetwork(mPart *msg) {
       ++nevent;
     }
     // open ports if needed
-    if (netmodel[vtxmodidx[i]]->getNPort()) {
-      netmodel[vtxmodidx[i]]->OpenPorts();
+    if (model[vtxmodidx[i]]->getNPort()) {
+      model[vtxmodidx[i]]->OpenPorts();
     }
     // initialize polychronization
-    pngs[i].clear();
-    pnglen[i].clear();
-    pngwin[i].clear();
-    ReadPNG(i);
+    grpstamps[i].clear();
+    grpdur[i].clear();
+    grpwindow[i].clear();
+    ReadGroup(i);
   }
   CkAssert(msg->nedg == nadjcy);
   CkAssert(msg->nedg == jmodidx);
@@ -341,32 +339,24 @@ void Network::LoadNetwork(mPart *msg) {
   // Cleanup;
   delete msg;
 
-  // Create Groups
-  CreateGroup();
+  // Multicast Communication 
+  CreateComm();
 
   // Print some information
-  CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjprt: %" PRIidx "\n",
-           prtidx, adjcy.size(), nadjcy, adjmap.size(), nadjprt);
+  CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjpart: %" PRIidx "\n",
+           partidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
 
   // Set up timing
   tsim = 0;
-  tdisp = 0;
   iter = 0;
+  dispiter = 0;
+  reciter = intrec;
+  saveiter = intsave;
   // Set up coordination
-  cadjprt[0] = 0;
-  cadjprt[1] = 0;
-  prtiter = 0;
-  // Set up computation
-  compidx = vtxdist[comprtmin];
-  compendx = vtxdist[comprtmax+1];
-  ccomp = 0;
-  ncomp = 0;
-  tcomp = 0;
+  cadjpart[0] = 0;
+  cadjpart[1] = 0;
+  partiter = 0;
 
-  // Set up checkpointing
-  checkiter = (idx_t) (tcheck/tstep);
-  // Set up recordning
-  reciter = (idx_t) (trecord/tstep);
 #ifdef STACS_WITH_YARP
   // Set up synchronization
   synciter = IDX_T_MAX;
@@ -386,40 +376,39 @@ void Network::LoadNetwork(mPart *msg) {
 void Network::SaveNetwork() {
   // Build network part message for saving
   mPart *mpart = BuildPart();
-  netdata(datidx).SaveNetwork(mpart);
+  netdata(fileidx).SaveNetwork(mpart);
     
   // Start a new cycle (checked data sent)
-  //thisProxy(prtidx).CycleNetwork();
-  cbcycleprt.send();
+  cyclepart.send();
 }
 
 // Send network partition to Netdata chare array (final)
 //
-void Network::SaveFinalNetwork() {
+void Network::SaveCloseNetwork() {
   // Close ports as needed
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
-    if (netmodel[vtxmodidx[i]]->getNPort()) {
-      netmodel[vtxmodidx[i]]->ClosePorts();
+    if (model[vtxmodidx[i]]->getNPort()) {
+      model[vtxmodidx[i]]->ClosePorts();
     }
   }
 
   // Build network part message for saving
   mPart *mpart = BuildPart();
-  netdata(datidx).SaveFinalNetwork(mpart);
+  netdata(fileidx).SaveCloseNetwork(mpart);
 }
 
 // Clean up Network chare array
 //
-void Network::FinalizeNetwork() {
+void Network::CloseNetwork() {
   // Close ports as needed
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
-    if (netmodel[vtxmodidx[i]]->getNPort()) {
-      netmodel[vtxmodidx[i]]->ClosePorts();
+    if (model[vtxmodidx[i]]->getNPort()) {
+      model[vtxmodidx[i]]->ClosePorts();
     }
   }
 
   // Move to cleanup of netdata
-  netdata(datidx).FinalizeNetwork();
+  netdata(fileidx).CloseNetwork();
 }
 
 
@@ -429,61 +418,62 @@ void Network::FinalizeNetwork() {
 
 // Create multicast network groups from local connectivity
 //
-void Network::CreateGroup() {
+void Network::CreateComm() {
   /* Bookkeeping */
   CkVec<CkArrayIndex1D> elems;
-  std::vector<idx_t> adjprt;
+  std::vector<int> adjpart;
 
   // Initialize for counting
-  adjprt.resize(npnet, 0);
+  adjpart.resize(netparts, 0);
 
   // bin edges to source parts
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
-    idx_t k = 1;
+    int k = 1;
     for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
       while (adjcy[i][j] >= vtxdist[k]) { ++k; }
-      ++adjprt[k-1];
+      ++adjpart[k-1];
     }
   }
 
   // count adjacent and add to group
-  for (idx_t k = 0; k < npnet; ++k) {
-    if (adjprt[k] > 0) {
+  for (int k = 0; k < netparts; ++k) {
+    if (adjpart[k] > 0) {
       elems.push_back(CkArrayIndex1D(k));
     }
   }
 
   // set group sizes
-  nadjprt = elems.size();
+  nadjpart = elems.size();
   
   // make a map of source parts
-  srcprt.clear();
-  for (idx_t k = 0; k < nadjprt; ++k) {
-    srcprt[*(elems[k].data())] = k;
+  srcpart.clear();
+  for (int k = 0; k < nadjpart; ++k) {
+    srcpart[*(elems[k].data())] = k;
   }
 
   // make list of target parts
-  trgprt.resize(nadjprt);
-  for (idx_t k = 0; k < nadjprt; ++k) {
-    trgprt[k] = *(elems[k].data());
+  trgpart.resize(nadjpart);
+  for (int k = 0; k < nadjpart; ++k) {
+    trgpart[k] = *(elems[k].data());
   }
 
   // Create Charm++ multicast sections
-  netgroup = CProxySection_Network::ckNew(thisProxy, elems.getVec(), nadjprt);
-  netgroup.ckSectionDelegate(CProxy_CkMulticastMgr(mCastGrpId).ckLocalBranch());
+  netcomm = CProxySection_Network::ckNew(thisProxy, elems.getVec(), nadjpart);
+  netcomm.ckSectionDelegate(CProxy_CkMulticastMgr(mCastGrpId).ckLocalBranch());
 }
 
 // Reset Network state
 //
 void Network::ResetNetwork() {
+  // Reset models
   for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
     // Clear events
     for (idx_t j = 0; j < nevtday; ++j) {
       evtcal[i][j].clear();
     }
     evtcol[i].clear();
-    // Reset vertex models
-    netmodel[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
+    // Reset vertices
+    model[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
   }
 }
 
@@ -520,7 +510,7 @@ mPart* Network::BuildPart() {
 
   // Initialize partition data message
   int msgSize[MSG_Part];
-  msgSize[0] = npnet+1;       // vtxdist
+  msgSize[0] = netparts+1;       // vtxdist
   msgSize[1] = adjcy.size();  // vtxmodidx
   msgSize[2] = adjcy.size()*3;// xyz
   msgSize[3] = adjcy.size()+1;// xadj
@@ -542,10 +532,10 @@ mPart* Network::BuildPart() {
   mpart->nstate = nstate;
   mpart->nstick = nstick;
   mpart->nevent = nevent;
-  mpart->prtidx = prtidx;
+  mpart->partidx = partidx;
 
   // Graph Information
-  for (idx_t i = 0; i < npnet+1; ++i) {
+  for (int i = 0; i < netparts+1; ++i) {
     // vtxdist
     mpart->vtxdist[i] = vtxdist[i];
   }

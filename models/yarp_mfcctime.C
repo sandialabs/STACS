@@ -149,7 +149,7 @@ YarpMFCCTimePort::YarpMFCCTimePort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpMFCCTime : public NetModelTmpl < 103, YarpMFCCTime > {
+class YarpMFCCTime : public ModelTmpl < 103, YarpMFCCTime > {
   public:
     /* Constructor */
     YarpMFCCTime() {

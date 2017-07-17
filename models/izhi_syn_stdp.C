@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiSynSTDP : public NetModelTmpl < 12, IzhiSynSTDP > {
+class IzhiSynSTDP : public ModelTmpl < 12, IzhiSynSTDP > {
   public:
     /* Constructor */
     IzhiSynSTDP() {

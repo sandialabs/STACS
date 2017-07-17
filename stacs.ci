@@ -3,32 +3,32 @@ mainmodule stacs {
 
   readonly CProxy_Main mainProxy;
   readonly CkGroupID mCastGrpId;
-  readonly idx_t npdat;
-  readonly idx_t npnet;
+  readonly unsigned int randseed;
+  readonly std::string netwkdir;
+  readonly int netparts;
+  readonly int netfiles;
   readonly std::string filebase;
   readonly std::string fileload;
   readonly std::string filesave;
-  readonly std::string modeldir;
   readonly std::string recordir;
   readonly std::string groupdir;
-  readonly idx_t rngseed;
-  readonly tick_t tmax;
   readonly tick_t tstep;
-  readonly tick_t tqueue;
-  readonly tick_t tcheck;
-  readonly tick_t trecord;
-  readonly tick_t tdisplay;
   readonly idx_t nevtday;
-  readonly int pnglength;
-  readonly idx_t comprtmin;
-  readonly idx_t comprtmax;
-  readonly idx_t ntrials;
-  readonly tick_t ttrial;
+  readonly idx_t intdisp;
+  readonly idx_t intrec;
+  readonly idx_t intsave;
+  readonly tick_t tmax;
+  readonly tick_t tepisode;
+  readonly idx_t episodes;
+  readonly int grpminlen;
+  readonly tick_t grpmaxdur;
+  readonly idx_t grpvtxmin;
+  readonly idx_t grpvtxmax;
   
   message mVtxs {
     idx_t vtxdist[];
     char rpcport[];
-    idx_t xrpcport;
+    int xrpcport;
   };
   
   mainchare Main {
@@ -44,7 +44,7 @@ mainmodule stacs {
   
   chare Stream {
     entry Stream(mVtxs *msg);
-    entry void OpenRPC(CProxy_Network cpnet, const CkCallback &cbcyc, bool paused);
+    entry void OpenRPC(CProxy_Network cpnet, const CkCallback &cbcycle, bool paused);
     entry void CloseRPC();
 
     entry [reductiontarget] void Sync();

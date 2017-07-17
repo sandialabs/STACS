@@ -53,7 +53,8 @@ struct event_t {
   real_t data;
   
   bool operator<(const event_t& event) const {
-    return diffuse < event.diffuse;
+    return (diffuse < event.diffuse ||
+        (diffuse == event.diffuse && source < event.source));
   }
 };
 
@@ -69,7 +70,7 @@ struct record_t {
 
 // Record list
 //
-struct trace_t {
+struct track_t {
   tick_t trec;
   tick_t tfreq;
   std::vector<idx_t> type;
@@ -78,7 +79,7 @@ struct trace_t {
   std::vector<idx_t> value;
 };
 
-// Spike-timing events (for PNGs)
+// Spike-timing events (for Groups)
 //
 struct stamp_t {
   tick_t diffuse; // timestamp of spike
@@ -94,7 +95,7 @@ struct stamp_t {
   }
 };
 
-// Spike-timing routes (for PNGs)
+// Spike-timing routes (for Groups)
 //
 struct route_t {
   tick_t diffuse; // timestamp of spike
@@ -109,15 +110,15 @@ struct route_t {
   }
 };
 
-// Spike-timing history (for PNGs)
+// Spike-timing history (for Groups)
 //
-struct trail_t {
+struct trace_t {
   idx_t origin; // index of vertex that (possibly) contributed to spike
   tick_t departure; // timestamp of vertex spike departure
   tick_t arrival; // timestamp of vertex spike arrival
 
-  bool operator<(const trail_t& trail) const {
-    return arrival < trail.arrival;
+  bool operator<(const trace_t& trace) const {
+    return arrival < trace.arrival;
   }
 };
 
@@ -138,8 +139,8 @@ CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs);
 
 // Polychronous Neuronal Group Reduction
 //
-void registerNetPNG(void);
-CkReductionMsg *netPNG(int nMsg, CkReductionMsg **msgs);
+void registerNetGroup(void);
+CkReductionMsg *netGroup(int nMsg, CkReductionMsg **msgs);
 
 // Events List Reduction
 //
@@ -173,15 +174,15 @@ class mDist : public CMessage_mDist {
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;
-    idx_t *nstate;
-    idx_t *nstick;
+    int *nstate;
+    int *nstick;
     idx_t *xparam;
     real_t *param;
     idx_t *xport;
     char *port;
-    bool *pngactive;
-    bool *pngmother;
-    bool *pnganchor;
+    bool *grpactive;
+    bool *grpmother;
+    bool *grpanchor;
     idx_t nmodel;
 };
 
@@ -213,7 +214,7 @@ class mPart : public CMessage_mPart {
     idx_t nstick;
     idx_t nevent;
     /* Bookkeeping */
-    idx_t prtidx;
+    int partidx;
 };
 
 // Network record data
@@ -231,7 +232,7 @@ class mRecord : public CMessage_mRecord {
     idx_t *xdiffuse;
     idx_t *xindex;
     /* Bookkeeping */
-    idx_t prtidx;
+    int partidx;
     idx_t iter;
     idx_t nevtlog;
     idx_t nrecord;
@@ -270,7 +271,7 @@ class mRPC : public CMessage_mRPC {
   public:
     real_t *rpcdata; // data sent with rpc message
     idx_t nrpcdata; // size of data
-    idx_t command;  // command
+    int command;  // command
 };
 
 
@@ -280,9 +281,9 @@ class mRPC : public CMessage_mRPC {
 
 // Network Model
 //
-class NetModel {
+class Model {
   public:
-    virtual ~NetModel() { }
+    virtual ~Model() { }
     /* Getters */
     idx_t getModType() const { return modtype; }
     idx_t getNParam() const { return paramlist.size(); }
@@ -301,9 +302,9 @@ class NetModel {
       idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
       return (index < sticklist.size() ? index : -1);
     }
-    bool getPNGActive() const { return pngactive; }
-    bool getPNGMother() const { return pngmother; }
-    bool getPNGAnchor() const { return pnganchor; }
+    bool getActive() const { return active; }
+    bool getMother() const { return mother; }
+    bool getAnchor() const { return anchor; }
     /* Setters */
     void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
       unifdist = u;
@@ -319,15 +320,9 @@ class NetModel {
         p += portname[i].size() + 1;
       }
     }
-    void setPNGActive(bool pactive) {
-      pngactive = pactive;
-    }
-    void setPNGMother(bool pmother) {
-      pngmother = pmother;
-    }
-    void setPNGAnchor(bool panchor) {
-      pnganchor = panchor;
-    }
+    void setActive(bool grpactive) { active = grpactive; }
+    void setMother(bool grpmother) { mother = grpmother; }
+    void setAnchor(bool grpanchor) { anchor = grpanchor; }
     /* Protocol Functions */
     virtual void OpenPorts() { }
     virtual void ClosePorts() { }
@@ -354,21 +349,21 @@ class NetModel {
     /* Protocol */
     std::vector<std::string> portname;
     /* Polychronization */
-    bool pngactive;
-    bool pngmother;
-    bool pnganchor;
+    bool active;
+    bool mother;
+    bool anchor;
 };
 
 // Network model template
 //
 template <idx_t TYPE, typename IMPL>
-class NetModelTmpl : public NetModel {
+class ModelTmpl : public Model {
   public:
-    static NetModel* Create() { return new IMPL(); }
+    static Model* Create() { return new IMPL(); }
     static const idx_t MODELTYPE; // for registration
     static void Enable() { volatile idx_t x = MODELTYPE; }
   protected:
-    NetModelTmpl() { modtype = MODELTYPE; }
+    ModelTmpl() { modtype = MODELTYPE; }
   private:
     /* Bring type into scope */
     enum { _MODELTYPE = TYPE };
@@ -376,24 +371,24 @@ class NetModelTmpl : public NetModel {
 
 // Network model factory singleton
 //
-class NetModelFactory {
+class ModelFactory {
   public:
-    typedef NetModel* (*t_pfFactory)();
+    typedef Model* (*t_pfFactory)();
 
-    static NetModelFactory *getNetModel() {
-      static NetModelFactory factory;
+    static ModelFactory *newModel() {
+      static ModelFactory factory;
       return &factory;
     }
 
     /* Register concrete factory */
-    idx_t Register(idx_t modtype, t_pfFactory netmodel) {
-      //CkPrintf("Registering constructor for vtx id %" PRIidx "\n", modtype);
-      modellist[modtype] = netmodel;
+    idx_t Register(idx_t modtype, t_pfFactory model) {
+      //CkPrintf("Registering constructor for model %" PRIidx "\n", modtype);
+      modellist[modtype] = model;
       return modtype;
     }
 
     /* Create concrete object */
-    NetModel *Create(idx_t modtype) {
+    Model *Create(idx_t modtype) {
       return modellist[modtype]();
     }
 
@@ -402,23 +397,23 @@ class NetModelFactory {
 
   private:
     /* Empty */
-    NetModelFactory() { }
-    ~NetModelFactory() { }
+    ModelFactory() { }
+    ~ModelFactory() { }
     /* Prevent copies */
-    NetModelFactory(NetModelFactory const&) { }
-    NetModelFactory& operator=(NetModelFactory const&);
+    ModelFactory(ModelFactory const&) { }
+    ModelFactory& operator=(ModelFactory const&);
 };
 
 // Network model factory registration
 //
 template <idx_t TYPE, typename IMPL>
-const idx_t NetModelTmpl<TYPE, IMPL>::MODELTYPE = NetModelFactory::getNetModel()->Register(
-    NetModelTmpl<TYPE, IMPL >::_MODELTYPE, &NetModelTmpl<TYPE, IMPL >::Create);
+const idx_t ModelTmpl<TYPE, IMPL>::MODELTYPE = ModelFactory::newModel()->Register(
+    ModelTmpl<TYPE, IMPL >::_MODELTYPE, &ModelTmpl<TYPE, IMPL >::Create);
 
 
 // "none" model
 //
-class NoneModel : public NetModelTmpl < 0, NoneModel > {
+class NoneModel : public ModelTmpl < 0, NoneModel > {
   public:
     NoneModel() { paramlist.resize(0); statelist.resize(0); sticklist.resize(0); auxstate.resize(0); auxstick.resize(0); portlist.resize(0); }
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) { return tdiff; }
@@ -440,19 +435,25 @@ class Netdata : public CBase_Netdata {
     ~Netdata();
 
     /* Loading */
-    void LoadNetwork(idx_t prtidx, const CkCallback &cbnet);
+    void LoadNetwork(int partidx, const CkCallback &cbnet);
     void ReadNetwork();
 
     /* Saving */
     void SaveNetwork(mPart *msg);
-    void SaveFinalNetwork(mPart *msg);
-    void FinalizeNetwork();
+    void SaveCloseNetwork(mPart *msg);
+    void CloseNetwork();
     void WriteNetwork();
-
+    
     /* Recording */
     void SaveRecord(mRecord *msg);
     void SaveFinalRecord(mRecord *msg);
     void WriteRecord();
+    void SaveEstimate(CkReductionMsg *msg);
+    void SaveFinalEstimate(CkReductionMsg *msg);
+    void WriteEstimate();
+    
+    /* Closing */
+    void FinalizeNetwork();
     
     /* Helper Functions */
     idx_t strtomodidx(const char* nptr, char** endptr) {
@@ -489,6 +490,7 @@ class Netdata : public CBase_Netdata {
     /* Network Data */
     std::vector<mPart*> parts;
     std::vector<mRecord*> records;
+    std::vector<event_t> grplog;
     /* Distributions */
     std::vector<dist_t> netdist;
     std::vector<idx_t> vtxdist;
@@ -496,14 +498,15 @@ class Netdata : public CBase_Netdata {
     std::vector<idx_t> statedist;
     std::vector<idx_t> stickdist;
     std::vector<idx_t> eventdist;
+    CkCallback maindist;
     /* Network Model */
-    std::vector<NetModel*> netmodel;      // collection of model objects (empty)
+    std::vector<Model*> model;      // collection of model objects (empty)
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     /* Bookkeeping */
-    idx_t datidx;
-    idx_t cprt, rprt;
-    idx_t nprt, xprt;
+    int fileidx;
+    int cpart, rpart;
+    int npart, xpart;
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;
@@ -524,54 +527,56 @@ class Network : public CBase_Network {
     void LoadNetwork(mPart *msg);
     
     /* Simulation */
-    void InitSimCntPls(CProxy_Netdata cpdat);
-    void InitSimCntRgd(CProxy_Netdata cpdat);
-    void InitSimEpsPls(CProxy_Netdata cpdat);
-    void InitSimEpsRgd(CProxy_Netdata cpdat);
+    void InitSimCntPls(CProxy_Netdata cpdata);
+    void InitSimCntRgd(CProxy_Netdata cpdata);
+    void InitSimEpsPls(CProxy_Netdata cpdata);
+    void InitSimEpsRgd(CProxy_Netdata cpdata);
     void CycleSimCntPls();
     void CycleSimCntRgd();
     void CycleSimEpsPls();
     void CycleSimEpsRgd();
     
     /* Estimation */
-    void InitEstCnt(CProxy_Netdata cpdat);
-    void InitEstEps(CProxy_Netdata cpdat);
+    void InitEstCnt(CProxy_Netdata cpdata);
+    void InitEstEps(CProxy_Netdata cpdata);
     void CycleEstCnt();
     void CycleEstEps();
 
     /* Communication */
-    void CreateGroup();
+    void CreateComm();
     void GoAhead(mGo *msg);
     mEvent* BuildEvent();
     void CommEvent(mEvent *msg);
     void CommStamp(mEvent *msg);
-    void MarkEvent();
+    
+    // Computation
+    void SortEvent();
     
     /* Saving */
     void SaveNetwork();
-    void SaveFinalNetwork();
-    void FinalizeNetwork();
+    void SaveCloseNetwork();
+    void CloseNetwork();
     void ResetNetwork();
     
     /* Recording */
     mRecord* BuildRecord();
-    void StoreRecord();
+    void AddRecord();
     void SaveRecord();
     void SaveFinalRecord();
-    void SaveEstimate(CkReductionMsg *msg);
-    void WriteEstimate(idx_t estidx);
+    void SaveEstimate();
+    void SaveFinalEstimate();
 
     /* Polychronization */
-    void InitPNG(CProxy_Netdata cpdat);
-    void FindPNG();
-    void ComputePNG(idx_t nseeds, idx_t pngidx);
-    void ComputePNG();
-    mEvent* BuildPNGSeed(std::vector<event_t>& pngseed);
-    void SeedPNG(mEvent *msg);
-    void CyclePNG();
-    void EvalPNG(CkReductionMsg *msg);
-    void ReadPNG(idx_t pngidx);
-    void WritePNG(idx_t pngidx);
+    void InitGroup(CProxy_Netdata cpdata);
+    void FindGroup();
+    void ComputeGroup(idx_t nseeds, int grpart);
+    void ComputeGroup();
+    mEvent* BuildGroupSeed(std::vector<event_t>& seed);
+    void SeedGroup(mEvent *msg);
+    void CycleGroup();
+    void EvalGroup(CkReductionMsg *msg);
+    void ReadGroup(idx_t groupidx);
+    void WriteGroup(idx_t groupidx);
 
 #ifdef STACS_WITH_YARP
     /* RPC Control */
@@ -582,19 +587,19 @@ class Network : public CBase_Network {
     
   private:
     /* Multicast */
-    CProxySection_Network netgroup;
-    std::unordered_map<idx_t, idx_t> srcprt; // source partitions
-    std::vector<idx_t> trgprt; // target partitions
+    CProxySection_Network netcomm;
+    std::unordered_map<int, int> srcpart; // source partitions
+    std::vector<int> trgpart; // target partitions
     /* Network Adjacency */
     std::vector<idx_t> vtxdist; // vertex distribution per part
     std::vector<idx_t> vtxidx; // local vertex index to global index
     std::unordered_map<idx_t, idx_t> vtxmap; // global vertex index to local index
-    std::vector<idx_t> vtxmodidx; // vertex model index into netmodel
+    std::vector<idx_t> vtxmodidx; // vertex model index
     std::vector<std::vector<idx_t>> adjcy; // local vertex adjacency to global index
     std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> adjmap; // mapping from global index to vector of target vertices and their adjcency
-    /* Network Model */
-    std::vector<NetModel*> netmodel; // collection of model objects
-    std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
+    /* Network Models */
+    std::vector<Model*> model; // collection of model objects
+    std::vector<std::vector<idx_t>> edgmodidx; // edge model index
     /* Network Data */
     std::vector<real_t> xyz; // spatial coordinates per vertex
     std::vector<std::vector<std::vector<real_t>>> state; // first level is the vertex, second level is the models, third is the state data
@@ -608,6 +613,7 @@ class Network : public CBase_Network {
     std::vector<event_t> evtext; // external events (and extra spillover)
     std::vector<event_t> evtrpc; // events generated from RPC
     /* Periodic Events */
+    tick_t tleap;
     std::vector<event_t> evtleap; // set of periodic events
     std::vector<bool> leaplist; // models with periodic events
     std::vector<std::vector<std::array<idx_t, 2>>> leapidx; // indices into models
@@ -615,48 +621,46 @@ class Network : public CBase_Network {
     std::vector<event_t> evtlog; // event logging
     std::vector<bool> evtloglist; // types of events to log
     std::vector<record_t> record; // record keeping
-    std::vector<trace_t> recordlist; // what to record
+    std::vector<track_t> recordlist; // what to record
     /* Polychronization */
-    std::vector<std::vector<std::vector<stamp_t>>> pngs; // PNGs per vertex (as mother)
-    std::vector<std::vector<tick_t>> pnglen; // PNG duration per vertex (as mother)
-    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> pngmap; // mapping from global index to vector of target PNGs
-    std::vector<std::vector<std::deque<stamp_t>>> pngwin; // Sliding window of stamps per PNG vertex (as mother)
-    std::vector<event_t> pnglog; // logging PNG activation
-    std::vector<event_t> pnglist; // listing of PNG activations
-    std::vector<std::vector<event_t>> pngseeds; // Potential PNGs of the vertex (seed events)
-    std::vector<std::deque<trail_t>> pngtrail; // sliding window of contributing spike-timing events per vertex
-    std::vector<route_t> pngtrack; // Generated spike-timing routes during computation per partition
-    std::vector<route_t> pngroute; // Candidate PNG (evaluated on reduction)
-    std::vector<std::vector<route_t>> pngchart; // Collection of PNG routes for a given vertex
+    std::vector<std::vector<std::vector<stamp_t>>> grpstamps; // Groups per vertex (as mother)
+    std::vector<std::vector<tick_t>> grpdur; // Group duration per vertex (as mother)
+    std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> grpmap; // mapping from global index to vector of target Groups
+    std::vector<std::vector<std::deque<stamp_t>>> grpwindow; // Sliding window of stamps per group vertex (as mother)
+    std::vector<event_t> grplog; // logging group activation
+    std::vector<std::vector<event_t>> grpseeds; // Potential groups of the vertex (seed events)
+    std::vector<std::deque<trace_t>> grptraces; // sliding window of contributing spike-timing events per vertex
+    std::vector<route_t> grpleg; // Generated spike-timing routes during computation per partition
+    std::vector<route_t> grproute; // Candidate group (evaluated on reduction)
+    std::vector<std::vector<route_t>> grproutes; // Collection of groups for a given vertex
     /* Random Number Generation */
     std::mt19937 rngine;
     std::uniform_real_distribution<real_t> *unifdist;
     /* Bookkeeping */
     CProxy_Netdata netdata;
-    CkCallback cbcycleprt;
-    idx_t prtidx, datidx;
+    CkCallback cyclepart;
+    int partidx, fileidx;
     /* Timing */
     tick_t tsim;
-    tick_t tdisp;
-    tick_t tleap;
+    tick_t teps;
+    idx_t epsidx;
+    /* Computation */
+    tick_t tcomp;
+    idx_t compidx;
+    idx_t ncomp, ccomp;
+    int evalpart;
     /* Coordination */
     idx_t iter;
-    idx_t nadjprt;
-    idx_t cadjprt[2], prtiter;
+    idx_t dispiter;
+    idx_t saveiter;
+    idx_t reciter;
+    idx_t nadjpart;
+    idx_t cadjpart[2], partiter;
 #ifdef STACS_WITH_YARP
     /* RPC Control */
-    CkCallback cbrpc;
+    CkCallback netrpc;
     idx_t synciter;
 #endif
-    /* Checkpointing */
-    idx_t checkiter;
-    idx_t reciter;
-    /* Computation */
-    idx_t compidx;
-    idx_t compendx;
-    idx_t evalidx;
-    idx_t ncomp, ccomp;
-    tick_t tcomp;
 };
 
 #endif //__STACS_NETWORK_H__

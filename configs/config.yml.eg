@@ -1,0 +1,24 @@
+# simulation
+runmode : "simulate"
+randseed: 2032
+plastic : yes
+episodic: no
+rpcport : "/stacs/rpc"
+rpcpause: yes
+
+# network
+netwkdir: "ntwrks/testnet"
+netparts: 4 # 8 network partitions
+netfiles: 2 # 4 network data files
+filebase: "testnet"
+fileload: ""
+filesave: ".out"
+recordir: "record"
+
+# timing
+tstep   : 1.0 # 1 millisecond
+tdisplay: 10.0 # 10 milliseconds
+trecord : 25.0 # 25 milliseconds
+tsave   : 50.0 # 50 milliseconds
+tmax    : 100.0 # 100 milliseconds
+

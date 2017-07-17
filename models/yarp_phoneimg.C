@@ -149,7 +149,7 @@ YarpPhoneImgPort::YarpPhoneImgPort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpPhoneImg : public NetModelTmpl < 105, YarpPhoneImg > {
+class YarpPhoneImg : public ModelTmpl < 105, YarpPhoneImg > {
   public:
     /* Constructor */
     YarpPhoneImg() {

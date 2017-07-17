@@ -148,7 +148,7 @@ YarpPhoneTimePort::YarpPhoneTimePort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpPhoneTime : public NetModelTmpl < 104, YarpPhoneTime > {
+class YarpPhoneTime : public ModelTmpl < 104, YarpPhoneTime > {
   public:
     /* Constructor */
     YarpPhoneTime() {

@@ -12,7 +12,7 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ idx_t npnet;
+extern /*readonly*/ int netparts;
 extern /*readonly*/ tick_t tstep;
 
 
@@ -34,11 +34,11 @@ mDist* Main::BuildDist() {
 
   // Initialize distribution message
   int msgSize[MSG_Dist];
-  msgSize[0] = npnet+1;         // vtxdist
-  msgSize[1] = npnet+1;         // edgdist
-  msgSize[2] = npnet+1;         // statedist
-  msgSize[3] = npnet+1;         // stickdist
-  msgSize[4] = npnet+1;         // eventdist
+  msgSize[0] = netparts+1;      // vtxdist
+  msgSize[1] = netparts+1;      // edgdist
+  msgSize[2] = netparts+1;      // statedist
+  msgSize[3] = netparts+1;      // stickdist
+  msgSize[4] = netparts+1;      // eventdist
   msgSize[5] = models.size();   // modtype
   msgSize[6] = models.size()+1; // xmodname
   msgSize[7] = nmodname;        // modname
@@ -46,7 +46,7 @@ mDist* Main::BuildDist() {
   mdist->nmodel = models.size();
 
   // Get distribution info
-  for (idx_t i = 0; i < npnet+1; ++i) {
+  for (int i = 0; i < netparts+1; ++i) {
     // vtxdist
     mdist->vtxdist[i] = netdist[i].nvtx;
     // edgdist
@@ -81,8 +81,8 @@ mDist* Main::BuildDist() {
 //
 mModel* Main::BuildModel() {
   /* Bookkeeping */
-  idx_t nparam;
-  idx_t nport;
+  int nparam;
+  int nport;
 
   // Get total size of param
   nparam = 0;
@@ -103,9 +103,9 @@ mModel* Main::BuildModel() {
   msgSize[4] = nparam;            // param
   msgSize[5] = models.size()+1;   // xport
   msgSize[6] = nport;             // port
-  msgSize[7] = models.size();     // pngactive
-  msgSize[8] = models.size();     // pngmother
-  msgSize[9] = models.size();     // pnganchor
+  msgSize[7] = models.size();     // grpactive
+  msgSize[8] = models.size();     // grpmother
+  msgSize[9] = models.size();     // grpanchor
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = models.size();
@@ -139,12 +139,12 @@ mModel* Main::BuildModel() {
       // xport
       mmodel->xport[i+1] += models[i].port[j].size() + 1;
     }
-    // pngactive
-    mmodel->pngactive[i] = models[i].pngactive;
-    // pngmother
-    mmodel->pngmother[i] = models[i].pngmother;
-    // pnganchor
-    mmodel->pnganchor[i] = models[i].pnganchor;
+    // grpactive
+    mmodel->grpactive[i] = models[i].grpactive;
+    // grpmother
+    mmodel->grpmother[i] = models[i].grpmother;
+    // grpanchor
+    mmodel->grpanchor[i] = models[i].grpanchor;
   }
 
   // Return model
@@ -162,12 +162,12 @@ mModel* Main::BuildModel() {
 mVtxs* Main::BuildVtxs() {
   // Initialize distribution message
   int msgSize[MSG_Vtxs];
-  msgSize[0] = npnet+1; // vtxdist
+  msgSize[0] = netparts+1; // vtxdist
   msgSize[1] = rpcport.size(); // rpcport
   mVtxs *mvtxs = new(msgSize, 0) mVtxs;
 
   // Get distribution info
-  for (idx_t i = 0; i < npnet+1; ++i) {
+  for (int i = 0; i < netparts+1; ++i) {
     //vtxdist
     mvtxs->vtxdist[i] = netdist[i].nvtx;
   }

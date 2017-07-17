@@ -9,13 +9,14 @@
 #include <chrono>
 #include <thread>
 
-#define TICKS_PER_MS    1000000 // 1 million
-#define TMAX_DEFAULT    10000.0 // 10s
-#define TSTEP_DEFAULT       1.0 // 1ms
-#define TQUEUE_DEFAULT     20.0 // 20ms
-#define TCHECK_DEFAULT     50.0 // 50ms
-#define TRECORD_DEFAULT    25.0 // 25ms
-#define TDISPLAY_DEFAULT    1.0 // 1ms
-#define TTRIAL_DEFAULT    500.0 // 500ms
+#define TICKS_PER_MS     1000000 // 1 million
+#define TSTEP_DEFAULT    1.0 // 1ms
+#define TEVENTQ_DEFAULT  20.0 // 20ms
+#define TDISPLAY_DEFAULT 100.0 // 100ms
+#define TRECORD_DEFAULT  500.0 // 500ms
+#define TSAVE_DEFAULT    1000.0 // 1s
+#define TMAX_DEFAULT     10000.0 // 10s
+#define EPISODES_DEFAULT 20 // 20 episodes
+#define TEPISODE_DEFAULT 500.0 // 500ms
 
 #endif //__STACS_TIMING_H__

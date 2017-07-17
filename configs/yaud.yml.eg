@@ -1,0 +1,36 @@
+# simulation
+runmode : "estimate"
+randseed: 2032
+plastic : yes
+episodic: yes
+rpcport : "/stacs/rpc"
+rpcpause: no
+
+# network
+netwkdir: "ntwrks/yaudnet"
+netparts: 8 # 8 network partitions
+netfiles: 4 # 4 network data files
+filebase: "yaudnet"
+fileload: ""
+filesave: ".out"
+recordir: "record"
+groupdir: "group"
+
+# timing
+tstep   : 1.0 # 1 millisecond
+teventq : 20.0 # 20 milliseconds
+tdisplay: 1000.0 # 1 second
+trecord : 1000.0 # 1 second
+tsave   : 5000.0 # 5 seconds
+tmax    : 15000.0 # 15 seconds
+tepisode: 500.0 # 500 milliseconds
+episodes: 30 # 30 episodes
+
+# groups
+grpactive: [izhiex, izhiin, izhiaudio]
+grpmother: [izhiex]
+grpanchor: [exnostdp]
+grpminlen: 6
+grpmaxdur: 150.0
+grpvtxmin: 0.25
+grpvtxmax: 0.5

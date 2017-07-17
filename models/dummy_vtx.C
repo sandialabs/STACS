@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DummyVtx : public NetModelTmpl < 1, DummyVtx > {
+class DummyVtx : public ModelTmpl < 1, DummyVtx > {
   public:
     /* Constructor */
     DummyVtx() {

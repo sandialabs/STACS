@@ -11,8 +11,8 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ CProxy_Main mainProxy;
-extern /*readonly*/ idx_t npdat;
-extern /*readonly*/ idx_t npnet;
+extern /*readonly*/ int netfiles;
+extern /*readonly*/ int netparts;
 
 
 /**************************************************************************
@@ -46,20 +46,20 @@ CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs) {
 //
 Netdata::Netdata(mDist *msg) {
   // Bookkeeping
-  datidx = thisIndex;
-  idx_t ndiv = npnet/npdat;
-  idx_t nrem = npnet%npdat;
-  cprt = rprt = 0;
-  nprt = ndiv + (datidx < nrem);
-  xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
+  fileidx = thisIndex;
+  int ndiv = netparts/netfiles;
+  int nrem = netparts%netfiles;
+  cpart = rpart = 0;
+  npart = ndiv + (fileidx < nrem);
+  xpart = fileidx*ndiv + (fileidx < nrem ? fileidx : nrem);
 
   // Persistence
-  vtxdist.resize(npnet+1);
-  edgdist.resize(npnet+1);
-  statedist.resize(npnet+1);
-  stickdist.resize(npnet+1);
-  eventdist.resize(npnet+1);
-  for (idx_t i = 0; i < npnet+1; ++i) {
+  vtxdist.resize(netparts+1);
+  edgdist.resize(netparts+1);
+  statedist.resize(netparts+1);
+  stickdist.resize(netparts+1);
+  eventdist.resize(netparts+1);
+  for (idx_t i = 0; i < netparts+1; ++i) {
     vtxdist[i] = msg->vtxdist[i];
     edgdist[i] = msg->edgdist[i];
     statedist[i] = msg->statedist[i];
@@ -67,35 +67,38 @@ Netdata::Netdata(mDist *msg) {
     eventdist[i] = msg->eventdist[i];
   }
   // Models
-  for (std::size_t i = 0; i < netmodel.size(); ++i) {
-    delete netmodel[i];
+  for (std::size_t i = 0; i < model.size(); ++i) {
+    delete model[i];
   }
   // Set up containers
-  netmodel.clear();
+  model.clear();
   modname.resize(msg->nmodel+1);
   // "none" model
-  netmodel.push_back(NetModelFactory::getNetModel()->Create(0));
+  model.push_back(ModelFactory::newModel()->Create(0));
   modname[0] = std::string("none");
   modmap[modname[0]] = 0;
   // User defined models
   for (idx_t i = 1; i < msg->nmodel+1; ++i) {
-    netmodel.push_back(NetModelFactory::getNetModel()->Create(msg->modtype[i-1]));
+    model.push_back(ModelFactory::newModel()->Create(msg->modtype[i-1]));
     modname[i] = std::string(msg->modname + msg->xmodname[i-1], msg->modname + msg->xmodname[i]);
     modmap[modname[i]] = i;
     /*
-    if (datidx == 0) {
-      CkPrintf("  Netdata model: %" PRIidx "   NStates: %" PRIidx "   Name: %s\n", i, netmodel[i]->getNState(), modname[i].c_str());
+    if (fileidx == 0) {
+      CkPrintf("  Netdata model: %" PRIidx "   NStates: %" PRIidx "   Name: %s\n", i, model[i]->getNState(), modname[i].c_str());
     }
     */
   }
   delete msg;
 
+  // Network distribution
+  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
+  
   // Data
-  parts.resize(nprt);
-  records.resize(nprt);
+  parts.resize(npart);
+  records.resize(npart);
 
   // Read in files
-  CkPrintf("Reading network data files %" PRIidx "\n", datidx);
+  CkPrintf("Reading network data files %" PRIidx "\n", fileidx);
   ReadNetwork();
 
 #ifdef STACS_WITH_YARP
@@ -116,8 +119,8 @@ Netdata::Netdata(CkMigrateMessage *msg) {
 // Netdata destructor
 //
 Netdata::~Netdata() {
-  for (std::size_t i = 0; i < netmodel.size(); ++i) {
-    delete netmodel[i];
+  for (std::size_t i = 0; i < model.size(); ++i) {
+    delete model[i];
   }
 }
 
@@ -128,9 +131,9 @@ Netdata::~Netdata() {
 
 // Send data to network partition
 //
-void Netdata::LoadNetwork(idx_t prtidx, const CkCallback &cbnet) {
+void Netdata::LoadNetwork(int partidx, const CkCallback &cbpart) {
   // Send part to network
-  cbnet.send(parts[prtidx - xprt]);
+  cbpart.send(parts[partidx - xpart]);
 }
 
 
@@ -142,41 +145,40 @@ void Netdata::LoadNetwork(idx_t prtidx, const CkCallback &cbnet) {
 //
 void Netdata::SaveNetwork(mPart *msg) {
   // Stash part
-  parts[msg->prtidx - xprt] = msg;
+  parts[msg->partidx - xpart] = msg;
   
   // Wait for all parts
-  if (++cprt == nprt) {
-    cprt = 0;
+  if (++cpart == npart) {
+    cpart = 0;
 
     // Write data
     WriteNetwork();
 
     // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
+    for (idx_t i = 0; i < npart; ++i) {
       delete parts[i];
     }
 
     // Return control to main
-    CkCallback *cb = new CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
-    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
+    contribute(npart*sizeof(dist_t), netdist.data(), net_dist, maindist);
   }
 }
 
 // Save data from network partition (final)
 //
-void Netdata::SaveFinalNetwork(mPart *msg) {
+void Netdata::SaveCloseNetwork(mPart *msg) {
   // Stash part
-  parts[msg->prtidx - xprt] = msg;
+  parts[msg->partidx - xpart] = msg;
   
   // Wait for all parts
-  if (++cprt == nprt) {
-    cprt = 0;
+  if (++cpart == npart) {
+    cpart = 0;
 
     // Write data
     WriteNetwork();
 
     // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
+    for (idx_t i = 0; i < npart; ++i) {
       delete parts[i];
     }
 
@@ -186,17 +188,17 @@ void Netdata::SaveFinalNetwork(mPart *msg) {
 #endif
 
     // Return control to main
-    CkCallback *cb = new CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy);
-    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, *cb);
+    contribute(npart*sizeof(dist_t), netdist.data(), net_dist,
+        CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
   }
 }
 
 // Finalize Netdata chare array
 //
-void Netdata::FinalizeNetwork() {
+void Netdata::CloseNetwork() {
   // Wait for all parts
-  if (++cprt == nprt) {
-    cprt = 0;
+  if (++cpart == npart) {
+    cpart = 0;
 
 #ifdef STACS_WITH_YARP
     // Finalize YARP
@@ -249,4 +251,46 @@ void Main::SaveFinalDist(CkReductionMsg *msg) {
 
   // Finished
   thisProxy.Halt();
+}
+
+
+/**************************************************************************
+* Estimation Recording
+**************************************************************************/
+
+// Collect estimates for writing
+//
+void Netdata::SaveEstimate(CkReductionMsg *msg) {
+  // Add to group log
+  grplog.clear();
+  for (std::size_t i = 0; i < (msg->getSize())/sizeof(event_t); ++i) {
+    grplog.push_back(*((event_t *)msg->getData()+i));
+  }
+  delete msg;
+
+  // Sorting
+  std::sort(grplog.begin(), grplog.end());
+
+  // Write estimate
+  WriteEstimate();
+}
+
+// Collect estimates for writing (final)
+//
+void Netdata::SaveFinalEstimate(CkReductionMsg *msg) {
+  // Add to group log
+  grplog.clear();
+  for (std::size_t i = 0; i < (msg->getSize())/sizeof(event_t); ++i) {
+    grplog.push_back(*((event_t *)msg->getData()+i));
+  }
+  delete msg;
+
+  // Sorting
+  std::sort(grplog.begin(), grplog.end());
+  
+  // Write estimate
+  WriteEstimate();
+    
+  // Return control to main (halting)
+  mainProxy.Halt();
 }

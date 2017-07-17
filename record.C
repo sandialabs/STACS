@@ -17,7 +17,7 @@
 
 // Store records
 //
-void Network::StoreRecord() {
+void Network::AddRecord() {
   // Periodic Records
   for (std::size_t r = 0; r < recordlist.size(); ++r) {
     if (recordlist[r].trec <= tsim) {
@@ -56,11 +56,10 @@ void Network::StoreRecord() {
 void Network::SaveRecord() {
   // Build record message for saving
   mRecord* mrecord = BuildRecord();
-  netdata(datidx).SaveRecord(mrecord);
+  netdata(fileidx).SaveRecord(mrecord);
   
   // Start a new cycle (checked data sent)
-  //thisProxy(prtidx).CycleNetwork();
-  cbcycleprt.send();
+  cyclepart.send();
 }
 
 // Send Records for writing (final)
@@ -68,25 +67,25 @@ void Network::SaveRecord() {
 void Network::SaveFinalRecord() {
   // Build record message for saving
   mRecord* mrecord = BuildRecord();
-  netdata(datidx).SaveFinalRecord(mrecord);
+  netdata(fileidx).SaveFinalRecord(mrecord);
 }
 
 // Write records to file
 //
 void Netdata::SaveRecord(mRecord *msg) {
   // Stash record
-  records[msg->prtidx - xprt] = msg;
+  records[msg->partidx - xpart] = msg;
   
   // Wait for all parts
-  if (++rprt == nprt) {
-    rprt = 0;
+  if (++rpart == npart) {
+    rpart = 0;
     
     // Write data
-    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
+    //CkPrintf("  Writing records %" PRIidx "\n", fileidx);
     WriteRecord();
 
     // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
+    for (idx_t i = 0; i < npart; ++i) {
       delete records[i];
     }
   }
@@ -96,18 +95,18 @@ void Netdata::SaveRecord(mRecord *msg) {
 //
 void Netdata::SaveFinalRecord(mRecord *msg) {
   // Stash record
-  records[msg->prtidx - xprt] = msg;
+  records[msg->partidx - xpart] = msg;
   
   // Wait for all parts
-  if (++rprt == nprt) {
-    rprt = 0;
+  if (++rpart == npart) {
+    rpart = 0;
     
     // Write data
-    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
+    //CkPrintf("  Writing records %" PRIidx "\n", fileidx);
     WriteRecord();
 
     // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
+    for (idx_t i = 0; i < npart; ++i) {
       delete records[i];
     }
     
@@ -151,7 +150,7 @@ mRecord* Network::BuildRecord() {
   mrecord->nevtlog = evtlog.size();
   mrecord->nrecord = record.size();
   mrecord->iter = iter;
-  mrecord->prtidx = prtidx;
+  mrecord->partidx = partidx;
 
   // Pack event information
   for (std::size_t i = 0; i < evtlog.size(); ++i) {

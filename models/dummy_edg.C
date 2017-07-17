@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DummyEdg : public NetModelTmpl < 2, DummyEdg > {
+class DummyEdg : public ModelTmpl < 2, DummyEdg > {
   public:
     /* Constructor */
     DummyEdg() {

@@ -1,7 +1,7 @@
 module network {
   initnode void registerMinTick(void);
   initnode void registerNetDist(void);
-  initnode void registerNetPNG(void);
+  initnode void registerNetGroup(void);
   initnode void registerNetEvent(void);
 
   message mDist {
@@ -18,15 +18,15 @@ module network {
   
   message mModel {
     idx_t modtype[];
-    idx_t nstate[];
-    idx_t nstick[];
+    int nstate[];
+    int nstick[];
     idx_t xparam[];
     real_t param[];
     idx_t xport[];
     char port[];
-    bool pngactive[];
-    bool pngmother[];
-    bool pnganchor[];
+    bool grpactive[];
+    bool grpmother[];
+    bool grpanchor[];
     idx_t nmodel;
   };
 
@@ -50,7 +50,7 @@ module network {
     idx_t nstate;
     idx_t nstick;
     idx_t nevent;
-    idx_t prtidx;
+    int partidx;
   };
   
   message mRecord {
@@ -63,7 +63,7 @@ module network {
     idx_t xdata[];
     idx_t xdiffuse[];
     idx_t xindex[];
-    idx_t prtidx;
+    idx_t partidx;
     idx_t iter;
     idx_t nevtlog;
     idx_t nrecord;
@@ -91,31 +91,33 @@ module network {
   
   array [1D] Netdata {
     entry Netdata(mDist *msg);
-    entry void LoadNetwork(int prtidx, const CkCallback &cbnet);
+    entry void LoadNetwork(int partidx, const CkCallback &cbpart);
     
     entry void SaveNetwork(mPart *msg);
-    entry void SaveFinalNetwork(mPart *msg);
-    entry void FinalizeNetwork();
+    entry void SaveCloseNetwork(mPart *msg);
+    entry void CloseNetwork();
     
     entry void SaveRecord(mRecord *msg);
     entry void SaveFinalRecord(mRecord *msg);
+    entry void SaveEstimate(CkReductionMsg *msg);
+    entry void SaveFinalEstimate(CkReductionMsg *msg);
   };
 
   array [1D] Network {
     entry Network(mModel *msg);
     entry void LoadNetwork(mPart *msg);
     
-    entry void InitSimCntPls(CProxy_Netdata cpdat);
-    entry void InitSimCntRgd(CProxy_Netdata cpdat);
-    entry void InitSimEpsPls(CProxy_Netdata cpdat);
-    entry void InitSimEpsRgd(CProxy_Netdata cpdat);
+    entry void InitSimCntPls(CProxy_Netdata cpdata);
+    entry void InitSimCntRgd(CProxy_Netdata cpdata);
+    entry void InitSimEpsPls(CProxy_Netdata cpdata);
+    entry void InitSimEpsRgd(CProxy_Netdata cpdata);
     entry void CycleSimCntPls();
     entry void CycleSimCntRgd();
     entry void CycleSimEpsPls();
     entry void CycleSimEpsRgd();
     
-    entry void InitEstCnt(CProxy_Netdata cpdat);
-    entry void InitEstEps(CProxy_Netdata cpdat);
+    entry void InitEstCnt(CProxy_Netdata cpdata);
+    entry void InitEstEps(CProxy_Netdata cpdata);
     entry void CycleEstCnt();
     entry void CycleEstEps();
     
@@ -125,19 +127,20 @@ module network {
     entry void CommRPC(mRPC *msg);
    
     entry void SaveNetwork();
-    entry void SaveFinalNetwork();
-    entry void FinalizeNetwork();
+    entry void SaveCloseNetwork();
+    entry void CloseNetwork();
     
     entry void SaveRecord();
     entry void SaveFinalRecord();
-    entry void SaveEstimate(CkReductionMsg *msg);
+    entry void SaveEstimate();
+    entry void SaveFinalEstimate();
     
-    entry void InitPNG(CProxy_Netdata cpdat);
-    entry void FindPNG();
-    entry void ComputePNG(idx_t nseeds, idx_t pngidx);
-    entry void ComputePNG();
-    entry void SeedPNG(mEvent *msg);
-    entry void CyclePNG();
-    entry void EvalPNG(CkReductionMsg *msg);
+    entry void InitGroup(CProxy_Netdata cpdata);
+    entry void FindGroup();
+    entry void ComputeGroup(idx_t nseeds, int grpart);
+    entry void ComputeGroup();
+    entry void SeedGroup(mEvent *msg);
+    entry void CycleGroup();
+    entry void EvalGroup(CkReductionMsg *msg);
   };
 };

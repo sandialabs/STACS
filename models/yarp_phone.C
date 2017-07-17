@@ -148,7 +148,7 @@ YarpPhonePort::YarpPhonePort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpPhone : public NetModelTmpl < 102, YarpPhone > {
+class YarpPhone : public ModelTmpl < 102, YarpPhone > {
   public:
     /* Constructor */
     YarpPhone() {

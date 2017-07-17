@@ -10,14 +10,13 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ tick_t tcheck;
-extern /*readonly*/ tick_t trecord;
-extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
-extern /*readonly*/ idx_t ntrials;
-extern /*readonly*/ tick_t ttrial;
+extern /*readonly*/ idx_t intdisp;
+extern /*readonly*/ idx_t intrec;
+extern /*readonly*/ tick_t tmax;
+extern /*readonly*/ tick_t tepisode;
+extern /*readonly*/ idx_t episodes;
 
 
 /**************************************************************************
@@ -49,29 +48,30 @@ CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs) {
 
 // Coordination with NetData chare array
 //
-void Network::InitEstCnt(CProxy_Netdata cpdat) {
+void Network::InitEstCnt(CProxy_Netdata cpdata) {
   // Set proxies
-  netdata = cpdat;
-  cbcycleprt = CkCallback(CkIndex_Network::CycleEstCnt(), prtidx, thisProxy);
+  netdata = cpdata;
+  cyclepart = CkCallback(CkIndex_Network::CycleEstCnt(), partidx, thisProxy);
   
   // Request network part from input
-  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
-  netdata(datidx).LoadNetwork(prtidx, *cb);
+  netdata(fileidx).LoadNetwork(partidx,
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
 }
 
 // Coordination with NetData chare array
 //
-void Network::InitEstEps(CProxy_Netdata cpdat) {
+void Network::InitEstEps(CProxy_Netdata cpdata) {
   // Set proxies
-  netdata = cpdat;
-  cbcycleprt = CkCallback(CkIndex_Network::CycleEstEps(), prtidx, thisProxy);
+  netdata = cpdata;
+  cyclepart = CkCallback(CkIndex_Network::CycleEstEps(), partidx, thisProxy);
 
   // Initialization
-  evalidx = -1;
+  teps = 0;
+  epsidx = -1;
   
   // Request network part from input
-  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
-  netdata(datidx).LoadNetwork(prtidx, *cb);
+  netdata(fileidx).LoadNetwork(partidx,
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
 }
 
 
@@ -81,22 +81,43 @@ void Network::InitEstEps(CProxy_Netdata cpdat) {
 
 // Send Estimates for writing
 //
-void Network::SaveEstimate(CkReductionMsg *msg) {
-  // Add to png list
-  pnglist.clear();
-  for (std::size_t i = 0; i < (msg->getSize())/sizeof(route_t); ++i) {
-    pnglist.push_back(*((event_t *)msg->getData()+i));
+void Network::SaveEstimate() {
+  if (partidx == 0) {
+    // Recording information
+    event_t event;
+    event.diffuse = 0;
+    event.type = EVENT_GROUP;
+    event.source = -1;
+    event.index = iter;
+    event.data = 0.0;
+    grplog.push_back(event);
   }
-  delete msg;
-
-  // Sorting
-  std::sort(pnglist.begin(), pnglist.end());
-
-  // Write estimate (account for offset)
-  WriteEstimate(evalidx-1);
+  // Reduce group information
+  contribute(grplog.size()*sizeof(event_t), grplog.data(), net_event, 
+      CkCallback(CkIndex_Netdata::SaveEstimate(NULL), 0, netdata));
+  grplog.clear();
   
-  // Start a new cycle (checked data sent)
-  thisProxy.CycleEstEps();
+  // Start a new cycle (data sent)
+  cyclepart.send();
+}
+
+// Send Estimates for writing (final)
+//
+void Network::SaveFinalEstimate() {
+  if (partidx == 0) {
+    // Recording information
+    event_t event;
+    event.diffuse = 0;
+    event.type = EVENT_GROUP;
+    event.source = -1;
+    event.index = iter;
+    event.data = 0.0;
+    grplog.push_back(event);
+  }
+  // Reduce group information
+  contribute(grplog.size()*sizeof(event_t), grplog.data(), net_event, 
+      CkCallback(CkIndex_Netdata::SaveFinalEstimate(NULL), 0, netdata));
+  grplog.clear();
 }
 
 
@@ -112,6 +133,14 @@ void Network::CycleEstCnt() {
     // return control to main
     contribute(0, NULL, CkReduction::nop);
   }
+  // Recording
+  else if (iter == reciter) {
+    // Bookkeeping
+    reciter += intrec;
+
+    // Send records
+    thisProxy(partidx).SaveEstimate();
+  }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
   else if (iter == synciter) {
@@ -119,7 +148,7 @@ void Network::CycleEstCnt() {
     synciter = IDX_T_MAX;
 
     // Display synchronization information
-    if (prtidx == 0) {
+    if (partidx == 0) {
       CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
     }
 
@@ -127,20 +156,12 @@ void Network::CycleEstCnt() {
     contribute(0, NULL, CkReduction::nop);
   }
 #endif
-  // Recording
-  else if (iter == reciter) {
-    // Bookkeeping
-    reciter = reciter + (idx_t) (trecord/tstep);
-
-    // Send records
-    thisProxy(prtidx).SaveRecord();
-  }
   // Simulate next cycle
   else {
     // Display iteration information
-    if (tsim >= tdisp && prtidx == 0) {
-      tdisp = tsim + tdisplay;
-      CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
+    if (iter >= dispiter && partidx == 0) {
+      dispiter += intdisp;
+      CkPrintf("  Estimating iteration %" PRIidx "\n", iter);
       //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
     }
     
@@ -153,7 +174,7 @@ void Network::CycleEstCnt() {
     idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      MarkEvent();
+      SortEvent();
     }
     
     // Check for periodic events
@@ -161,16 +182,16 @@ void Network::CycleEstCnt() {
       std::vector<event_t>::iterator event = evtleap.begin();
       // Compute periodic events
       while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set netmodel index
+        // Set model index
         idx_t n = event->source;
         // Loop through all models
         for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
           event->index = leapidx[n][m][1];
           if (event->index) {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
           }
           else {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
           }
         }
         // Update timing
@@ -195,63 +216,63 @@ void Network::CycleEstCnt() {
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
 
       // Polychronization
-      for (std::size_t p = 0; p < pngs[i].size(); ++p) {
+      for (std::size_t p = 0; p < grpstamps[i].size(); ++p) {
         // Pop out any old stamps
-        while (!pngwin[i][p].empty()) {
-          if (pngwin[i][p].front().diffuse + pnglen[i][p] <= tdrift) {
-            pngwin[i][p].pop_front();
+        while (!grpwindow[i][p].empty()) {
+          if (grpwindow[i][p].front().diffuse + grpdur[i][p] <= tdrift) {
+            grpwindow[i][p].pop_front();
           }
           else {
             break;
           }
         }
         // Template event
-        event_t pngevent;
-        pngevent.diffuse = tdrift;
-        pngevent.type = EVENT_GROUP;
-        pngevent.data = 0.0;
+        event_t event;
+        event.diffuse = tdrift;
+        event.type = EVENT_GROUP;
+        event.data = 0.0;
         // Check for threshold number of stamps
         // TODO: Threshold based off of excitatory neurons only?
-        if (pngwin[i][p].size() > (pngs[i][p].size() / 2)) {
+        if (grpwindow[i][p].size() > (grpstamps[i][p].size() / 2)) {
           // Compute group activation
           int nactive = 0;
-          std::deque<stamp_t>::iterator pngcan = pngwin[i][p].begin();
-          for (std::size_t t = 0; t < pngs[i][p].size(); ++t) {
-            while (pngcan != pngwin[i][p].end()) {
+          std::deque<stamp_t>::iterator grpcan = grpwindow[i][p].begin();
+          for (std::size_t t = 0; t < grpstamps[i][p].size(); ++t) {
+            while (grpcan != grpwindow[i][p].end()) {
               // TODO: Refine the acceptable jitter
-              if ((pngcan->diffuse + pnglen[i][p] - tdrift + 5 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift + 4 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift + 3 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift + 2 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift + TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source)) {
+              if ((grpcan->diffuse + grpdur[i][p] - tdrift + 5 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift + 4 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift + 3 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift + 2 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift + TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source)) {
                 ++nactive;
               }
-              else if (pngcan->diffuse + pnglen[i][p] - tdrift > pngs[i][p][t].diffuse) {
+              else if (grpcan->diffuse + grpdur[i][p] - tdrift > grpstamps[i][p][t].diffuse) {
                 break;
               }
-              ++pngcan;
+              ++grpcan;
             }
           }
-          if (nactive > (pngs[i][p].size() / 2)) {
+          if (nactive > (grpstamps[i][p].size() / 2)) {
             CkPrintf("PNG %d, %d activated\n", vtxidx[i], p);
             // Record group activation
-            pngevent.source = vtxidx[i];
-            pngevent.index = p;
-            pngevent.data = ((real_t)(pnglen[i][p]/TICKS_PER_MS));
-            evtlog.push_back(pngevent);
+            event.source = vtxidx[i];
+            event.index = p;
+            event.data = ((real_t)(grpdur[i][p]/TICKS_PER_MS));
+            grplog.push_back(event);
             // Clear window for repeats
-            pngwin[i][p].clear();
+            grpwindow[i][p].clear();
           }
         }
       }
@@ -259,7 +280,7 @@ void Network::CycleEstCnt() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
+        tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
@@ -314,7 +335,7 @@ void Network::CycleEstCnt() {
                   if (edgmodidx[i][j]) {
                     events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    model[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
@@ -337,7 +358,7 @@ void Network::CycleEstCnt() {
               }
               else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
+                model[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
                 evtcol[i].push_back(events[e]);
@@ -352,11 +373,11 @@ void Network::CycleEstCnt() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
@@ -366,7 +387,7 @@ void Network::CycleEstCnt() {
       //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
+    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
 
     // Send messages to entire network
     // TODO: Reduce communication due to monitoring
@@ -376,8 +397,8 @@ void Network::CycleEstCnt() {
     // Increment simulated time
     tsim += tstep;
 
-    // Store new records
-    StoreRecord();
+    // Add new records
+    AddRecord();
   }
 }
 
@@ -389,39 +410,36 @@ void Network::CycleEstCnt() {
 // Main control flow
 //
 void Network::CycleEstEps() {
-  // Check if computation is complete
-  if (tsim >= tcomp) {
-    // Reset network
-    ResetNetwork();
-    tsim = 0;
-    tleap = 0;
-    iter = 0;
-    cadjprt[0] = 0;
-    cadjprt[1] = 0;
-    prtiter = 0;
-    
-    // Time to measure pngs
-    tcomp = ttrial;
-    
-    for (std::size_t i = 0; i < pngwin.size(); ++i) {
-      for (std::size_t p = 0; p < pngwin[i].size(); ++p) {
-        pngwin[i][p].clear();
-      }
-    }
-    
-    // Coordination after reset
-    if (evalidx+1 < ntrials) {
-      ++evalidx;
-
-      // Reduce PNG information
-      CkCallback *cb = new CkCallback(CkIndex_Network::SaveEstimate(NULL), 0, thisProxy);
-      contribute(pnglog.size()*sizeof(event_t), pnglog.data(), net_event, *cb);
-
-      pnglog.clear();
-    }
-    else {
+  // Check if episode is complete
+  if (tsim >= teps) {
+    // Check if all episodes are complete
+    if (++epsidx >= episodes) {
       // return control to main
       contribute(0, NULL, CkReduction::nop);
+    }
+    else {
+      teps = tsim + tepisode;
+
+      // Reset network for next episode
+      for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
+        // Clear events
+        for (idx_t j = 0; j < nevtday; ++j) {
+          evtcal[i][j].clear();
+        }
+        evtcol[i].clear();
+        // Reset vertices
+        model[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
+      }
+
+      // Clear out groups from current episode
+      for (std::size_t i = 0; i < grpwindow.size(); ++i) {
+        for (std::size_t p = 0; p < grpwindow[i].size(); ++p) {
+          grpwindow[i][p].clear();
+        }
+      }
+
+      // Send records and estimates
+      thisProxy(partidx).SaveEstimate();
     }
   }
 #ifdef STACS_WITH_YARP
@@ -431,7 +449,7 @@ void Network::CycleEstEps() {
     synciter = IDX_T_MAX;
 
     // Display synchronization information
-    if (prtidx == 0) {
+    if (partidx == 0) {
       CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
     }
 
@@ -442,11 +460,11 @@ void Network::CycleEstEps() {
   // Simulate next cycle
   else {
     // Display iteration information
-    if (tsim == 0 && prtidx == 0) {
-      CkPrintf("  Estimating iteration %" PRIidx "\n", evalidx);
-      //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
+    if (iter == dispiter && partidx == 0) {
+      dispiter += intdisp;
+      CkPrintf("  Estimating episode %" PRIidx "\n", epsidx);
     }
-    
+
     // Bookkeeping
     idx_t evtday = iter%nevtday;
     tick_t tstop = tsim + tstep;
@@ -456,7 +474,7 @@ void Network::CycleEstEps() {
     idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      MarkEvent();
+      SortEvent();
     }
     
     // Check for periodic events
@@ -464,16 +482,16 @@ void Network::CycleEstEps() {
       std::vector<event_t>::iterator event = evtleap.begin();
       // Compute periodic events
       while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set netmodel index
+        // Set model index
         idx_t n = event->source;
         // Loop through all models
         for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
           event->index = leapidx[n][m][1];
           if (event->index) {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
           }
           else {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
           }
         }
         // Update timing
@@ -498,63 +516,63 @@ void Network::CycleEstEps() {
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
 
       // Polychronization
-      for (std::size_t p = 0; p < pngs[i].size(); ++p) {
+      for (std::size_t p = 0; p < grpstamps[i].size(); ++p) {
         // Pop out any old stamps
-        while (!pngwin[i][p].empty()) {
-          if (pngwin[i][p].front().diffuse + pnglen[i][p] <= tdrift) {
-            pngwin[i][p].pop_front();
+        while (!grpwindow[i][p].empty()) {
+          if (grpwindow[i][p].front().diffuse + grpdur[i][p] <= tdrift) {
+            grpwindow[i][p].pop_front();
           }
           else {
             break;
           }
         }
         // Template event
-        event_t pngevent;
-        pngevent.diffuse = tdrift;
-        pngevent.type = EVENT_GROUP;
-        pngevent.data = 0.0;
+        event_t event;
+        event.diffuse = tdrift;
+        event.type = EVENT_GROUP;
+        event.data = 0.0;
         // Check for threshold number of stamps
         // TODO: Threshold based off of excitatory neurons only?
-        if (pngwin[i][p].size() > (pngs[i][p].size() / 2)) {
+        if (grpwindow[i][p].size() > (grpstamps[i][p].size() / 2)) {
           // Compute group activation
           int nactive = 0;
-          std::deque<stamp_t>::iterator pngcan = pngwin[i][p].begin();
-          for (std::size_t t = 0; t < pngs[i][p].size(); ++t) {
-            while (pngcan != pngwin[i][p].end()) {
+          std::deque<stamp_t>::iterator grpcan = grpwindow[i][p].begin();
+          for (std::size_t t = 0; t < grpstamps[i][p].size(); ++t) {
+            while (grpcan != grpwindow[i][p].end()) {
               // TODO: Refine the acceptable jitter
-              if ((pngcan->diffuse + pnglen[i][p] - tdrift + 5 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift + 4 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift + 3 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift + 2 * TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift + TICKS_PER_MS == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source) ||
-                  (pngcan->diffuse + pnglen[i][p] - tdrift == pngs[i][p][t].diffuse && pngcan->source == pngs[i][p][t].source)) {
+              if ((grpcan->diffuse + grpdur[i][p] - tdrift + 5 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift + 4 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift + 3 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift + 2 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift + TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
+                  (grpcan->diffuse + grpdur[i][p] - tdrift == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source)) {
                 ++nactive;
               }
-              else if (pngcan->diffuse + pnglen[i][p] - tdrift > pngs[i][p][t].diffuse) {
+              else if (grpcan->diffuse + grpdur[i][p] - tdrift > grpstamps[i][p][t].diffuse) {
                 break;
               }
-              ++pngcan;
+              ++grpcan;
             }
           }
-          if (nactive > (pngs[i][p].size() / 2)) {
+          if (nactive > (grpstamps[i][p].size() / 2)) {
             CkPrintf("PNG %d, %d activated\n", vtxidx[i], p);
             // Record group activation
-            pngevent.source = vtxidx[i];
-            pngevent.index = p;
-            pngevent.data = ((real_t)(pnglen[i][p]/TICKS_PER_MS));
-            pnglog.push_back(pngevent);
+            event.source = vtxidx[i];
+            event.index = p;
+            event.data = ((real_t)(grpdur[i][p]/TICKS_PER_MS));
+            grplog.push_back(event);
             // Clear window for repeats
-            pngwin[i][p].clear();
+            grpwindow[i][p].clear();
           }
         }
       }
@@ -562,7 +580,7 @@ void Network::CycleEstEps() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
+        tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
@@ -617,7 +635,7 @@ void Network::CycleEstEps() {
                   if (edgmodidx[i][j]) {
                     events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    model[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
@@ -640,7 +658,7 @@ void Network::CycleEstEps() {
               }
               else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
+                model[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
                 evtcol[i].push_back(events[e]);
@@ -655,11 +673,11 @@ void Network::CycleEstEps() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
@@ -669,7 +687,7 @@ void Network::CycleEstEps() {
       //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
+    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
 
     // Send messages to entire network
     // TODO: Reduce communication due to monitoring
@@ -679,7 +697,7 @@ void Network::CycleEstEps() {
     // Increment simulated time
     tsim += tstep;
     
-    // Store new records
-    StoreRecord();
+    // Add new records
+    AddRecord();
   }
 }

@@ -49,10 +49,13 @@ charmrun
 *.evtlog.*
 *.record.*
 *.pnglog.*
+*.grplog.*
 
 # Polychronization Files
 *.group.*
 *.chart.*
+*.stamp.*
+*.route.*
 
 # Temporary Files
 *.swp

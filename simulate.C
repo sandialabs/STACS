@@ -10,14 +10,14 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ tick_t tcheck;
-extern /*readonly*/ tick_t trecord;
-extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
-extern /*readonly*/ idx_t ntrials;
-extern /*readonly*/ tick_t ttrial;
+extern /*readonly*/ idx_t intdisp;
+extern /*readonly*/ idx_t intrec;
+extern /*readonly*/ idx_t intsave;
+extern /*readonly*/ tick_t tmax;
+extern /*readonly*/ tick_t tepisode;
+extern /*readonly*/ idx_t episodes;
 
 
 /**************************************************************************
@@ -26,55 +26,58 @@ extern /*readonly*/ tick_t ttrial;
 
 // Coordination with NetData chare array
 //
-void Network::InitSimCntPls(CProxy_Netdata cpdat) {
+void Network::InitSimCntPls(CProxy_Netdata cpdata) {
   // Set proxies
-  netdata = cpdat;
-  cbcycleprt = CkCallback(CkIndex_Network::CycleSimCntPls(), prtidx, thisProxy);
+  netdata = cpdata;
+  cyclepart = CkCallback(CkIndex_Network::CycleSimCntPls(), partidx, thisProxy);
+
+  // Request network part from input
+  netdata(fileidx).LoadNetwork(partidx,
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
+}
+
+// Coordination with NetData chare array
+//
+void Network::InitSimCntRgd(CProxy_Netdata cpdata) {
+  // Set proxies
+  netdata = cpdata;
+  cyclepart = CkCallback(CkIndex_Network::CycleSimCntRgd(), partidx, thisProxy);
+
+  // Request network part from input
+  netdata(fileidx).LoadNetwork(partidx,
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
+}
+
+// Coordination with NetData chare array
+//
+void Network::InitSimEpsPls(CProxy_Netdata cpdata) {
+  // Set proxies
+  netdata = cpdata;
+  cyclepart = CkCallback(CkIndex_Network::CycleSimEpsPls(), partidx, thisProxy);
 
   // Initialization
+  teps = 0;
+  epsidx = -1;
   
   // Request network part from input
-  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
-  netdata(datidx).LoadNetwork(prtidx, *cb);
+  netdata(fileidx).LoadNetwork(partidx,
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
 }
 
 // Coordination with NetData chare array
 //
-void Network::InitSimCntRgd(CProxy_Netdata cpdat) {
+void Network::InitSimEpsRgd(CProxy_Netdata cpdata) {
   // Set proxies
-  netdata = cpdat;
-  cbcycleprt = CkCallback(CkIndex_Network::CycleSimCntRgd(), prtidx, thisProxy);
-
-  // Request network part from input
-  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
-  netdata(datidx).LoadNetwork(prtidx, *cb);
-}
-
-// Coordination with NetData chare array
-//
-void Network::InitSimEpsPls(CProxy_Netdata cpdat) {
-  // Set proxies
-  netdata = cpdat;
-  cbcycleprt = CkCallback(CkIndex_Network::CycleSimEpsPls(), prtidx, thisProxy);
+  netdata = cpdata;
+  cyclepart = CkCallback(CkIndex_Network::CycleSimEpsRgd(), partidx, thisProxy);
 
   // Initialization
-  evalidx = -2;
+  teps = 0;
+  epsidx = -1;
   
   // Request network part from input
-  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
-  netdata(datidx).LoadNetwork(prtidx, *cb);
-}
-
-// Coordination with NetData chare array
-//
-void Network::InitSimEpsRgd(CProxy_Netdata cpdat) {
-  // Set proxies
-  netdata = cpdat;
-  cbcycleprt = CkCallback(CkIndex_Network::CycleSimEpsRgd(), prtidx, thisProxy);
-  
-  // Request network part from input
-  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
-  netdata(datidx).LoadNetwork(prtidx, *cb);
+  netdata(fileidx).LoadNetwork(partidx,
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
 }
 
 
@@ -90,6 +93,27 @@ void Network::CycleSimCntPls() {
     // return control to main
     contribute(0, NULL, CkReduction::nop);
   }
+  // Recording
+  else if (iter == reciter) {
+    // Bookkeeping
+    reciter += intrec;
+
+    // Send records
+    thisProxy(partidx).SaveRecord();
+  }
+  // Saving
+  else if (iter == saveiter) {
+    // Bookkeeping
+    saveiter += intsave;
+    
+    // Display checkpointing information
+    if (partidx == 0) {
+      CkPrintf("  Saving network at iteration %" PRIidx "\n", iter);
+    }
+
+    // Checkpoint
+    thisProxy(partidx).SaveNetwork();
+  }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
   else if (iter == synciter) {
@@ -97,7 +121,7 @@ void Network::CycleSimCntPls() {
     synciter = IDX_T_MAX;
 
     // Display synchronization information
-    if (prtidx == 0) {
+    if (partidx == 0) {
       CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
     }
 
@@ -105,32 +129,11 @@ void Network::CycleSimCntPls() {
     contribute(0, NULL, CkReduction::nop);
   }
 #endif
-  // Checkpointing
-  else if (iter == checkiter) {
-    // Bookkeeping
-    checkiter = checkiter + (idx_t) (tcheck/tstep);
-    
-    // Display checkpointing information
-    if (prtidx == 0) {
-      CkPrintf("  Checkpointing at iteration %" PRIidx "\n", iter);
-    }
-
-    // Checkpoint
-    thisProxy(prtidx).SaveNetwork();
-  }
-  // Recording
-  else if (iter == reciter) {
-    // Bookkeeping
-    reciter = reciter + (idx_t) (trecord/tstep);
-
-    // Send records
-    thisProxy(prtidx).SaveRecord();
-  }
   // Simulate next cycle
   else {
     // Display iteration information
-    if (tsim >= tdisp && prtidx == 0) {
-      tdisp = tsim + tdisplay;
+    if (iter >= dispiter && partidx == 0) {
+      dispiter += intdisp;
       CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
       //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
     }
@@ -144,7 +147,7 @@ void Network::CycleSimCntPls() {
     idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      MarkEvent();
+      SortEvent();
     }
     
     // Check for periodic events
@@ -152,16 +155,16 @@ void Network::CycleSimCntPls() {
       std::vector<event_t>::iterator event = evtleap.begin();
       // Compute periodic events
       while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set netmodel index
+        // Set model index
         idx_t n = event->source;
         // Loop through all models
         for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
           event->index = leapidx[n][m][1];
           if (event->index) {
-            netmodel[n]->Jump(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
+            model[n]->Jump(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
           }
           else {
-            netmodel[n]->Jump(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
+            model[n]->Jump(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
           }
         }
         // Update timing
@@ -186,11 +189,11 @@ void Network::CycleSimCntPls() {
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          netmodel[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
@@ -198,7 +201,7 @@ void Network::CycleSimCntPls() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
+        tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
@@ -253,7 +256,7 @@ void Network::CycleSimCntPls() {
                   if (edgmodidx[i][j]) {
                     events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Jump(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    model[edgmodidx[i][j]]->Jump(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
@@ -276,7 +279,7 @@ void Network::CycleSimCntPls() {
               }
               else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Jump(events[e], state[i], stick[i], vtxaux[i]);
+                model[vtxmodidx[i]]->Jump(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
                 evtcol[i].push_back(events[e]);
@@ -291,11 +294,11 @@ void Network::CycleSimCntPls() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            netmodel[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
@@ -305,17 +308,17 @@ void Network::CycleSimCntPls() {
       //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
+    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
 
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();
-    netgroup.CommEvent(mevent);
+    netcomm.CommEvent(mevent);
 
     // Increment simulated time
     tsim += tstep;
 
-    // Store new records
-    StoreRecord();
+    // Add new records
+    AddRecord();
   }
 }
 
@@ -332,6 +335,14 @@ void Network::CycleSimCntRgd() {
     // return control to main
     contribute(0, NULL, CkReduction::nop);
   }
+  // Recording
+  else if (iter == reciter) {
+    // Bookkeeping
+    reciter += intrec;
+
+    // Send records
+    thisProxy(partidx).SaveRecord();
+  }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
   else if (iter == synciter) {
@@ -339,7 +350,7 @@ void Network::CycleSimCntRgd() {
     synciter = IDX_T_MAX;
 
     // Display synchronization information
-    if (prtidx == 0) {
+    if (partidx == 0) {
       CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
     }
 
@@ -347,19 +358,11 @@ void Network::CycleSimCntRgd() {
     contribute(0, NULL, CkReduction::nop);
   }
 #endif
-  // Recording
-  else if (iter == reciter) {
-    // Bookkeeping
-    reciter = reciter + (idx_t) (trecord/tstep);
-
-    // Send records
-    thisProxy(prtidx).SaveRecord();
-  }
   // Simulate next cycle
   else {
     // Display iteration information
-    if (tsim >= tdisp && prtidx == 0) {
-      tdisp = tsim + tdisplay;
+    if (iter >= dispiter && partidx == 0) {
+      dispiter += intdisp;
       CkPrintf("  Simulating iteration %" PRIidx "\n", iter);
       //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
     }
@@ -373,7 +376,7 @@ void Network::CycleSimCntRgd() {
     idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      MarkEvent();
+      SortEvent();
     }
     
     // Check for periodic events
@@ -381,16 +384,16 @@ void Network::CycleSimCntRgd() {
       std::vector<event_t>::iterator event = evtleap.begin();
       // Compute periodic events
       while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set netmodel index
+        // Set model index
         idx_t n = event->source;
         // Loop through all models
         for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
           event->index = leapidx[n][m][1];
           if (event->index) {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
           }
           else {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
           }
         }
         // Update timing
@@ -415,11 +418,11 @@ void Network::CycleSimCntRgd() {
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
@@ -427,7 +430,7 @@ void Network::CycleSimCntRgd() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
+        tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
@@ -482,7 +485,7 @@ void Network::CycleSimCntRgd() {
                   if (edgmodidx[i][j]) {
                     events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    model[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
@@ -505,7 +508,7 @@ void Network::CycleSimCntRgd() {
               }
               else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
+                model[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
                 evtcol[i].push_back(events[e]);
@@ -520,11 +523,11 @@ void Network::CycleSimCntRgd() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
@@ -534,17 +537,17 @@ void Network::CycleSimCntRgd() {
       //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
+    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
 
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();
-    netgroup.CommEvent(mevent);
+    netcomm.CommEvent(mevent);
 
     // Increment simulated time
     tsim += tstep;
 
-    // Store new records
-    StoreRecord();
+    // Add new records
+    AddRecord();
   }
 }
 
@@ -556,22 +559,32 @@ void Network::CycleSimCntRgd() {
 // Main control flow
 //
 void Network::CycleSimEpsPls() {
-  // Check if computation is complete
-  if (tsim >= tcomp) {
-    
-    tcomp = tsim+ttrial;
-    
-    // Coordination for episode
-    if (evalidx < ntrials) {
-      ++evalidx;
-
-      // Start a new cycle (after checked data sent)
-      thisProxy(prtidx).SaveRecord();
-    }
-    else {
+  // Check if episode is complete
+  if (tsim >= teps) {
+    // Check if all episodes are complete
+    if (++epsidx >= episodes) {
       // return control to main
       contribute(0, NULL, CkReduction::nop);
     }
+    else {
+      teps = tsim + tepisode;
+    
+      // Start a new cycle (after checked data sent)
+      thisProxy(partidx).SaveRecord();
+    }
+  }
+  // Saving
+  else if (iter == saveiter) {
+    // Bookkeeping
+    saveiter += intsave;
+    
+    // Display checkpointing information
+    if (partidx == 0) {
+      CkPrintf("  Saving network at iteration %" PRIidx "\n", iter);
+    }
+
+    // Checkpoint
+    thisProxy(partidx).SaveNetwork();
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
@@ -580,7 +593,7 @@ void Network::CycleSimEpsPls() {
     synciter = IDX_T_MAX;
 
     // Display synchronization information
-    if (prtidx == 0) {
+    if (partidx == 0) {
       CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
     }
 
@@ -591,10 +604,9 @@ void Network::CycleSimEpsPls() {
   // Simulate next cycle
   else {
     // Display iteration information
-    if (tsim >= tdisp && prtidx == 0) {
-      tdisp = tsim + ttrial;
-      CkPrintf("  Simulating Episode %" PRIidx "\n", evalidx+1);
-      //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
+    if (iter == dispiter && partidx == 0) {
+      dispiter += intdisp;
+      CkPrintf("  Simulating episode %" PRIidx "\n", epsidx);
     }
     
     // Bookkeeping
@@ -606,7 +618,7 @@ void Network::CycleSimEpsPls() {
     idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      MarkEvent();
+      SortEvent();
     }
     
     // Check for periodic events
@@ -614,16 +626,16 @@ void Network::CycleSimEpsPls() {
       std::vector<event_t>::iterator event = evtleap.begin();
       // Compute periodic events
       while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set netmodel index
+        // Set model index
         idx_t n = event->source;
         // Loop through all models
         for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
           event->index = leapidx[n][m][1];
           if (event->index) {
-            netmodel[n]->Jump(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
+            model[n]->Jump(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
           }
           else {
-            netmodel[n]->Jump(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
+            model[n]->Jump(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
           }
         }
         // Update timing
@@ -648,11 +660,11 @@ void Network::CycleSimEpsPls() {
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          netmodel[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
@@ -660,7 +672,7 @@ void Network::CycleSimEpsPls() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
+        tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
@@ -715,7 +727,7 @@ void Network::CycleSimEpsPls() {
                   if (edgmodidx[i][j]) {
                     events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Jump(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    model[edgmodidx[i][j]]->Jump(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
@@ -738,7 +750,7 @@ void Network::CycleSimEpsPls() {
               }
               else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Jump(events[e], state[i], stick[i], vtxaux[i]);
+                model[vtxmodidx[i]]->Jump(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
                 evtcol[i].push_back(events[e]);
@@ -753,11 +765,11 @@ void Network::CycleSimEpsPls() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            netmodel[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
@@ -767,17 +779,17 @@ void Network::CycleSimEpsPls() {
       //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
+    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
 
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();
-    netgroup.CommEvent(mevent);
+    netcomm.CommEvent(mevent);
 
     // Increment simulated time
     tsim += tstep;
     
-    // Store new records
-    StoreRecord();
+    // Add new records
+    AddRecord();
   }
 }
 
@@ -789,23 +801,18 @@ void Network::CycleSimEpsPls() {
 // Main control flow
 //
 void Network::CycleSimEpsRgd() {
-  // Check if computation is complete
-  if (tsim >= tcomp) {
-    // Reset network
-    ResetNetwork();
-    
-    tcomp = tsim+ttrial;
-    
-    // Coordination after reset
-    if (evalidx < ntrials) {
-      ++evalidx;
-
-      // Start a new cycle (checked data sent)
-      thisProxy(prtidx).SaveRecord();
-    }
-    else {
+  // Check if episode is complete
+  if (tsim >= teps) {
+    // Check if simulation episodes are complete
+    if (++epsidx >= episodes) {
       // return control to main
       contribute(0, NULL, CkReduction::nop);
+    }
+    else {
+      teps = tsim + tepisode;
+    
+      // Start a new cycle (after checked data sent)
+      thisProxy(partidx).SaveRecord();
     }
   }
 #ifdef STACS_WITH_YARP
@@ -815,7 +822,7 @@ void Network::CycleSimEpsRgd() {
     synciter = IDX_T_MAX;
 
     // Display synchronization information
-    if (prtidx == 0) {
+    if (partidx == 0) {
       CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
     }
 
@@ -826,12 +833,11 @@ void Network::CycleSimEpsRgd() {
   // Simulate next cycle
   else {
     // Display iteration information
-    if (tsim >= tdisp && prtidx == 0) {
-      tdisp = tsim + ttrial;
-      CkPrintf("  Simulating Episode %" PRIidx "\n", evalidx+1);
-      //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
+    if (iter == dispiter && partidx == 0) {
+      dispiter += intdisp;
+      CkPrintf("  Simulating episode %" PRIidx "\n", epsidx);
     }
-    
+
     // Bookkeeping
     idx_t evtday = iter%nevtday;
     tick_t tstop = tsim + tstep;
@@ -841,7 +847,7 @@ void Network::CycleSimEpsRgd() {
     idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      MarkEvent();
+      SortEvent();
     }
     
     // Check for periodic events
@@ -849,16 +855,16 @@ void Network::CycleSimEpsRgd() {
       std::vector<event_t>::iterator event = evtleap.begin();
       // Compute periodic events
       while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set netmodel index
+        // Set model index
         idx_t n = event->source;
         // Loop through all models
         for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
           event->index = leapidx[n][m][1];
           if (event->index) {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
           }
           else {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
           }
         }
         // Update timing
@@ -883,11 +889,11 @@ void Network::CycleSimEpsRgd() {
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
@@ -895,7 +901,7 @@ void Network::CycleSimEpsRgd() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
+        tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
@@ -950,7 +956,7 @@ void Network::CycleSimEpsRgd() {
                   if (edgmodidx[i][j]) {
                     events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    model[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
@@ -973,7 +979,7 @@ void Network::CycleSimEpsRgd() {
               }
               else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
+                model[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
                 evtcol[i].push_back(events[e]);
@@ -988,11 +994,11 @@ void Network::CycleSimEpsRgd() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
@@ -1002,16 +1008,16 @@ void Network::CycleSimEpsRgd() {
       //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
+    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
 
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();
-    netgroup.CommEvent(mevent);
+    netcomm.CommEvent(mevent);
 
     // Increment simulated time
     tsim += tstep;
     
-    // Store new records
-    StoreRecord();
+    // Add new records
+    AddRecord();
   }
 }

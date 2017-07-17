@@ -13,7 +13,7 @@
 * Charm++ Read-Only Variables
 **************************************************************************/
 extern /*readonly*/ CProxy_Main mainProxy;
-extern /*readonly*/ idx_t npnet;
+extern /*readonly*/ int netparts;
 extern /*readonly*/ tick_t tstep;
 
 
@@ -25,8 +25,8 @@ extern /*readonly*/ tick_t tstep;
 //
 Stream::Stream(mVtxs *msg) {
   // Read in distribution
-  vtxdist.resize(npnet+1);
-  for (idx_t i = 0; i < npnet+1; ++i) {
+  vtxdist.resize(netparts+1);
+  for (idx_t i = 0; i < netparts+1; ++i) {
     // vtxdist
     vtxdist[i] = msg->vtxdist[i];
   }
@@ -51,10 +51,10 @@ Stream::~Stream() {
 
 // Open RPC port
 //
-void Stream::OpenRPC(CProxy_Network cpnet, const CkCallback &cbcyc, bool paused) {
+void Stream::OpenRPC(CProxy_Network cpnet, const CkCallback &cbcycle, bool paused) {
   // Charm++ Coordination
   network = cpnet;
-  cbcycle = cbcyc;
+  netcycle = cbcycle;
 
   // Open RPC and attach callback
   CkPrintf("Opening port %s\n", rpcport.c_str());
@@ -62,11 +62,11 @@ void Stream::OpenRPC(CProxy_Network cpnet, const CkCallback &cbcyc, bool paused)
   // Test port
   if (this->where().getPort() > 0) {
     // Setup callback
-    cbmain = CkCallback(CkReductionTarget(Main, Stop), mainProxy);
-    CkCallback *cbp = new CkCallback(CkReductionTarget(Stream, Pause), thisProxy);
-    CkCallback *cbs = new CkCallback(CkReductionTarget(Stream, Sync), thisProxy);
+    netstop = CkCallback(CkReductionTarget(Main, Stop), mainProxy);
     // Set RPC reader
-    rpcreader = new RPCReader(network, vtxdist, *cbp, *cbs, cbmain, cbcycle);
+    rpcreader = new RPCReader(vtxdist, network, netcycle, netstop,
+        CkCallback(CkReductionTarget(Stream, Pause), thisProxy),
+        CkCallback(CkReductionTarget(Stream, Sync), thisProxy));
     if (rpcreader != NULL) {
       this->setReader(*rpcreader);
       if (paused) {
@@ -113,11 +113,10 @@ void Stream::Sync() {
   rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
 
   // Reset callback
-  network.ckSetReductionClient(&cbmain);
+  network.ckSetReductionClient(&netstop);
 
   // Restart network
-  //network.CycleNetwork();
-  cbcycle.send();
+  netcycle.send();
 }
 
 // Network callback (paused)
@@ -130,7 +129,7 @@ void Stream::Pause() {
   rpcreader->SetSyncFlag(RPCSYNC_SYNCED);
 
   // Reset callback
-  network.ckSetReductionClient(&cbmain);
+  network.ckSetReductionClient(&netstop);
 }
 
 
@@ -151,7 +150,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
 
   // Extract message
   std::string command(in.get(0).asString().c_str());
-  idx_t cmdid = RPCCOMMAND_NONE;
+  int cmdid = RPCCOMMAND_NONE;
   // Prepare output
   out.clear();
 
@@ -163,10 +162,10 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
     out.addVocab(yarp::os::Vocab::encode("many"));
     out.add("received command: help"
             "  commands to control simulation are:\n"
-            "   - help:  show this help page\n"
+            "   - help: show this help page\n"
             "   - pause: un/pause the simulation\n"
-            "   - stop:  stop the simulation\n"
-            "   - check: checkpoint the simulation\n"
+            "   - stop: stop the simulation\n"
+            "   - save: save simulation state\n"
             "   - step <t>: step the simulation <t> ms\n"
             "   - stim <t o a d>: apply stimulation\n");
   }
@@ -177,6 +176,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
     // Check for synchronization (toggles behavior)
     if (syncflag == RPCSYNC_SYNCING) {
       CkPrintf("RPC Error: Simulation is Syncing\n");
+      //TODO: Make sure syncflag is always set (no race conditions)
     }
     else if (syncflag == RPCSYNC_UNSYNCED) {
       syncflag = RPCSYNC_SYNCING;
@@ -186,7 +186,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Pausing Simulation\n");
 
       // Modify reduction client
-      network.ckSetReductionClient(&cbpause);
+      network.ckSetReductionClient(&netpause);
     }
     else if (syncflag == RPCSYNC_SYNCED) {
       syncflag = RPCSYNC_UNSYNCED;
@@ -213,18 +213,16 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Stopping Simulation\n");
     }
     else if (syncflag == RPCSYNC_SYNCED) {
-      //syncflag = RPCSYNC_SYNCED;
-
       // Stop while paused
       CkPrintf("RPC Command: Stopping Simulation\n");
-      cbmain.send();
+      netstop.send();
     }
     out.add("received command: stop");
   }
 
-  // Checkpointing
+  // Saving network state
   //
-  else if (command == "check") {
+  else if (command == "save") {
     // Check for synchronization
     if (syncflag == RPCSYNC_SYNCING) {
       CkPrintf("RPC Error: Simulation is Syncing\n");
@@ -240,7 +238,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Checkpointing Simulation\n");
       
       // Modify reduction client
-      network.ckSetReductionClient(&cbpause);
+      network.ckSetReductionClient(&netpause);
     }
     out.add("received command: check");
   }
@@ -272,7 +270,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Stepping Simulation for %" PRIrealms " ms\n", step);
       
       // Modify reduction client
-      network.ckSetReductionClient(&cbpause);
+      network.ckSetReductionClient(&netpause);
     }
     out.add("received command: step");
   }
@@ -291,7 +289,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Stimulating Simulation\n");
 
       // Modify reduction client
-      network.ckSetReductionClient(&cbsync);
+      network.ckSetReductionClient(&netsync);
     }
     else if (syncflag == RPCSYNC_SYNCED) {
       syncflag = RPCSYNC_SYNCING;
@@ -301,7 +299,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Stimulating Simulation\n");
       
       // Modify reduction client
-      network.ckSetReductionClient(&cbpause);
+      network.ckSetReductionClient(&netpause);
     }
     out.add("received command: stim");
   }
@@ -323,7 +321,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Opening YARP Connection\n");
       
       // Modify reduction client
-      network.ckSetReductionClient(&cbpause);
+      network.ckSetReductionClient(&netpause);
     }
     out.add("received command: open");
   }
@@ -345,7 +343,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Closing YARP Connection\n");
       
       // Modify reduction client
-      network.ckSetReductionClient(&cbpause);
+      network.ckSetReductionClient(&netpause);
     }
     out.add("received command: close");
   }

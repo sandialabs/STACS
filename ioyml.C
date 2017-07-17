@@ -17,27 +17,27 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ idx_t npdat;
-extern /*readonly*/ idx_t npnet;
+extern /*readonly*/ unsigned randseed;
+extern /*readonly*/ std::string netwkdir;
+extern /*readonly*/ int netparts;
+extern /*readonly*/ int netfiles;
 extern /*readonly*/ std::string filebase;
 extern /*readonly*/ std::string fileload;
 extern /*readonly*/ std::string filesave;
-extern /*readonly*/ std::string modeldir;
 extern /*readonly*/ std::string recordir;
 extern /*readonly*/ std::string groupdir;
-extern /*readonly*/ idx_t rngseed;
-extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tstep;
-extern /*readonly*/ tick_t tqueue;
-extern /*readonly*/ tick_t tcheck;
-extern /*readonly*/ tick_t trecord;
-extern /*readonly*/ tick_t tdisplay;
 extern /*readonly*/ idx_t nevtday;
-extern /*readonly*/ int pnglength;
-extern /*readonly*/ idx_t comprtmin;
-extern /*readonly*/ idx_t comprtmax;
-extern /*readonly*/ idx_t ntrials;
-extern /*readonly*/ tick_t ttrial;
+extern /*readonly*/ idx_t intdisp;
+extern /*readonly*/ idx_t intrec;
+extern /*readonly*/ idx_t intsave;
+extern /*readonly*/ tick_t tmax;
+extern /*readonly*/ tick_t tepisode;
+extern /*readonly*/ idx_t episodes;
+extern /*readonly*/ int grpminlen;
+extern /*readonly*/ tick_t grpmaxdur;
+//extern /*readonly*/ idx_t grpvtxmin;
+//extern /*readonly*/ idx_t grpvtxmax;
 
 
 /**************************************************************************
@@ -58,22 +58,81 @@ int Main::ReadConfig(std::string configfile) {
   }
 
   // Process configuration information
-
-  // Number of data files
+  // Simulation
+  // Run mode
   try {
-    npdat = config["npdat"].as<idx_t>();
+    runmode = config["runmode"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  npdat: %s\n", e.what());
+    runmode = std::string(RUNMODE_DEFAULT);
+    CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
+  }
+  if (runmode != std::string(RUNMODE_SIMULATE) && 
+      runmode != std::string(RUNMODE_FINDGROUP) && 
+      runmode != std::string(RUNMODE_ESTIMATE)) {
+    runmode = std::string(RUNMODE_DEFAULT);
+    CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
+  }
+  // Random number seed
+  try {
+     randseed = config["randseed"].as<unsigned>();
+  } catch (YAML::RepresentationException& e) {
+    std::random_device rd;
+    randseed = rd();
+    CkPrintf("  randseed not defined, seeding with: %u\n", randseed);
+  }
+  // Network plasticity
+  try {
+    plastic = config["plastic"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    plastic = PLASTIC_DEFAULT;
+    CkPrintf("  plastic not defined, defaulting to: %s\n", (plastic ? "true" : "false"));
+  }
+  // Episodic simulation
+  try {
+    episodic = config["episodic"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    episodic = EPISODIC_DEFAULT;
+    CkPrintf("  episodic not defined, defaulting to: %s\n", (episodic ? "true" : "false"));
+  }
+#ifdef STACS_WITH_YARP
+  // RPC port
+  try {
+    rpcport = config["rpcport"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    rpcport = std::string(RPCPORT_DEFAULT);
+    CkPrintf("  rpcportname not defined, defaulting to: %s\n", rpcport.c_str());
+  }
+  // Start simulation paused
+  try {
+    rpcpause = config["rpcpause"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    rpcpause = RPCPAUSE_DEFAULT;
+    CkPrintf("  rpcpause not defined, defaulting to: %s\n", (rpcpause ? "true" : "false"));
+  }
+#endif
+
+  // Network
+  // Network data directory
+  try {
+    netwkdir = config["netwkdir"].as<std::string>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  netwkdir: %s\n", e.what());
     return 1;
   }
   // Number of network parts
   try {
-    npnet = config["npnet"].as<idx_t>();
+    netparts = config["netparts"].as<int>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  npnet: %s\n", e.what());
+    CkPrintf("  netparts: %s\n", e.what());
     return 1;
   }
-  
+  // Number of data files
+  try {
+    netfiles = config["netfiles"].as<int>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  netfiles: %s\n", e.what());
+    return 1;
+  }
   // Network file base name
   try {
     filebase = config["filebase"].as<std::string>();
@@ -85,55 +144,33 @@ int Main::ReadConfig(std::string configfile) {
   try {
     fileload = config["fileload"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  fileload not defined, defaulting to: \"\"\n");
-    fileload = std::string("");
+    fileload = std::string(FILELOAD_DEFAULT);
+    CkPrintf("  fileload not defined, defaulting to: \"%s\"\n", fileload.c_str());
   }
   // output filename modifications
   try {
     filesave = config["filesave"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  filesave not defined, defaulting to: \".o\"\n");
-    filesave = std::string(".o");
-  }
-  // Network data directory
-  try {
-    modeldir = config["modeldir"].as<std::string>();
-  } catch (YAML::RepresentationException& e) {
-    CkPrintf("  modeldir: %s\n", e.what());
-    return 1;
+    filesave = std::string(FILESAVE_DEFAULT);
+    CkPrintf("  filesave not defined, defaulting to: \"%s\"\n", filesave.c_str());
   }
   // Records output directory
   try {
     recordir = config["recordir"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  recordir not defined, defaulting to: \"%s\"\n", modeldir.c_str());
-    recordir = modeldir;
+    recordir = std::string(RECORDIR_DEFAULT);
+    CkPrintf("  recordir not defined, defaulting to: \"%s\"\n", recordir.c_str());
   }
-  // Polychronization output directory
+  // Groups output directory
   try {
     groupdir = config["groupdir"].as<std::string>();
   } catch (YAML::RepresentationException& e) {
-    CkPrintf("  groupdir not defined, defaulting to: \"%s\"\n", modeldir.c_str());
-    groupdir = modeldir;
+    groupdir = std::string(GROUPDIR_DEFAULT);
+    CkPrintf("  groupdir not defined, defaulting to: \"%s\"\n", groupdir.c_str());
   }
   
-  // Random number seed
-  try {
-     rngseed = config["rngseed"].as<idx_t>();
-  } catch (YAML::RepresentationException& e) {
-    std::random_device rd;
-    rngseed = rd();
-    CkPrintf("  rngseed not defined, seeding with: %" PRIidx "\n", rngseed);
-  }
-  // Maximum simulation time (in ms)
+  // Timing
   real_t treal;
-  try {
-    treal = config["tmax"].as<real_t>();
-  } catch (YAML::RepresentationException& e) {
-    treal = TMAX_DEFAULT;
-    CkPrintf("  tmax not defined, defaulting to: %.2g ms\n", treal);
-  }
-  tmax = (tick_t)(treal*TICKS_PER_MS);
   // Time of a simulation step (in ms)
   try {
     treal = config["tstep"].as<real_t>();
@@ -144,157 +181,144 @@ int Main::ReadConfig(std::string configfile) {
   tstep = (tick_t)(treal*TICKS_PER_MS);
   // Time of standard event queue (in ms)
   try {
-    treal = config["tqueue"].as<real_t>();
+    teventq = config["teventq"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
-    treal = TQUEUE_DEFAULT;
-    CkPrintf("  tqueue not defined, defaulting to: %.2g ms\n", treal);
+    teventq = TEVENTQ_DEFAULT;
+    CkPrintf("  teventq not defined, defaulting to: %.2g ms\n", teventq);
   }
-  tqueue = (tick_t)(treal*TICKS_PER_MS);
-  // Time between checkpoints (in ms)
-  try {
-    treal = config["tcheck"].as<real_t>();
-  } catch (YAML::RepresentationException& e) {
-    treal = TCHECK_DEFAULT;
-    CkPrintf("  tcheck not defined, defaulting to: %.2g ms\n", treal);
-  }
-  tcheck = (tick_t)(treal*TICKS_PER_MS);
-  // Time between recording points (in ms)
-  try {
-    treal = config["trecord"].as<real_t>();
-  } catch (YAML::RepresentationException& e) {
-    treal = TRECORD_DEFAULT;
-    CkPrintf("  trecord not defined, defaulting to: %.2g ms\n", treal);
-  }
-  trecord = (tick_t)(treal*TICKS_PER_MS);
+  nevtday = (idx_t)(((tick_t)(teventq*TICKS_PER_MS))/tstep) + 1;
   // How often to display the simulation time (in ms)
   try {
-    treal = config["tdisplay"].as<real_t>();
+    tdisplay = config["tdisplay"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
-    treal = TDISPLAY_DEFAULT;
-    CkPrintf("  tdisplay not defined, defaulting to: %.2g ms\n", treal);
+    tdisplay = TDISPLAY_DEFAULT;
+    CkPrintf("  tdisplay not defined, defaulting to: %.2g ms\n", tdisplay);
   }
-  tdisplay = (tick_t)(treal*TICKS_PER_MS);
-  // Slots in event queue (calendar days per year)
-  nevtday = (tqueue / tstep) + 1;
-  
-  // Run mode
+  intdisp = (idx_t)(((tick_t)(tdisplay*TICKS_PER_MS))/tstep);
+  // Time between recording points (in ms)
   try {
-    runmode = config["runmode"].as<std::string>();
+    trecord = config["trecord"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
-    runmode = std::string(RUNMODE_DEFAULT);
-    CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
+    trecord = TRECORD_DEFAULT;
+    CkPrintf("  trecord not defined, defaulting to: %.2g ms\n", trecord);
   }
-  if (runmode != RUNMODE_SIM && runmode != RUNMODE_PNG && runmode != RUNMODE_EST) {
-    runmode = std::string(RUNMODE_DEFAULT);
-    CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
-  }
-  // Network plasticity
+  intrec = (idx_t)(((tick_t)(trecord*TICKS_PER_MS))/tstep);
+  // Time between checkpoints (in ms)
   try {
-    plasticity = config["plasticity"].as<bool>();
+    tsave = config["tsave"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
-    plasticity = PLASTICITY_DEFAULT;
-    CkPrintf("  plasticity not defined, defaulting to: %s\n", (plasticity ? "true" : "false"));
+    tsave = TSAVE_DEFAULT;
+    CkPrintf("  tsave not defined, defaulting to: %.2g ms\n", tsave);
   }
-  // Network plasticity
+  intsave = (idx_t)(((tick_t)(tsave*TICKS_PER_MS))/tstep);
+  // Maximum simulation time (in ms)
   try {
-    episodic = config["episodic"].as<bool>();
+    treal = config["tmax"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
-    episodic = EPISODIC_DEFAULT;
-    CkPrintf("  episodic not defined, defaulting to: %s\n", (episodic ? "true" : "false"));
+    treal = TMAX_DEFAULT;
+    if (!episodic) {
+      CkPrintf("  tmax not defined, defaulting to: %.2g ms\n", treal);
+    }
   }
-#ifdef STACS_WITH_YARP
-  // RPC port
+  tmax = (tick_t)(treal*TICKS_PER_MS);
+  // Time per episode
   try {
-    rpcport = config["rpcportname"].as<std::string>();
+    treal = config["tepisode"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
-    rpcport = RPCPORTNAME_DEFAULT;
-    CkPrintf("  rpcportname not defined, defaulting to: %s\n", rpcport.c_str());
+    treal = TEPISODE_DEFAULT;
+    if (episodic) {
+      CkPrintf("  tepisode not defined, defaulting to: %.2g ms\n", treal);
+    }
   }
-  // Start simulation paused
+  tepisode = (tick_t)(treal*TICKS_PER_MS);
+  // Number of episodes
   try {
-    startpaused = config["startpaused"].as<bool>();
+    episodes = config["episodes"].as<idx_t>();
   } catch (YAML::RepresentationException& e) {
-    startpaused = STARTPAUSED_DEFAULT;
-    CkPrintf("  startpaused not defined, defaulting to: %s\n", (startpaused ? "true" : "false"));
+    episodes = EPISODES_DEFAULT;
+    if (episodic) {
+      CkPrintf("  episodes not defined, defaulting to: %" PRIidx " eps\n", episodes);
+    }
   }
-#endif
+  // Modifications to episodic simulation
+  if (episodic) {
+    // Display iteration with episodes
+    intdisp = (idx_t)(tepisode/tstep);
+    // Save network according to episode boundaries
+    idx_t savediv = intsave/intdisp;
+    intsave = savediv*intdisp;
+  }
 
-  // Polychronization (active models)
-  pngactives.clear();
+  // Polychronous groups
+  // Active models
+  grpactives.clear();
   // Identifiers are their own 'node'
-  YAML::Node pngactive = config["pngactive"];
-  pngactives.resize(pngactive.size());
-  for (std::size_t i = 0; i < pngactive.size(); ++i) {
+  YAML::Node grpactive = config["grpactive"];
+  grpactives.resize(grpactive.size());
+  for (std::size_t i = 0; i < grpactive.size(); ++i) {
     try {
-      pngactives[i] = pngactive[i].as<std::string>();
+      grpactives[i] = grpactive[i].as<std::string>();
     } catch (YAML::RepresentationException& e) {
-      CkPrintf("  pngactive: %s\n", e.what());
+      CkPrintf("  grpactive: %s\n", e.what());
       return 1;
     }
   }
-  // Polychronization (mothers)
-  pngmothers.clear();
+  // Mother vertices
+  grpmothers.clear();
   // Identifiers are their own 'node'
-  YAML::Node pngmother = config["pngmother"];
-  pngmothers.resize(pngmother.size());
-  for (std::size_t i = 0; i < pngmother.size(); ++i) {
+  YAML::Node grpmother = config["grpmother"];
+  grpmothers.resize(grpmother.size());
+  for (std::size_t i = 0; i < grpmother.size(); ++i) {
     try {
-      pngmothers[i] = pngmother[i].as<std::string>();
+      grpmothers[i] = grpmother[i].as<std::string>();
     } catch (YAML::RepresentationException& e) {
-      CkPrintf("  pngmother: %s\n", e.what());
+      CkPrintf("  grpmother: %s\n", e.what());
       return 1;
     }
   }
-  // Polychronization (anchors)
-  pnganchors.clear();
+  // Anchor edges
+  grpanchors.clear();
   // Identifiers are their own 'node'
-  YAML::Node pnganchor = config["pnganchor"];
-  pnganchors.resize(pnganchor.size());
-  for (std::size_t i = 0; i < pnganchor.size(); ++i) {
+  YAML::Node grpanchor = config["grpanchor"];
+  grpanchors.resize(grpanchor.size());
+  for (std::size_t i = 0; i < grpanchor.size(); ++i) {
     try {
-      pnganchors[i] = pnganchor[i].as<std::string>();
+      grpanchors[i] = grpanchor[i].as<std::string>();
     } catch (YAML::RepresentationException& e) {
-      CkPrintf("  pnganchor: %s\n", e.what());
+      CkPrintf("  grpanchor: %s\n", e.what());
       return 1;
     }
   }
-  // Polychronization minimum group path
+  // Minimum group path length
   try {
-    pnglength = config["pnglength"].as<int>();
+    grpminlen = config["grpminlen"].as<int>();
   } catch (YAML::RepresentationException& e) {
-    pnglength = 7;
+    grpminlen = GRPMINLEN_DEFAULT;
   }
-  // Polychronization compute min partition (inclusive)
+  // Maximum group duration
   try {
-    comprtmin = config["comprtmin"].as<idx_t>();
+    treal = config["grpmaxdur"].as<real_t>();
   } catch (YAML::RepresentationException& e) {
-    comprtmin = 0;
+    treal = GRPMAXDUR_DEFAULT;
   }
-  // Polychronization compute max partition (inclusive)
+  grpmaxdur = (tick_t)(treal*TICKS_PER_MS);
+  // Minimum evaluated vertex (fraction of network)
   try {
-    comprtmax = config["comprtmax"].as<idx_t>();
+    grpvtxminreal = config["grpvtxmin"].as<realidx_t>();
   } catch (YAML::RepresentationException& e) {
-    comprtmax = npnet-1;
+    grpvtxminreal = 0.0;
   }
-  if (comprtmin < 0 || comprtmin >= npnet || comprtmax < 0 || comprtmax >= npnet) {
-    CkPrintf("  comprtmin/max out of bounds (0 to %" PRIidx ") inclusive\n", npnet-1);
+  // Maximum evaluated vertex (fraction of network)
+  try {
+    grpvtxmaxreal = config["grpvtxmax"].as<realidx_t>();
+  } catch (YAML::RepresentationException& e) {
+    grpvtxmaxreal = 1.0;
+  }
+  if (grpvtxminreal < 0.0 || grpvtxminreal > 1.0 || grpvtxmaxreal < 0.0 || grpvtxmaxreal > 1.0) {
+    CkPrintf("  grpvtxmin/max out of bounds (0.0 to 1.0)\n");
     return 1;
   }
   
-  // Number of trials to estimate
-  try {
-    ntrials = config["ntrials"].as<idx_t>();
-  } catch (YAML::RepresentationException& e) {
-    ntrials = 0;
-  }
-  // Time of trials
-  try {
-    treal = config["ttrial"].as<real_t>();
-  } catch (YAML::RepresentationException& e) {
-    treal = TTRIAL_DEFAULT;
-  }
-  ttrial = (tick_t)(treal*TICKS_PER_MS);
-
   // Return success
   return 0;
 }
@@ -308,10 +332,10 @@ int Main::ReadConfig(std::string configfile) {
 //
 int Main::ReadModel() {
   // Load model file
-  CkPrintf("Reading model information\n");// from %s/%s.model\n", modeldir.c_str(), filebase.c_str());
+  CkPrintf("Reading model information\n");// from %s/%s.model\n", netwkdir.c_str(), filebase.c_str());
   YAML::Node modfile;
   try {
-    modfile = YAML::LoadAllFromFile(modeldir + "/" + filebase + ".model");
+    modfile = YAML::LoadAllFromFile(netwkdir + "/" + filebase + ".model");
   } catch (YAML::BadFile& e) {
     CkPrintf("  %s\n", e.what());
     return 1;
@@ -339,9 +363,6 @@ int Main::ReadModel() {
     
     // Params are their own 'node'
     YAML::Node param = modfile[i]["param"];
-    if (param.size() == 0) {
-      //CkPrintf("  warning: %s has no parameters\n", models[i].modname.c_str());
-    }
     models[i].param.resize(param.size());
     for (std::size_t j = 0; j < param.size(); ++j) {
       try {
@@ -354,9 +375,6 @@ int Main::ReadModel() {
     
     // States are their own 'node'
     YAML::Node state = modfile[i]["state"];
-    if (state.size() == 0) {
-      //CkPrintf("  warning: %s has no state\n", models[i].modname.c_str());
-    }
     // Count states and sticks
     models[i].nstate = 0;
     models[i].nstick = 0;
@@ -378,9 +396,6 @@ int Main::ReadModel() {
 
     // Ports are their own 'node'
     YAML::Node port = modfile[i]["port"];
-    if (port.size() == 0) {
-      //CkPrintf("  warning: %s has no ports\n", models[i].modname.c_str());
-    }
     models[i].port.resize(port.size());
     for (std::size_t j = 0; j < port.size(); ++j) {
       try {
@@ -392,26 +407,26 @@ int Main::ReadModel() {
     }
 
     // Polychronization (active models)
-    models[i].pngactive = false;
-    for (std::size_t j = 0; j < pngactives.size(); ++j) {
-      if (models[i].modname == pngactives[j]) {
-        models[i].pngactive = true;
+    models[i].grpactive = false;
+    for (std::size_t j = 0; j < grpactives.size(); ++j) {
+      if (models[i].modname == grpactives[j]) {
+        models[i].grpactive = true;
         break;
       }
     }
-    // Polychronization (mothers)
-    models[i].pngmother = false;
-    for (std::size_t j = 0; j < pngmothers.size(); ++j) {
-      if (models[i].modname == pngmothers[j]) {
-        models[i].pngmother = true;
+    // Polychronization (mother vertices)
+    models[i].grpmother = false;
+    for (std::size_t j = 0; j < grpmothers.size(); ++j) {
+      if (models[i].modname == grpmothers[j]) {
+        models[i].grpmother = true;
         break;
       }
     }
-    // Polychronization (anchors)
-    models[i].pnganchor = false;
-    for (std::size_t j = 0; j < pnganchors.size(); ++j) {
-      if (models[i].modname == pnganchors[j]) {
-        models[i].pnganchor = true;
+    // Polychronization (anchor edges)
+    models[i].grpanchor = false;
+    for (std::size_t j = 0; j < grpanchors.size(); ++j) {
+      if (models[i].modname == grpanchors[j]) {
+        models[i].grpanchor = true;
         break;
       }
     }
@@ -425,7 +440,7 @@ int Main::ReadModel() {
       modelports.append(port.str());
     }
     // TODO: modtype to name for base model
-    CkPrintf("  Model: %d   Name: %s   Type: %" PRIidx "   States: %" PRIidx"   Params: %d   Ports:%s\n",
+    CkPrintf("  Model: %d   Name: %s   Type: %d   States: %u   Params: %u   Ports:%s\n",
         i+1, models[i].modname.c_str(), models[i].modtype, models[i].nstate + models[i].nstick,
         models[i].param.size(), (modelports == "") ? " None" : modelports.c_str());
   }

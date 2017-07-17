@@ -18,6 +18,7 @@ typedef uint64_t    uidx_t;
 typedef uint64_t    tick_t;
 typedef uint16_t    flag_t;
 typedef real8       real_t;
+typedef real10      realidx_t;
 typedef int16_t     sample_t;
 
 // Reading from file

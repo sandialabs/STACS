@@ -149,7 +149,7 @@ YarpAudioPort::YarpAudioPort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpAudio : public NetModelTmpl < 101, YarpAudio > {
+class YarpAudio : public ModelTmpl < 101, YarpAudio > {
   public:
     /* Constructor */
     YarpAudio() {

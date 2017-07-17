@@ -10,23 +10,25 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ idx_t npnet;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t nevtday;
-extern /*readonly*/ int pnglength;
+extern /*readonly*/ int grpminlen;
+extern /*readonly*/ tick_t grpmaxdur;
+extern /*readonly*/ idx_t grpvtxmin;
+extern /*readonly*/ idx_t grpvtxmax;
 
 
 /**************************************************************************
-* Reduction for PNGs
+* Reduction for Groups
 **************************************************************************/
 
-CkReduction::reducerType net_png;
+CkReduction::reducerType net_group;
 /*initnode*/
-void registerNetPNG(void) {
-  net_png = CkReduction::addReducer(netPNG);
+void registerNetGroup(void) {
+  net_group = CkReduction::addReducer(netGroup);
 }
 
-CkReductionMsg *netPNG(int nMsg, CkReductionMsg **msgs) {
+CkReductionMsg *netGroup(int nMsg, CkReductionMsg **msgs) {
   std::vector<route_t> ret;
   ret.clear();
   for (int i = 0; i < nMsg; i++) {
@@ -45,126 +47,127 @@ CkReductionMsg *netPNG(int nMsg, CkReductionMsg **msgs) {
 
 // Coordination with NetData chare array
 //
-void Network::InitPNG(CProxy_Netdata cpdat) {
+void Network::InitGroup(CProxy_Netdata cpdata) {
   // Set proxies
-  netdata = cpdat;
-  cbcycleprt = CkCallback(CkIndex_Network::CyclePNG(), prtidx, thisProxy);
+  netdata = cpdata;
+  cyclepart = CkCallback(CkIndex_Network::CycleGroup(), partidx, thisProxy);
 
   // Initialization
-  evalidx = 0;
+  tcomp = 0;
+  compidx = grpvtxmin;
+  ccomp = 0;
+  ncomp = 0;
+  evalpart = 0;
   
   // Request network part from input
-  CkCallback *cb = new CkCallback(CkIndex_Network::LoadNetwork(NULL), prtidx, thisProxy);
-  netdata(datidx).LoadNetwork(prtidx, *cb);
+  netdata(fileidx).LoadNetwork(partidx, 
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
 }
 
 
 /**************************************************************************
-* Finding Polychronous Neuronal Groups (PNGs)
+* Finding Polychronous Neuronal Groups
 **************************************************************************/
 
-// Find PNG (main control loop)
+// Find Group (main control loop)
 //
-void Network::FindPNG() {
-  // Loop through all vertices
-  //if (compidx < vtxdist[npnet]) {
+void Network::FindGroup() {
   // Loop through range of vertices
-  if (compidx < compendx) {
-    pngseeds.clear();
+  if (compidx < grpvtxmax) {
+    grpseeds.clear();
     // Only one vertex containing partition performs control
     std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx);
     if (mother != vtxmap.end()) {
-      if (netmodel[vtxmodidx[mother->second]]->getPNGMother()) {
+      if (model[vtxmodidx[mother->second]]->getMother()) {
         // Bookkeeping
         idx_t i = mother->second;
-        pngs[i].clear();
-        pngchart.clear();
+        grpstamps[i].clear();
+        grproutes.clear();
 
         // Skip vertices with less than three
         // TODO: make the number of anchor vertices configurable
         if (edgmodidx[i].size() < 3) {
           // continue to next vertex
-          thisProxy.FindPNG();
+          thisProxy.FindGroup();
         }
         else {
           // Use only valid anchor edges
           std::vector<idx_t> anchor;
           anchor.clear();
           for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
-            if (netmodel[edgmodidx[i][j]]->getPNGAnchor()) {
+            if (model[edgmodidx[i][j]]->getAnchor()) {
               // TODO: Based off of spiking property of the 
-              //       netmodel instead of just anchor models
-              if (netmodel[edgmodidx[i][j]]->getStickIdx("delay") == 0) {
+              //       model instead of just anchor models
+              if (model[edgmodidx[i][j]]->getStickIdx("delay") == 0) {
                 anchor.push_back(j);
               }
             }
           }
 
-          // PNG combinatorics
+          // Group combinatorics
           for (idx_t j0 = 0; j0 < anchor.size(); ++j0) {
             for (idx_t j1 = j0+1; j1 < anchor.size(); ++j1) {
               for (idx_t j2 = j1+1; j2 < anchor.size(); ++j2) {
                 // Test for spiking of mother neuron
                 // assuming perfect timing of anchor
-                netmodel[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
+                model[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
                 event_t event;
                 event.diffuse = 0;
                 event.type = EVENT_SPIKE;
                 event.source = i;
                 event.data = 0.0;
                 event.index = anchor[j0]+1;
-                netmodel[edgmodidx[i][anchor[j0]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j0]]][vtxmodidx[i]]);
+                model[edgmodidx[i][anchor[j0]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j0]]][vtxmodidx[i]]);
                 event.index = anchor[j1]+1;
-                netmodel[edgmodidx[i][anchor[j1]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j1]]][vtxmodidx[i]]);
+                model[edgmodidx[i][anchor[j1]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j1]]][vtxmodidx[i]]);
                 event.index = anchor[j2]+1;
-                netmodel[edgmodidx[i][anchor[j2]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j2]]][vtxmodidx[i]]);
+                model[edgmodidx[i][anchor[j2]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j2]]][vtxmodidx[i]]);
                 tick_t tdrift = 0;
                 tick_t tstop = tstep * 5; // Strongly spiking triplets only
                 while (tdrift < tstop) {
                   // Step through model drift (vertex)
-                  tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
+                  tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
                 }
-                // Potential PNG only if mother vertex spiked
+                // Potential Group only if mother vertex spiked
                 if (events.size() && events[0].type == EVENT_SPIKE) {
                   events.clear();
-                  std::vector<event_t> pngseed;
-                  pngseed.clear();
+                  std::vector<event_t> grpseed;
+                  grpseed.clear();
                   event.type = EVENT_SPIKE;
                   event.data = 0.0;
                   event.diffuse = stick[i][anchor[j0]+1][0];
                   event.source = adjcy[i][anchor[j0]];
                   event.index = adjcy[i][anchor[j0]];
-                  pngseed.push_back(event);
+                  grpseed.push_back(event);
                   event.diffuse = stick[i][anchor[j1]+1][0];
                   event.source = adjcy[i][anchor[j1]];
                   event.index = adjcy[i][anchor[j1]];
-                  pngseed.push_back(event);
+                  grpseed.push_back(event);
                   event.diffuse = stick[i][anchor[j2]+1][0];
                   event.source = adjcy[i][anchor[j2]];
                   event.index = adjcy[i][anchor[j2]];
-                  pngseed.push_back(event);
+                  grpseed.push_back(event);
                   // correctly order the timing
-                  std::sort(pngseed.begin(), pngseed.end());
-                  pngseed[0].diffuse = pngseed[2].diffuse - pngseed[0].diffuse;
-                  pngseed[1].diffuse = pngseed[2].diffuse - pngseed[1].diffuse;
-                  pngseed[2].diffuse = pngseed[2].diffuse - pngseed[2].diffuse;
-                  std::sort(pngseed.begin(), pngseed.end());
-                  // Push to PNG seeds
-                  pngseeds.push_back(pngseed);
+                  std::sort(grpseed.begin(), grpseed.end());
+                  grpseed[0].diffuse = grpseed[2].diffuse - grpseed[0].diffuse;
+                  grpseed[1].diffuse = grpseed[2].diffuse - grpseed[1].diffuse;
+                  grpseed[2].diffuse = grpseed[2].diffuse - grpseed[2].diffuse;
+                  std::sort(grpseed.begin(), grpseed.end());
+                  // Push to Group seeds
+                  grpseeds.push_back(grpseed);
                 }
               }
             }
           }
-          ncomp = pngseeds.size();
+          ncomp = grpseeds.size();
           // Display computation information
-          CkPrintf("    Computing PNGs for vertex %" PRIidx " with %" PRIidx "\n", compidx, ncomp);
-          //thisProxy.ComputePNG(((ncomp > 10) ? 10 : ncomp), prtidx);
-          thisProxy.ComputePNG(ncomp, prtidx);
+          CkPrintf("  Computing vertex %" PRIidx " groups %" PRIidx "\n", compidx, ncomp);
+          thisProxy.ComputeGroup(ncomp, partidx);
         }
       }
       else {
         // continue to next vertex
-        thisProxy.FindPNG();
+        thisProxy.FindGroup();
       }
     }
     ++compidx;
@@ -176,91 +179,90 @@ void Network::FindPNG() {
 }
 
 /**************************************************************************
-* Computing PNGs
+* Computing Groups
 **************************************************************************/
 
-// Initial setup for PNG computation
+// Initial setup for Group computation
 //
-void Network::ComputePNG(idx_t nseeds, idx_t pngidx) {
+void Network::ComputeGroup(idx_t nseeds, int grpart) {
   // Bookkeeping
   ccomp = 0;
   ncomp = nseeds;
-  evalidx = pngidx;
-  tcomp = tstep * 150;
-  // TODO: make this max png length
+  evalpart = grpart;
+  tcomp = grpmaxdur;
 
-  // Coordination after reset
-  thisProxy(prtidx).ComputePNG();
+  thisProxy(partidx).ComputeGroup();
 }
 
-// Compute PNG (vertex control loop)
+// Compute Group (vertex control loop)
 //
-void Network::ComputePNG() {
-  // Loop through PNG seeds
+void Network::ComputeGroup() {
+  // Loop through Group seeds
   if (ccomp < ncomp) {
-    pngroute.clear();
-    pngtrack.clear();
-    if (!pngseeds.empty()) {
-      // Initialize candidate PNG
-      pngroute.resize(pngseeds[ccomp].size());
-      for (std::size_t i = 0; i < pngseeds[ccomp].size(); ++i) {
-        pngroute[i].diffuse = pngseeds[ccomp][i].diffuse;
-        pngroute[i].source = pngseeds[ccomp][i].source;
-        pngroute[i].origin = -1;
-        pngroute[i].departure = 0;
-        pngroute[i].arrival = 0;
+    grpleg.clear();
+    grproute.clear();
+    if (!grpseeds.empty()) {
+      // Initialize candidate group
+      grproute.resize(grpseeds[ccomp].size());
+      for (std::size_t i = 0; i < grpseeds[ccomp].size(); ++i) {
+        grproute[i].diffuse = grpseeds[ccomp][i].diffuse;
+        grproute[i].source = grpseeds[ccomp][i].source;
+        grproute[i].origin = -1;
+        grproute[i].departure = 0;
+        grproute[i].arrival = 0;
       }
+  
       // Seed spikes for simulation
-      mEvent *mevent = BuildPNGSeed(pngseeds[ccomp]);
-      thisProxy.SeedPNG(mevent);
+      mEvent *mevent = BuildGroupSeed(grpseeds[ccomp]);
+      thisProxy.SeedGroup(mevent);
     }
     ++ccomp;
   }
   else {
     std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx-1);
-    if (!pngseeds.empty() && mother != vtxmap.end()) {
-      idx_t pngidx = mother->second;
-      CkPrintf("  Found %d PNGs\n", pngs[pngidx].size());
-      if (pngs[pngidx].size()) {
+    if (!grpseeds.empty() && mother != vtxmap.end()) {
+      idx_t groupidx = mother->second;
+      CkPrintf("  Groups found %d\n", grpstamps[groupidx].size());
+      if (grpstamps[groupidx].size()) {
         // Write to file
-        WritePNG(pngidx);
+        WriteGroup(groupidx);
       }
-      // Clear found pngs after writing
-      pngs[pngidx].clear();
-      pngchart.clear();
+      // Clear found groups after writing
+      grpstamps[groupidx].clear();
+      grproutes.clear();
     }
     // Return control to main loop
-    thisProxy(prtidx).FindPNG();
+    thisProxy(partidx).FindGroup();
   }
 }
 
-// Coordination for PNG computation
+// Coordination for Group computation
 //
-void Network::EvalPNG(CkReductionMsg *msg) {
-  // Add to png candidate
+void Network::EvalGroup(CkReductionMsg *msg) {
+  // Add to group candidate
   for (std::size_t i = 0; i < (msg->getSize())/sizeof(route_t); ++i) {
-    pngroute.push_back(*((route_t *)msg->getData()+i));
+    grproute.push_back(*((route_t *)msg->getData()+i));
   }
   delete msg;
 
   //CkPrintf("Evaluating\n");
   // Sorting
-  std::sort(pngroute.begin(), pngroute.end());
+  std::sort(grproute.begin(), grproute.end());
 
-  // Max path of png should be longer than min path threshold (7)
-  std::unordered_map<idx_t, int> pngpath;
-  int maxpath = 0;
-  for (std::size_t i = 0; i < pngroute.size(); ++i) {
-    pngpath[pngroute[i].source] = std::max(pngpath[pngroute[i].source], 1+pngpath[pngroute[i].origin]);
-    maxpath = std::max(maxpath, pngpath[pngroute[i].source]);
+  // Max path of group should be longer than min path length
+  std::unordered_map<idx_t, int> grpath;
+  int maxlen = 0;
+  for (std::size_t i = 0; i < grproute.size(); ++i) {
+    grpath[grproute[i].source] = std::max(grpath[grproute[i].source], 1+grpath[grproute[i].origin]);
+    maxlen = std::max(maxlen, grpath[grproute[i].source]);
   }
-  if (maxpath >= pnglength) {
+  if (maxlen >= grpminlen) {
     // Anchors should contribute to more than just the mother neuron
     bool alluseful = true;
-    for (std::size_t j = 0; j < pngseeds[ccomp-1].size(); ++j) {
+    for (std::size_t j = 0; j < grpseeds[ccomp-1].size(); ++j) {
       int useful = 0;
-      for (std::size_t i = 0; i < pngroute.size(); ++i) {
-        if (pngroute[i].origin == pngseeds[ccomp-1][j].source) {
+      for (std::size_t i = 0; i < grproute.size(); ++i) {
+        if (grproute[i].origin == grpseeds[ccomp-1][j].source) {
           if (++useful >= 2) { break; }
         }
       }
@@ -271,47 +273,57 @@ void Network::EvalPNG(CkReductionMsg *msg) {
     }
     if (alluseful) {
       std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx-1);
-      idx_t pngidx = mother->second;
-      std::set<stamp_t> pngset;
-      for (std::size_t i = 0; i < pngroute.size(); ++i) {
-        pngset.insert((stamp_t){pngroute[i].diffuse, pngroute[i].source});
+      idx_t groupidx = mother->second;
+      std::set<stamp_t> grpset;
+      for (std::size_t i = 0; i < grproute.size(); ++i) {
+        grpset.insert((stamp_t){grproute[i].diffuse, grproute[i].source});
       }
-      std::vector<stamp_t> pngvec;
-      pngvec.assign(pngset.begin(), pngset.end());
-      pngs[pngidx].push_back(pngvec);
-      pngchart.push_back(pngroute);
+      std::vector<stamp_t> grpvec;
+      grpvec.assign(grpset.begin(), grpset.end());
+      grpstamps[groupidx].push_back(grpvec);
+      grproutes.push_back(grproute);
     }
   }
 
-  // Compute next PNG
-  thisProxy.ComputePNG();
+  // Compute next Group
+  thisProxy.ComputeGroup();
 }
 
 /**************************************************************************
-* Computing PNGs (simulation)
+* Computing Groups (simulation)
 **************************************************************************/
 
-// Simulation loop for PNG computation
+// Simulation loop for Group computation
 //
-void Network::CyclePNG() {
+void Network::CycleGroup() {
   // Check if computation is complete
   if (tsim >= tcomp) {
-    // Reset network
-    ResetNetwork();
+    // Reset network for next group computation
+    for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
+      // Clear events
+      for (idx_t j = 0; j < nevtday; ++j) {
+        evtcal[i][j].clear();
+      }
+      evtcol[i].clear();
+      // Reset vertices
+      model[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
+    }
+    // Reset timing
     tsim = 0;
     iter = 0;
-    cadjprt[0] = 0;
-    cadjprt[1] = 0;
-    prtiter = 0;
-    // Remove excess pngtrail
+    // Reset coordination
+    cadjpart[0] = 0;
+    cadjpart[1] = 0;
+    partiter = 0;
+
+    // Remove excess grptraces
     for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
-      pngtrail[i].clear();
+      grptraces[i].clear();
     }
     
-    // Coordination after reset
-    // Reduce PNG information
-    CkCallback *cb = new CkCallback(CkIndex_Network::EvalPNG(NULL), evalidx, thisProxy);
-    contribute(pngtrack.size()*sizeof(route_t), pngtrack.data(), net_png, *cb);
+    // Reduce Group information
+    contribute(grpleg.size()*sizeof(route_t), grpleg.data(), net_group, 
+        CkCallback(CkIndex_Network::EvalGroup(NULL), evalpart, thisProxy));
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
@@ -320,7 +332,7 @@ void Network::CyclePNG() {
     synciter = IDX_T_MAX;
 
     // Display synchronization information
-    if (prtidx == 0) {
+    if (partidx == 0) {
       CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
     }
 
@@ -338,7 +350,7 @@ void Network::CyclePNG() {
     idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      MarkEvent();
+      SortEvent();
     }
     
     // Check for periodic events
@@ -346,16 +358,16 @@ void Network::CyclePNG() {
       std::vector<event_t>::iterator event = evtleap.begin();
       // Compute periodic events
       while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set netmodel index
+        // Set model index
         idx_t n = event->source;
         // Loop through all models
         for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
           event->index = leapidx[n][m][1];
           if (event->index) {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
           }
           else {
-            netmodel[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
+            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
           }
         }
         // Update timing
@@ -368,7 +380,7 @@ void Network::CyclePNG() {
     
     // Perform computation
     for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
-      if (netmodel[vtxmodidx[i]]->getPNGActive() == false) {
+      if (model[vtxmodidx[i]]->getActive() == false) {
         evtcal[i][evtday].clear();
         continue;
       }
@@ -384,28 +396,28 @@ void Network::CyclePNG() {
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
-          // Add to PNG log
+          model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          // Add to contribution log
           if (event->type == EVENT_SPIKE) {
-            trail_t trail;
-            trail.origin = adjcy[i][event->index-1];
-            trail.departure = event->diffuse - stick[i][event->index][0];
-            trail.arrival = event->diffuse;
-            pngtrail[i].push_back(trail);
+            trace_t trace;
+            trace.origin = adjcy[i][event->index-1];
+            trace.departure = event->diffuse - stick[i][event->index][0];
+            trace.arrival = event->diffuse;
+            grptraces[i].push_back(trace);
           }
         }
         // vertex events
         else {
-          netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
       
       // Move sliding window of contributing routes forward
       // TODO: make this value user adjustable
-      while (!pngtrail[i].empty()) {
-        if (pngtrail[i].front().arrival + ((tick_t)10.0)*TICKS_PER_MS <= tdrift) {
-          pngtrail[i].pop_front();
+      while (!grptraces[i].empty()) {
+        if (grptraces[i].front().arrival + ((tick_t)10.0)*TICKS_PER_MS <= tdrift) {
+          grptraces[i].pop_front();
         }
         else {
           break;
@@ -415,7 +427,7 @@ void Network::CyclePNG() {
       // Computation
       while (tdrift < tstop) {
         // Step through model drift (vertex)
-        tdrift += netmodel[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
+        tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
         // TODO: Conversion from edge indices to global (for individual output)
@@ -427,11 +439,11 @@ void Network::CyclePNG() {
               route.diffuse = events[e].diffuse;
               route.source = vtxidx[i];
               // go through contribution log
-              for (std::size_t j = 0; j < pngtrail[i].size(); ++j) {
-                route.origin = pngtrail[i][j].origin;
-                route.departure = pngtrail[i][j].departure;
-                route.arrival = pngtrail[i][j].arrival;
-                pngtrack.push_back(route);
+              for (std::size_t j = 0; j < grptraces[i].size(); ++j) {
+                route.origin = grptraces[i][j].origin;
+                route.departure = grptraces[i][j].departure;
+                route.arrival = grptraces[i][j].arrival;
+                grpleg.push_back(route);
               }
             }
             // Get information
@@ -479,7 +491,7 @@ void Network::CyclePNG() {
                   if (edgmodidx[i][j]) {
                     events[e].index = j+1;
                     // Jump now
-                    netmodel[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                    model[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
                   }
                 }
               }
@@ -502,7 +514,7 @@ void Network::CyclePNG() {
               }
               else if (events[e].diffuse < tsim + tstep) {
                 // Jump now
-                netmodel[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
+                model[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
               }
               else {
                 evtcol[i].push_back(events[e]);
@@ -517,11 +529,11 @@ void Network::CyclePNG() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            netmodel[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            netmodel[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
@@ -533,7 +545,7 @@ void Network::CyclePNG() {
 
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();
-    netgroup.CommEvent(mevent);
+    netcomm.CommEvent(mevent);
     
     // Increment simulated time
     tsim += tstep;
@@ -541,12 +553,12 @@ void Network::CyclePNG() {
 }
 
 /**************************************************************************
-* PNG Events
+* Group Events
 **************************************************************************/
 
-// Seed events for PNG computation
+// Seed events for Group computation
 //
-void Network::SeedPNG(mEvent *msg) {
+void Network::SeedGroup(mEvent *msg) {
   // Event prototype
   event_t event;
   tick_t departure;
@@ -579,7 +591,7 @@ void Network::SeedPNG(mEvent *msg) {
   delete msg;
 
   // Start cycle after seeding events
-  thisProxy(prtidx).CyclePNG();
+  thisProxy(partidx).CycleGroup();
 }
 
 
@@ -587,28 +599,28 @@ void Network::SeedPNG(mEvent *msg) {
 * Build Messages
 **************************************************************************/
 
-// Build event seed for PNG computation
+// Build event seed for Group computation
 //
-mEvent* Network::BuildPNGSeed(std::vector<event_t>& pngseed) {
+mEvent* Network::BuildGroupSeed(std::vector<event_t>& grpseed) {
   // Initialize distribution message
   int msgSize[MSG_Event];
-  msgSize[0] = pngseed.size();     // diffuse
-  msgSize[1] = pngseed.size();     // type
-  msgSize[2] = pngseed.size();     // source
-  msgSize[3] = pngseed.size();     // index
-  msgSize[4] = pngseed.size();     // data
+  msgSize[0] = grpseed.size();     // diffuse
+  msgSize[1] = grpseed.size();     // type
+  msgSize[2] = grpseed.size();     // source
+  msgSize[3] = grpseed.size();     // index
+  msgSize[4] = grpseed.size();     // data
   mEvent *mevent = new(msgSize, 0) mEvent;
-  mevent->nevent = pngseed.size();
+  mevent->nevent = grpseed.size();
   mevent->iter = 0;
   
   // Pack event information
-  for (std::size_t i = 0; i < pngseed.size(); ++i) {
+  for (std::size_t i = 0; i < grpseed.size(); ++i) {
     // Add event to message
-    mevent->diffuse[i] = pngseed[i].diffuse;
-    mevent->type[i] = pngseed[i].type;
-    mevent->source[i] = pngseed[i].source;
-    mevent->index[i] = pngseed[i].index;
-    mevent->data[i] = pngseed[i].data;
+    mevent->diffuse[i] = grpseed[i].diffuse;
+    mevent->type[i] = grpseed[i].type;
+    mevent->source[i] = grpseed[i].source;
+    mevent->index[i] = grpseed[i].index;
+    mevent->data[i] = grpseed[i].data;
   }
 
   return mevent;

@@ -10,7 +10,7 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
-extern /*readonly*/ idx_t npnet;
+extern /*readonly*/ int netparts;
 extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t nevtday;
 
@@ -23,21 +23,21 @@ extern /*readonly*/ idx_t nevtday;
 //
 void Network::GoAhead(mGo *msg) {
   // Increment coordination
-  ++cadjprt[(prtiter + (msg->iter - iter))%2];
+  ++cadjpart[(partiter + (msg->iter - iter))%2];
   delete msg;
 
   // Start next cycle
-  if (cadjprt[prtiter] == nadjprt) {
+  if (cadjpart[partiter] == nadjpart) {
     // Bookkeepping
-    cadjprt[prtiter] = 0;
-    prtiter = (prtiter+1)%2;
+    cadjpart[partiter] = 0;
+    partiter = (partiter+1)%2;
 
     // Increment iteration
     ++iter;
 
     // Start a new cycle
-    //thisProxy(prtidx).CycleNetwork();
-    cbcycleprt.send();
+    //thisProxy(partidx).CycleNetwork();
+    cyclepart.send();
   }
 }
 
@@ -45,7 +45,7 @@ void Network::GoAhead(mGo *msg) {
 //
 void Network::CommEvent(mEvent *msg) {
   // Increment coordination
-  ++cadjprt[(prtiter + (msg->iter - iter))%2];
+  ++cadjpart[(partiter + (msg->iter - iter))%2];
 
   // Event prototype
   event_t event;
@@ -128,17 +128,17 @@ void Network::CommEvent(mEvent *msg) {
   delete msg;
 
   // Start next cycle
-  if (cadjprt[prtiter] == nadjprt) {
+  if (cadjpart[partiter] == nadjpart) {
     // Bookkeepping
-    cadjprt[prtiter] = 0;
-    prtiter = (prtiter+1)%2;
+    cadjpart[partiter] = 0;
+    partiter = (partiter+1)%2;
 
     // Increment iteration
     ++iter;
 
     // Start a new cycle
-    //thisProxy(prtidx).CycleNetwork();
-    cbcycleprt.send();
+    //thisProxy(partidx).CycleNetwork();
+    cyclepart.send();
   }
 }
 
@@ -147,7 +147,7 @@ void Network::CommEvent(mEvent *msg) {
 //
 void Network::CommStamp(mEvent *msg) {
   // Increment coordination
-  ++cadjprt[(prtiter + (msg->iter - iter))%2];
+  ++cadjpart[(partiter + (msg->iter - iter))%2];
 
   // Event prototype
   event_t event;
@@ -161,10 +161,10 @@ void Network::CommStamp(mEvent *msg) {
       stamp.diffuse = msg->diffuse[i];
       stamp.source = msg->source[i];
       // distribute to polychronous groups
-      std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = pngmap.find(msg->source[i]);
-      if (targets != pngmap.end()) {
+      std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>>::iterator targets = grpmap.find(msg->source[i]);
+      if (targets != grpmap.end()) {
         for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
-          pngwin[(*target)[0]][(*target)[1]].push_back(stamp);
+          grpwindow[(*target)[0]][(*target)[1]].push_back(stamp);
         }
       }
     }
@@ -243,17 +243,17 @@ void Network::CommStamp(mEvent *msg) {
   delete msg;
 
   // Start next cycle
-  if (cadjprt[prtiter] == npnet) {
+  if (cadjpart[partiter] == netparts) {
     // Bookkeepping
-    cadjprt[prtiter] = 0;
-    prtiter = (prtiter+1)%2;
+    cadjpart[partiter] = 0;
+    partiter = (partiter+1)%2;
 
     // Increment iteration
     ++iter;
 
     // Start a new cycle
-    //thisProxy(prtidx).CycleNetwork();
-    cbcycleprt.send();
+    //thisProxy(partidx).CycleNetwork();
+    cyclepart.send();
   }
 }
 
@@ -264,7 +264,7 @@ void Network::CommStamp(mEvent *msg) {
 
 // Move from Event Collection to Calendar (on new year)
 //
-void Network::MarkEvent() {
+void Network::SortEvent() {
   for (std::size_t i = 0; i < evtcol.size(); ++i) {
     for (std::size_t j = 0; j < evtcol[i].size(); ++j) {
       // Add to event queue or back onto spillover

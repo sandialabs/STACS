@@ -23,7 +23,7 @@ extern /*readonly*/ idx_t nevtday;
 // Receive and handle RPC messages
 //
 void Network::CommRPC(mRPC *msg) {
-  //CkPrintf("Received %" PRIidx" on %" PRIidx " in iteration %" PRIidx "\n", msg->command, prtidx, iter);
+  //CkPrintf("Received %" PRIidx" on %" PRIidx " in iteration %" PRIidx "\n", msg->command, partidx, iter);
 
   // Pausing/Checkpointing/Stepping
   //
@@ -31,22 +31,21 @@ void Network::CommRPC(mRPC *msg) {
       msg->command == RPCCOMMAND_STOP) {
     // Coordinate the synchronization iteration
     synciter = iter;
-    if (prtiter % 2 == 0 && cadjprt[0] > cadjprt[1]) { ++synciter; }
-    if (prtiter % 2 == 1 && cadjprt[1] > cadjprt[0]) { ++synciter; }
+    if (partiter % 2 == 0 && cadjpart[0] > cadjpart[1]) { ++synciter; }
+    if (partiter % 2 == 1 && cadjpart[1] > cadjpart[0]) { ++synciter; }
     // TODO make this print with debugging flag
-    //CkPrintf("Messages on %" PRIidx ": c0: %d, c1: %d, pi: % " PRIidx "\n", prtidx, cadjprt[0], cadjprt[1], prtiter);
-    //CkPrintf("Pausing %" PRIidx " in iteration %" PRIidx "\n", prtidx, synciter);
+    //CkPrintf("Messages on %" PRIidx ": c0: %d, c1: %d, pi: % " PRIidx "\n", partidx, cadjpart[0], cadjpart[1], partiter);
+    //CkPrintf("Pausing %" PRIidx " in iteration %" PRIidx "\n", partidx, synciter);
   }
   else if (msg->command == RPCCOMMAND_UNPAUSE) {
     // Resume simulation
-    //thisProxy(prtidx).CycleNetwork();
-    cbcycleprt.send();
+    cyclepart.send();
   }
   else if (msg->command == RPCCOMMAND_CHECK) {
     // Coordinate the synchronization iteration
     synciter = iter;
     // Perform checkpointing
-    thisProxy(prtidx).SaveNetwork();
+    thisProxy(partidx).SaveNetwork();
   }
   else if (msg->command == RPCCOMMAND_STEP) {
     if (msg->nrpcdata == 0) {
@@ -58,8 +57,7 @@ void Network::CommRPC(mRPC *msg) {
       synciter = iter + (idx_t) (((tick_t) (msg->rpcdata[0]*TICKS_PER_MS))/tstep);
     }
     // Resume simulation until synchronization point
-    //thisProxy(prtidx).CycleNetwork();
-    cbcycleprt.send();
+    cyclepart.send();
   }
 
   // Stimulation
@@ -68,8 +66,8 @@ void Network::CommRPC(mRPC *msg) {
     // Coordinate the syncronization iteration
     synciter = iter;
     if (msg->command == RPCCOMMAND_STIM) {
-      if (prtiter % 2 == 0 && cadjprt[0] > cadjprt[1]) { ++synciter; }
-      if (prtiter % 2 == 1 && cadjprt[1] > cadjprt[0]) { ++synciter; }
+      if (partiter % 2 == 0 && cadjpart[0] > cadjpart[1]) { ++synciter; }
+      if (partiter % 2 == 1 && cadjpart[1] > cadjpart[0]) { ++synciter; }
     }
 
     // Apply Stimuli (with offset)
@@ -117,8 +115,8 @@ void Network::CommRPC(mRPC *msg) {
     }
     // Resync if necessary
     if (msg->command == RPCCOMMAND_PSTIM) {
-      //thisProxy(prtidx).CycleNetwork();
-      cbcycleprt.send();
+      //thisProxy(partidx).CycleNetwork();
+      cyclepart.send();
     }
   }
 
@@ -128,15 +126,15 @@ void Network::CommRPC(mRPC *msg) {
     // Coordinate the syncronization iteration
     synciter = iter;
     // Resync
-    //thisProxy(prtidx).CycleNetwork();
-    cbcycleprt.send();
+    //thisProxy(partidx).CycleNetwork();
+    cyclepart.send();
   }
   else if (msg->command == RPCCOMMAND_CLOSE) {
     // Coordinate the syncronization iteration
     synciter = iter;
     // Resync
-    //thisProxy(prtidx).CycleNetwork();
-    cbcycleprt.send();
+    //thisProxy(partidx).CycleNetwork();
+    cyclepart.send();
   }
 
   // cleanup
