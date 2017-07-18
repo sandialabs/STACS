@@ -36,8 +36,6 @@ extern /*readonly*/ tick_t tepisode;
 extern /*readonly*/ idx_t episodes;
 extern /*readonly*/ int grpminlen;
 extern /*readonly*/ tick_t grpmaxdur;
-//extern /*readonly*/ idx_t grpvtxmin;
-//extern /*readonly*/ idx_t grpvtxmax;
 
 
 /**************************************************************************

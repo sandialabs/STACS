@@ -330,8 +330,8 @@ class Model {
     virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) = 0;
     virtual void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) = 0;
-    virtual void Hop(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
-    virtual void Leap(std::vector<event_t>& events) { }
+    virtual void Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { Jump(event, state, stick, auxidx); }
+    virtual void Skip(std::vector<event_t>& events) { }
   protected:
     /* Random Number Generation */
     std::mt19937 *rngine;
@@ -527,20 +527,20 @@ class Network : public CBase_Network {
     void LoadNetwork(mPart *msg);
     
     /* Simulation */
-    void InitSimCntPls(CProxy_Netdata cpdata);
-    void InitSimCntRgd(CProxy_Netdata cpdata);
-    void InitSimEpsPls(CProxy_Netdata cpdata);
-    void InitSimEpsRgd(CProxy_Netdata cpdata);
-    void CycleSimCntPls();
-    void CycleSimCntRgd();
-    void CycleSimEpsPls();
-    void CycleSimEpsRgd();
+    void InitSimContPlas(CProxy_Netdata cpdata);
+    void InitSimEpisPlas(CProxy_Netdata cpdata);
+    void InitSimCont(CProxy_Netdata cpdata);
+    void InitSimEpis(CProxy_Netdata cpdata);
+    void CycleSimContPlas();
+    void CycleSimEpisPlas();
+    void CycleSimCont();
+    void CycleSimEpis();
     
     /* Estimation */
-    void InitEstCnt(CProxy_Netdata cpdata);
-    void InitEstEps(CProxy_Netdata cpdata);
-    void CycleEstCnt();
-    void CycleEstEps();
+    void InitEstCont(CProxy_Netdata cpdata);
+    void InitEstEpis(CProxy_Netdata cpdata);
+    void CycleEstCont();
+    void CycleEstEpis();
 
     /* Communication */
     void CreateComm();
@@ -550,7 +550,12 @@ class Network : public CBase_Network {
     void CommStamp(mEvent *msg);
     
     // Computation
-    void SortEvent();
+    void SortEventCalendar();
+    void SkipEventPlas();
+    void SkipEvent();
+    void HandleEventPlas(event_t &event, const idx_t i);
+    void HandleEvent(event_t &event, const idx_t i);
+    void EstimateGroup(const idx_t i);
     
     /* Saving */
     void SaveNetwork();
@@ -613,10 +618,10 @@ class Network : public CBase_Network {
     std::vector<event_t> evtext; // external events (and extra spillover)
     std::vector<event_t> evtrpc; // events generated from RPC
     /* Periodic Events */
-    tick_t tleap;
-    std::vector<event_t> evtleap; // set of periodic events
-    std::vector<bool> leaplist; // models with periodic events
-    std::vector<std::vector<std::array<idx_t, 2>>> leapidx; // indices into models
+    tick_t tskip;
+    std::vector<event_t> evtskip; // set of periodic events
+    std::vector<bool> skiplist; // models with periodic events
+    std::vector<std::vector<std::array<idx_t, 2>>> skipidx; // indices into models
     /* Recording */
     std::vector<event_t> evtlog; // event logging
     std::vector<bool> evtloglist; // types of events to log

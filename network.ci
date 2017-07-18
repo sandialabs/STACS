@@ -107,19 +107,19 @@ module network {
     entry Network(mModel *msg);
     entry void LoadNetwork(mPart *msg);
     
-    entry void InitSimCntPls(CProxy_Netdata cpdata);
-    entry void InitSimCntRgd(CProxy_Netdata cpdata);
-    entry void InitSimEpsPls(CProxy_Netdata cpdata);
-    entry void InitSimEpsRgd(CProxy_Netdata cpdata);
-    entry void CycleSimCntPls();
-    entry void CycleSimCntRgd();
-    entry void CycleSimEpsPls();
-    entry void CycleSimEpsRgd();
+    entry void InitSimContPlas(CProxy_Netdata cpdata);
+    entry void InitSimEpisPlas(CProxy_Netdata cpdata);
+    entry void InitSimCont(CProxy_Netdata cpdata);
+    entry void InitSimEpis(CProxy_Netdata cpdata);
+    entry void CycleSimContPlas();
+    entry void CycleSimEpisPlas();
+    entry void CycleSimCont();
+    entry void CycleSimEpis();
     
-    entry void InitEstCnt(CProxy_Netdata cpdata);
-    entry void InitEstEps(CProxy_Netdata cpdata);
-    entry void CycleEstCnt();
-    entry void CycleEstEps();
+    entry void InitEstCont(CProxy_Netdata cpdata);
+    entry void InitEstEpis(CProxy_Netdata cpdata);
+    entry void CycleEstCont();
+    entry void CycleEstEpis();
     
     entry void GoAhead(mGo *msg);
     entry void CommEvent(mEvent *msg);

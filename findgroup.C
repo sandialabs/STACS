@@ -117,11 +117,11 @@ void Network::FindGroup() {
                 event.source = i;
                 event.data = 0.0;
                 event.index = anchor[j0]+1;
-                model[edgmodidx[i][anchor[j0]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j0]]][vtxmodidx[i]]);
+                model[edgmodidx[i][anchor[j0]]]->Jump(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j0]]][vtxmodidx[i]]);
                 event.index = anchor[j1]+1;
-                model[edgmodidx[i][anchor[j1]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j1]]][vtxmodidx[i]]);
+                model[edgmodidx[i][anchor[j1]]]->Jump(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j1]]][vtxmodidx[i]]);
                 event.index = anchor[j2]+1;
-                model[edgmodidx[i][anchor[j2]]]->Hop(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j2]]][vtxmodidx[i]]);
+                model[edgmodidx[i][anchor[j2]]]->Jump(event, state[i], stick[i], edgaux[edgmodidx[i][anchor[j2]]][vtxmodidx[i]]);
                 tick_t tdrift = 0;
                 tick_t tstop = tstep * 5; // Strongly spiking triplets only
                 while (tdrift < tstop) {
@@ -347,35 +347,14 @@ void Network::CycleGroup() {
 
     // Clear event buffer
     evtext.clear();
-    idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      SortEvent();
+      SortEventCalendar();
     }
     
     // Check for periodic events
-    if (tsim >= tleap) {
-      std::vector<event_t>::iterator event = evtleap.begin();
-      // Compute periodic events
-      while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set model index
-        idx_t n = event->source;
-        // Loop through all models
-        for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
-          event->index = leapidx[n][m][1];
-          if (event->index) {
-            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
-          }
-          else {
-            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
-          }
-        }
-        // Update timing
-        event->diffuse += (tick_t)(event->data*TICKS_PER_MS);
-        ++event;
-      }
-      std::sort(evtleap.begin(), evtleap.end());
-      tleap = evtleap.front().diffuse;
+    if (tsim >= tskip) {
+      SkipEvent();
     }
     
     // Perform computation
@@ -389,14 +368,13 @@ void Network::CycleGroup() {
 
       // Sort events
       std::sort(evtcal[i][evtday].begin(), evtcal[i][evtday].end());
-      nevent += evtcal[i][evtday].size();
 
       // Perform events starting at beginning of step
       std::vector<event_t>::iterator event = evtcal[i][evtday].begin();
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           // Add to contribution log
           if (event->type == EVENT_SPIKE) {
             trace_t trace;
@@ -408,7 +386,7 @@ void Network::CycleGroup() {
         }
         // vertex events
         else {
-          model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
@@ -430,7 +408,6 @@ void Network::CycleGroup() {
         tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
-        // TODO: Conversion from edge indices to global (for individual output)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
             // Polychronization information
@@ -446,80 +423,7 @@ void Network::CycleGroup() {
                 grpleg.push_back(route);
               }
             }
-            // Get information
-            idx_t target = events[e].source;
-            idx_t index = events[e].index;
-            // reindex to global
-            events[e].source = vtxidx[i];
-            // Remote events (multicast to edges)
-            if (target & REMOTE_EDGES) {
-              // reindex to global
-              events[e].index = vtxidx[i];
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Remote event (singlecast to edge)
-            else if (target & REMOTE_EDGE) {
-              // reindex to global
-              // TODO: get this value from the target mapping
-              events[e].index = adjcy[i][index];
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Remote event (singlecast to vertex)
-            else if (target & REMOTE_VERTEX) {
-              // reindex to global
-              // TODO: get this value from the target mapping
-              events[e].index = -adjcy[i][index]-1; // negative index indicates vertex
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Local events (multicast to edges)
-            if (target & LOCAL_EDGES) {
-              events[e].source = -1; // negative source indicates local event
-              // Jump loops
-              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
-                  }
-                }
-              }
-              else if (events[e].diffuse < tsim + tstep) {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    // Jump now
-                    model[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
-                  }
-                }
-              }
-              else {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    evtcol[i].push_back(events[e]);
-                  }
-                }
-              }
-            }
-            // Local event (singlecast to vertex)
-            if (target & LOCAL_VERTEX) {
-              // vertex to itself
-              events[e].source = -1; // negative source indicates local event
-              events[e].index = 0;
-              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
-              }
-              else if (events[e].diffuse < tsim + tstep) {
-                // Jump now
-                model[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
-              }
-              else {
-                evtcol[i].push_back(events[e]);
-              }
-            }
+            HandleEvent(events[e], i);
           }
           // clear log for next time
           events.clear();
@@ -529,11 +433,11 @@ void Network::CycleGroup() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }

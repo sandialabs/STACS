@@ -48,10 +48,10 @@ CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs) {
 
 // Coordination with NetData chare array
 //
-void Network::InitEstCnt(CProxy_Netdata cpdata) {
+void Network::InitEstCont(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleEstCnt(), partidx, thisProxy);
+  cyclepart = CkCallback(CkIndex_Network::CycleEstCont(), partidx, thisProxy);
   
   // Request network part from input
   netdata(fileidx).LoadNetwork(partidx,
@@ -60,10 +60,10 @@ void Network::InitEstCnt(CProxy_Netdata cpdata) {
 
 // Coordination with NetData chare array
 //
-void Network::InitEstEps(CProxy_Netdata cpdata) {
+void Network::InitEstEpis(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleEstEps(), partidx, thisProxy);
+  cyclepart = CkCallback(CkIndex_Network::CycleEstEpis(), partidx, thisProxy);
 
   // Initialization
   teps = 0;
@@ -127,7 +127,7 @@ void Network::SaveFinalEstimate() {
 
 // Main control flow
 //
-void Network::CycleEstCnt() {
+void Network::CycleEstCont() {
   // Check if simulation time is complete
   if (tsim >= tmax) {
     // return control to main
@@ -171,35 +171,15 @@ void Network::CycleEstCnt() {
 
     // Clear event buffer
     evtext.clear();
-    idx_t nevent = 0;
+    
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      SortEvent();
+      SortEventCalendar();
     }
     
     // Check for periodic events
-    if (tsim >= tleap) {
-      std::vector<event_t>::iterator event = evtleap.begin();
-      // Compute periodic events
-      while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set model index
-        idx_t n = event->source;
-        // Loop through all models
-        for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
-          event->index = leapidx[n][m][1];
-          if (event->index) {
-            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
-          }
-          else {
-            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
-          }
-        }
-        // Update timing
-        event->diffuse += (tick_t)(event->data*TICKS_PER_MS);
-        ++event;
-      }
-      std::sort(evtleap.begin(), evtleap.end());
-      tleap = evtleap.front().diffuse;
+    if (tsim >= tskip) {
+      SkipEvent();
     }
     
     // Perform computation
@@ -209,73 +189,23 @@ void Network::CycleEstCnt() {
 
       // Sort events
       std::sort(evtcal[i][evtday].begin(), evtcal[i][evtday].end());
-      nevent += evtcal[i][evtday].size();
 
       // Perform events starting at beginning of step
       std::vector<event_t>::iterator event = evtcal[i][evtday].begin();
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
 
       // Polychronization
-      for (std::size_t p = 0; p < grpstamps[i].size(); ++p) {
-        // Pop out any old stamps
-        while (!grpwindow[i][p].empty()) {
-          if (grpwindow[i][p].front().diffuse + grpdur[i][p] <= tdrift) {
-            grpwindow[i][p].pop_front();
-          }
-          else {
-            break;
-          }
-        }
-        // Template event
-        event_t event;
-        event.diffuse = tdrift;
-        event.type = EVENT_GROUP;
-        event.data = 0.0;
-        // Check for threshold number of stamps
-        // TODO: Threshold based off of excitatory neurons only?
-        if (grpwindow[i][p].size() > (grpstamps[i][p].size() / 2)) {
-          // Compute group activation
-          int nactive = 0;
-          std::deque<stamp_t>::iterator grpcan = grpwindow[i][p].begin();
-          for (std::size_t t = 0; t < grpstamps[i][p].size(); ++t) {
-            while (grpcan != grpwindow[i][p].end()) {
-              // TODO: Refine the acceptable jitter
-              if ((grpcan->diffuse + grpdur[i][p] - tdrift + 5 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift + 4 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift + 3 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift + 2 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift + TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source)) {
-                ++nactive;
-              }
-              else if (grpcan->diffuse + grpdur[i][p] - tdrift > grpstamps[i][p][t].diffuse) {
-                break;
-              }
-              ++grpcan;
-            }
-          }
-          if (nactive > (grpstamps[i][p].size() / 2)) {
-            CkPrintf("PNG %d, %d activated\n", vtxidx[i], p);
-            // Record group activation
-            event.source = vtxidx[i];
-            event.index = p;
-            event.data = ((real_t)(grpdur[i][p]/TICKS_PER_MS));
-            grplog.push_back(event);
-            // Clear window for repeats
-            grpwindow[i][p].clear();
-          }
-        }
-      }
+      EstimateGroup(i);
 
       // Computation
       while (tdrift < tstop) {
@@ -283,87 +213,13 @@ void Network::CycleEstCnt() {
         tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
-        // TODO: Conversion from edge indices to global (for individual output)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
-            // Get information
-            idx_t target = events[e].source;
-            idx_t index = events[e].index;
-            // reindex to global
-            events[e].source = vtxidx[i];
             // Record listed event
-            if (evtloglist[events[e].type]) {
-              evtlog.push_back(events[e]);
-            }
-            // Remote events (multicast to edges)
-            if (target & REMOTE_EDGES) {
-              // reindex to global
-              events[e].index = vtxidx[i];
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Remote event (singlecast to edge)
-            else if (target & REMOTE_EDGE) {
-              // reindex to global
-              // TODO: get this value from the target mapping
-              events[e].index = adjcy[i][index];
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Remote event (singlecast to vertex)
-            else if (target & REMOTE_VERTEX) {
-              // reindex to global
-              // TODO: get this value from the target mapping
-              events[e].index = -adjcy[i][index]-1; // negative index indicates vertex
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Local events (multicast to edges)
-            if (target & LOCAL_EDGES) {
-              events[e].source = -1; // negative source indicates local event
-              // Jump loops
-              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
-                  }
-                }
-              }
-              else if (events[e].diffuse < tsim + tstep) {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    // Jump now
-                    model[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
-                  }
-                }
-              }
-              else {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    evtcol[i].push_back(events[e]);
-                  }
-                }
-              }
-            }
-            // Local event (singlecast to vertex)
-            if (target & LOCAL_VERTEX) {
-              // vertex to itself
-              events[e].source = -1; // negative source indicates local event
-              events[e].index = 0;
-              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
-              }
-              else if (events[e].diffuse < tsim + tstep) {
-                // Jump now
-                model[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
-              }
-              else {
-                evtcol[i].push_back(events[e]);
-              }
-            }
+            //if (evtloglist[events[e].type]) {
+            //  evtlog.push_back(events[e]);
+            //}
+            HandleEvent(events[e], i);
           }
           // clear log for next time
           events.clear();
@@ -373,21 +229,19 @@ void Network::CycleEstCnt() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
       }
 
       // Clear event queue
-      //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
 
     // Send messages to entire network
     // TODO: Reduce communication due to monitoring
@@ -398,7 +252,7 @@ void Network::CycleEstCnt() {
     tsim += tstep;
 
     // Add new records
-    AddRecord();
+    //AddRecord();
   }
 }
 
@@ -409,7 +263,7 @@ void Network::CycleEstCnt() {
 
 // Main control flow
 //
-void Network::CycleEstEps() {
+void Network::CycleEstEpis() {
   // Check if episode is complete
   if (tsim >= teps) {
     // Check if all episodes are complete
@@ -471,35 +325,15 @@ void Network::CycleEstEps() {
 
     // Clear event buffer
     evtext.clear();
-    idx_t nevent = 0;
+
     // Redistribute any events (on new year)
     if (evtday == 0) {
-      SortEvent();
+      SortEventCalendar();
     }
     
     // Check for periodic events
-    if (tsim >= tleap) {
-      std::vector<event_t>::iterator event = evtleap.begin();
-      // Compute periodic events
-      while (event != evtleap.end() && event->diffuse <= tsim) {
-        // Set model index
-        idx_t n = event->source;
-        // Loop through all models
-        for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
-          event->index = leapidx[n][m][1];
-          if (event->index) {
-            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
-          }
-          else {
-            model[n]->Hop(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
-          }
-        }
-        // Update timing
-        event->diffuse += (tick_t)(event->data*TICKS_PER_MS);
-        ++event;
-      }
-      std::sort(evtleap.begin(), evtleap.end());
-      tleap = evtleap.front().diffuse;
+    if (tsim >= tskip) {
+      SkipEvent();
     }
     
     // Perform computation
@@ -509,73 +343,23 @@ void Network::CycleEstEps() {
 
       // Sort events
       std::sort(evtcal[i][evtday].begin(), evtcal[i][evtday].end());
-      nevent += evtcal[i][evtday].size();
 
       // Perform events starting at beginning of step
       std::vector<event_t>::iterator event = evtcal[i][evtday].begin();
       while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
         // edge events
         if (event->index) {
-          model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+          model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
         }
         // vertex events
         else {
-          model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+          model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
         }
         ++event;
       }
 
       // Polychronization
-      for (std::size_t p = 0; p < grpstamps[i].size(); ++p) {
-        // Pop out any old stamps
-        while (!grpwindow[i][p].empty()) {
-          if (grpwindow[i][p].front().diffuse + grpdur[i][p] <= tdrift) {
-            grpwindow[i][p].pop_front();
-          }
-          else {
-            break;
-          }
-        }
-        // Template event
-        event_t event;
-        event.diffuse = tdrift;
-        event.type = EVENT_GROUP;
-        event.data = 0.0;
-        // Check for threshold number of stamps
-        // TODO: Threshold based off of excitatory neurons only?
-        if (grpwindow[i][p].size() > (grpstamps[i][p].size() / 2)) {
-          // Compute group activation
-          int nactive = 0;
-          std::deque<stamp_t>::iterator grpcan = grpwindow[i][p].begin();
-          for (std::size_t t = 0; t < grpstamps[i][p].size(); ++t) {
-            while (grpcan != grpwindow[i][p].end()) {
-              // TODO: Refine the acceptable jitter
-              if ((grpcan->diffuse + grpdur[i][p] - tdrift + 5 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift + 4 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift + 3 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift + 2 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift + TICKS_PER_MS == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source) ||
-                  (grpcan->diffuse + grpdur[i][p] - tdrift == grpstamps[i][p][t].diffuse && grpcan->source == grpstamps[i][p][t].source)) {
-                ++nactive;
-              }
-              else if (grpcan->diffuse + grpdur[i][p] - tdrift > grpstamps[i][p][t].diffuse) {
-                break;
-              }
-              ++grpcan;
-            }
-          }
-          if (nactive > (grpstamps[i][p].size() / 2)) {
-            CkPrintf("PNG %d, %d activated\n", vtxidx[i], p);
-            // Record group activation
-            event.source = vtxidx[i];
-            event.index = p;
-            event.data = ((real_t)(grpdur[i][p]/TICKS_PER_MS));
-            grplog.push_back(event);
-            // Clear window for repeats
-            grpwindow[i][p].clear();
-          }
-        }
-      }
+      EstimateGroup(i);
 
       // Computation
       while (tdrift < tstop) {
@@ -583,87 +367,13 @@ void Network::CycleEstEps() {
         tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
 
         // Handle generated events (if any)
-        // TODO: Conversion from edge indices to global (for individual output)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
-            // Get information
-            idx_t target = events[e].source;
-            idx_t index = events[e].index;
-            // reindex to global
-            events[e].source = vtxidx[i];
             // Record listed event
-            if (evtloglist[events[e].type]) {
-              evtlog.push_back(events[e]);
-            }
-            // Remote events (multicast to edges)
-            if (target & REMOTE_EDGES) {
-              // reindex to global
-              events[e].index = vtxidx[i];
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Remote event (singlecast to edge)
-            else if (target & REMOTE_EDGE) {
-              // reindex to global
-              // TODO: get this value from the target mapping
-              events[e].index = adjcy[i][index];
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Remote event (singlecast to vertex)
-            else if (target & REMOTE_VERTEX) {
-              // reindex to global
-              // TODO: get this value from the target mapping
-              events[e].index = -adjcy[i][index]-1; // negative index indicates vertex
-              // push to communication
-              evtext.push_back(events[e]);
-            }
-            // Local events (multicast to edges)
-            if (target & LOCAL_EDGES) {
-              events[e].source = -1; // negative source indicates local event
-              // Jump loops
-              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
-                  }
-                }
-              }
-              else if (events[e].diffuse < tsim + tstep) {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    // Jump now
-                    model[edgmodidx[i][j]]->Hop(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
-                  }
-                }
-              }
-              else {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    evtcol[i].push_back(events[e]);
-                  }
-                }
-              }
-            }
-            // Local event (singlecast to vertex)
-            if (target & LOCAL_VERTEX) {
-              // vertex to itself
-              events[e].source = -1; // negative source indicates local event
-              events[e].index = 0;
-              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
-              }
-              else if (events[e].diffuse < tsim + tstep) {
-                // Jump now
-                model[vtxmodidx[i]]->Hop(events[e], state[i], stick[i], vtxaux[i]);
-              }
-              else {
-                evtcol[i].push_back(events[e]);
-              }
-            }
+            //if (evtloglist[events[e].type]) {
+            //  evtlog.push_back(events[e]);
+            //}
+            HandleEvent(events[e], i);
           }
           // clear log for next time
           events.clear();
@@ -673,24 +383,24 @@ void Network::CycleEstEps() {
         while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
           // edge events
           if (event->index) {
-            model[edgmodidx[i][event->index-1]]->Hop(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
+            model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
           }
           // vertex events
           else {
-            model[vtxmodidx[i]]->Hop(*event, state[i], stick[i], vtxaux[i]);
+            model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
           }
           ++event;
         }
       }
 
       // Clear event queue
-      //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
 
     // Send messages to entire network
     // TODO: Reduce communication due to monitoring
+    //       Make two communication channels
+    //       One for events, and the other for stamps
     mEvent *mevent = BuildEvent();
     thisProxy.CommStamp(mevent);
 
@@ -698,6 +408,66 @@ void Network::CycleEstEps() {
     tsim += tstep;
     
     // Add new records
-    AddRecord();
+    //AddRecord();
+  }
+}
+
+
+/**************************************************************************
+* Network Estimation Helpers
+**************************************************************************/
+
+// Estimate any group activations
+//
+void Network::EstimateGroup(idx_t i) {
+  for (std::size_t p = 0; p < grpstamps[i].size(); ++p) {
+    // Pop out any old stamps
+    while (!grpwindow[i][p].empty()) {
+      if (grpwindow[i][p].front().diffuse + grpdur[i][p] <= tsim) {
+        grpwindow[i][p].pop_front();
+      }
+      else {
+        break;
+      }
+    }
+    // Template event
+    event_t event;
+    event.diffuse = tsim;
+    event.type = EVENT_GROUP;
+    event.data = 0.0;
+    // Check for threshold number of stamps
+    // TODO: Threshold based off of excitatory neurons only?
+    if (grpwindow[i][p].size() > (grpstamps[i][p].size() / 2)) {
+      // Compute group activation
+      int nactive = 0;
+      std::deque<stamp_t>::iterator stamp = grpwindow[i][p].begin();
+      for (std::size_t t = 0; t < grpstamps[i][p].size(); ++t) {
+        while (stamp != grpwindow[i][p].end()) {
+          // TODO: Refine the acceptable jitter
+          if ((stamp->diffuse + grpdur[i][p] - tsim + 5 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && stamp->source == grpstamps[i][p][t].source) ||
+              (stamp->diffuse + grpdur[i][p] - tsim + 4 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && stamp->source == grpstamps[i][p][t].source) ||
+              (stamp->diffuse + grpdur[i][p] - tsim + 3 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && stamp->source == grpstamps[i][p][t].source) ||
+              (stamp->diffuse + grpdur[i][p] - tsim + 2 * TICKS_PER_MS == grpstamps[i][p][t].diffuse && stamp->source == grpstamps[i][p][t].source) ||
+              (stamp->diffuse + grpdur[i][p] - tsim + TICKS_PER_MS == grpstamps[i][p][t].diffuse && stamp->source == grpstamps[i][p][t].source) ||
+              (stamp->diffuse + grpdur[i][p] - tsim == grpstamps[i][p][t].diffuse && stamp->source == grpstamps[i][p][t].source)) {
+            ++nactive;
+          }
+          else if (stamp->diffuse + grpdur[i][p] - tsim > grpstamps[i][p][t].diffuse) {
+            break;
+          }
+          ++stamp;
+        }
+      }
+      if (nactive > (grpstamps[i][p].size() / 2)) {
+        CkPrintf("PNG %d, %d activated\n", vtxidx[i], p);
+        // Record group activation
+        event.source = vtxidx[i];
+        event.index = p;
+        event.data = ((real_t)(grpdur[i][p]/TICKS_PER_MS));
+        grplog.push_back(event);
+        // Clear window for repeats
+        grpwindow[i][p].clear();
+      }
+    }
   }
 }

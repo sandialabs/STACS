@@ -31,7 +31,7 @@ class IzhiThalamus : public ModelTmpl < 100, IzhiThalamus > {
     
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
-    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
+    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
 };
 
 
@@ -58,10 +58,3 @@ tick_t IzhiThalamus::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
   }
   return tdiff;
 }
-
-// Simulation jump
-//
-void IzhiThalamus::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
-  //CkPrintf("Jumping Vtx\n");
-}
-
