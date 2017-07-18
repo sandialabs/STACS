@@ -347,6 +347,10 @@ void Network::HandleEventPlas(event_t& event, const idx_t i) {
   idx_t index = event.index;
   // Reindex to global
   event.source = vtxidx[i];
+  // Record listed event
+  if (evtloglist[event.type]) {
+    evtlog.push_back(event);
+  }
   // Remote events (multicast to edges)
   if (target & REMOTE_EDGES) {
     // reindex to global
@@ -427,6 +431,10 @@ void Network::HandleEvent(event_t& event, const idx_t i) {
   idx_t index = event.index;
   // Reindex to global
   event.source = vtxidx[i];
+  // Record listed event
+  if (evtloglist[event.type]) {
+    evtlog.push_back(event);
+  }
   // Remote events (multicast to edges)
   if (target & REMOTE_EDGES) {
     // reindex to global

@@ -57,7 +57,7 @@ void Network::InitGroup(CProxy_Netdata cpdata) {
   compidx = grpvtxmin;
   ccomp = 0;
   ncomp = 0;
-  evalpart = 0;
+  compart = 0;
   
   // Request network part from input
   netdata(fileidx).LoadNetwork(partidx, 
@@ -188,7 +188,7 @@ void Network::ComputeGroup(idx_t nseeds, int grpart) {
   // Bookkeeping
   ccomp = 0;
   ncomp = nseeds;
-  evalpart = grpart;
+  compart = grpart;
   tcomp = grpmaxdur;
 
   thisProxy(partidx).ComputeGroup();
@@ -323,7 +323,7 @@ void Network::CycleGroup() {
     
     // Reduce Group information
     contribute(grpleg.size()*sizeof(route_t), grpleg.data(), net_group, 
-        CkCallback(CkIndex_Network::EvalGroup(NULL), evalpart, thisProxy));
+        CkCallback(CkIndex_Network::EvalGroup(NULL), compart, thisProxy));
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
@@ -423,7 +423,81 @@ void Network::CycleGroup() {
                 grpleg.push_back(route);
               }
             }
-            HandleEvent(events[e], i);
+            // TODO: Conversion from edge indices to global (for individual output)
+            // Get information
+            idx_t target = events[e].source;
+            idx_t index = events[e].index;
+            // Reindex to global
+            events[e].source = vtxidx[i];
+            // Remote events (multicast to edges)
+            if (target & REMOTE_EDGES) {
+              // reindex to global
+              events[e].index = vtxidx[i];
+              // push to communication
+              evtext.push_back(events[e]);
+            }
+            // Remote event (singlecast to edge)
+            else if (target & REMOTE_EDGE) {
+              // reindex to global
+              // TODO: get this value from the target mapping
+              events[e].index = adjcy[i][index];
+              // push to communication
+              evtext.push_back(events[e]);
+            }
+            // Remote event (singlecast to vertex)
+            else if (target & REMOTE_VERTEX) {
+              // reindex to global
+              // TODO: get this value from the target mapping
+              events[e].index = -adjcy[i][index]-1; // negative index indicates vertex
+              // push to communication
+              evtext.push_back(events[e]);
+            }
+            // Local events (multicast to edges)
+            if (target & LOCAL_EDGES) {
+              events[e].source = -1; // negative source indicates local event
+              // Jump loops
+              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
+                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
+                  if (edgmodidx[i][j]) {
+                    events[e].index = j+1;
+                    evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
+                  }
+                }
+              }
+              else if (events[e].diffuse < tsim + tstep) {
+                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
+                  if (edgmodidx[i][j]) {
+                    events[e].index = j+1;
+                    // Jump now
+                    model[edgmodidx[i][j]]->Jump(events[e], state[i], stick[i], edgaux[edgmodidx[i][j]][vtxmodidx[i]]);
+                  }
+                }
+              }
+              else {
+                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
+                  if (edgmodidx[i][j]) {
+                    events[e].index = j+1;
+                    evtcol[i].push_back(events[e]);
+                  }
+                }
+              }
+            }
+            // Local event (singlecast to vertex)
+            if (target & LOCAL_VERTEX) {
+              // vertex to itself
+              events[e].source = -1; // negative source indicates local event
+              events[e].index = 0;
+              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
+                evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
+              }
+              else if (events[e].diffuse < tsim + tstep) {
+                // Jump now
+                model[vtxmodidx[i]]->Jump(events[e], state[i], stick[i], vtxaux[i]);
+              }
+              else {
+                evtcol[i].push_back(events[e]);
+              }
+            }
           }
           // clear log for next time
           events.clear();

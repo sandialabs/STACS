@@ -82,6 +82,10 @@ void Network::InitEstEpis(CProxy_Netdata cpdata) {
 // Send Estimates for writing
 //
 void Network::SaveEstimate() {
+  // Build record message for saving
+  mRecord* mrecord = BuildRecord();
+  netdata(fileidx).SaveRecord(mrecord);
+
   if (partidx == 0) {
     // Recording information
     event_t event;
@@ -104,6 +108,10 @@ void Network::SaveEstimate() {
 // Send Estimates for writing (final)
 //
 void Network::SaveFinalEstimate() {
+  // Build record message for saving
+  mRecord* mrecord = BuildRecord();
+  netdata(fileidx).SaveFinalRecord(mrecord);
+  
   if (partidx == 0) {
     // Recording information
     event_t event;
@@ -215,10 +223,6 @@ void Network::CycleEstCont() {
         // Handle generated events (if any)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
-            // Record listed event
-            //if (evtloglist[events[e].type]) {
-            //  evtlog.push_back(events[e]);
-            //}
             HandleEvent(events[e], i);
           }
           // clear log for next time
@@ -252,7 +256,7 @@ void Network::CycleEstCont() {
     tsim += tstep;
 
     // Add new records
-    //AddRecord();
+    AddRecord();
   }
 }
 
@@ -369,10 +373,6 @@ void Network::CycleEstEpis() {
         // Handle generated events (if any)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
-            // Record listed event
-            //if (evtloglist[events[e].type]) {
-            //  evtlog.push_back(events[e]);
-            //}
             HandleEvent(events[e], i);
           }
           // clear log for next time
@@ -408,7 +408,7 @@ void Network::CycleEstEpis() {
     tsim += tstep;
     
     // Add new records
-    //AddRecord();
+    AddRecord();
   }
 }
 

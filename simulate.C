@@ -186,10 +186,6 @@ void Network::CycleSimContPlas() {
         // Handle generated events (if any)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
-            // Record listed event
-            if (evtloglist[events[e].type]) {
-              evtlog.push_back(events[e]);
-            }
             HandleEventPlas(events[e], i);
           }
           // clear log for next time
@@ -319,10 +315,6 @@ void Network::CycleSimCont() {
         // Handle generated events (if any)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
-            // Record listed event
-            if (evtloglist[events[e].type]) {
-              evtlog.push_back(events[e]);
-            }
             HandleEvent(events[e], i);
           }
           // clear log for next time
@@ -467,10 +459,6 @@ void Network::CycleSimEpisPlas() {
         // Handle generated events (if any)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
-            // Record listed event
-            if (evtloglist[events[e].type]) {
-              evtlog.push_back(events[e]);
-            }
             HandleEventPlas(events[e], i);
           }
           // clear log for next time
@@ -602,10 +590,6 @@ void Network::CycleSimEpis() {
         // Handle generated events (if any)
         if (events.size()) {
           for (std::size_t e = 0; e < events.size(); ++e) {
-            // Record listed event
-            if (evtloglist[events[e].type]) {
-              evtlog.push_back(events[e]);
-            }
             HandleEvent(events[e], i);
           }
           // clear log for next time

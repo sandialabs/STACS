@@ -329,7 +329,7 @@ void Main::Stop() {
   }
   else if (runmode == RUNMODE_ESTIMATE) {
     network.SaveFinalEstimate();
-    ++nhalt;
+    ++nhalt; ++nhalt;
     network.CloseNetwork();
     ++nhalt;
   }

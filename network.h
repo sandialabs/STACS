@@ -651,9 +651,9 @@ class Network : public CBase_Network {
     idx_t epsidx;
     /* Computation */
     tick_t tcomp;
-    idx_t compidx;
     idx_t ncomp, ccomp;
-    int evalpart;
+    idx_t compidx;
+    int compart;
     /* Coordination */
     idx_t iter;
     idx_t dispiter;
