@@ -14,7 +14,7 @@
 * Ports
 **************************************************************************/
 
-class YarpMFCCTimePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
+class YaudWinMFCCEpisPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
   private:
     // Sound samples
     real_t samplefreq;
@@ -34,16 +34,15 @@ class YarpMFCCTimePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
     //char melfile[100];
   public:
     std::deque<std::vector<real_t>> mels;
-    YarpMFCCTimePort(int nm);
+    YaudWinMFCCEpisPort(int nm);
     //using yarp::os::BufferedPort<yarp::sig::Sound>::onRead;
     virtual void onRead (yarp::sig::Sound& ssig) {
       // Receive sound
       CkPrintf("Received %d samples\n", ssig.getSamples());
-      std::size_t noldsample = samplebuffer.size();
-      std::size_t nnewsample = ssig.getSamples();
-      samplebuffer.resize(noldsample + nnewsample);
-      for (std::size_t s = 0; s < nnewsample; ++s) {
-        samplebuffer[noldsample+s] = ((real_t)((sample_t)ssig.get(s)))/32768.0;
+      std::size_t nsample = ssig.getSamples();
+      samplebuffer.resize(nsample);
+      for (std::size_t s = 0; s < nsample; ++s) {
+        samplebuffer[s] = ((real_t)((sample_t)ssig.get(s)))/32768.0;
       }
       //CkPrintf("Sample samples: %f, %f, %f, %f, %f\n", samplebuffer[50], samplebuffer[100], samplebuffer[150], samplebuffer[200], samplebuffer[250]);
       // Split samples into windows
@@ -81,11 +80,11 @@ class YarpMFCCTimePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
         //mels.pop_front();
       }
       // Delete to the end of the processed sound samples
-      samplebuffer.erase(samplebuffer.begin(), samplebuffer.begin() + nwindow * (ninput - noverlap));
+      samplebuffer.clear();//erase(samplebuffer.begin(), samplebuffer.begin() + nwindow * (ninput - noverlap));
     }
 };
 
-YarpMFCCTimePort::YarpMFCCTimePort(int nm) {
+YaudWinMFCCEpisPort::YaudWinMFCCEpisPort(int nm) {
   // Set up parameters
   // Sound samples
   samplefreq = 16000.0; // Hz
@@ -149,14 +148,13 @@ YarpMFCCTimePort::YarpMFCCTimePort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpMFCCTime : public ModelTmpl < 103, YarpMFCCTime > {
+class YaudWinMFCCEpis : public ModelTmpl < 102, YaudWinMFCCEpis > {
   public:
     /* Constructor */
-    YarpMFCCTime() {
+    YaudWinMFCCEpis() {
       // parameters
-      paramlist.resize(2);
+      paramlist.resize(1);
       paramlist[0] = "nmel";
-      paramlist[1] = "ampl";
       // states
       statelist.resize(0);
       // sticks
@@ -181,9 +179,11 @@ class YarpMFCCTime : public ModelTmpl < 103, YarpMFCCTime > {
     void OpenPorts();
     void ClosePorts();
 
+    void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick);
+
   private:
 #ifdef STACS_WITH_YARP
-    YarpMFCCTimePort* port;
+    YaudWinMFCCEpisPort* port;
     yarp::os::BufferedPort<yarp::os::Bottle>* preq;
 #endif
     tick_t tsample;
@@ -194,9 +194,21 @@ class YarpMFCCTime : public ModelTmpl < 103, YarpMFCCTime > {
 * Class methods
 **************************************************************************/
 
+// Rerun model
+//
+void YaudWinMFCCEpis::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+#ifdef STACS_WITH_YARP
+  // Request new phone
+  yarp::os::Bottle& b = preq->prepare();
+  b.clear();
+  b.addInt((int) port->mels.size());
+  preq->write();
+#endif
+}
+
 // Simulation step
 //
-tick_t YarpMFCCTime::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
+tick_t YaudWinMFCCEpis::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
 #ifdef STACS_WITH_YARP
   // Check every 16 ms
   // TODO: move to parameters
@@ -214,94 +226,25 @@ tick_t YarpMFCCTime::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
     // total time of 32ms
     for (idx_t i = 0; i < (idx_t) param[0]; ++i) {
       event.index = i;
-      if (mel[i] < -15.0) {
-        continue;
-      } else if (mel[i] < -14) {
-        event.diffuse = tdrift + 10 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 11 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -13) {
-        event.diffuse = tdrift + 9 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 10 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -12) {
-        event.diffuse = tdrift + 8 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 9 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -11) {
-        event.diffuse = tdrift + 7 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 8 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -10) {
-        event.diffuse = tdrift + 6 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 7 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -9) {
-        event.diffuse = tdrift + 5 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 6 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -8) {
-        event.diffuse = tdrift + 4 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 5 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -7) {
-        event.diffuse = tdrift + 3 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 4 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -6) {
-        event.diffuse = tdrift + 2 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 3 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else if (mel[i] < -5) {
-        event.diffuse = tdrift + 1 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 2 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      } else {
-        event.diffuse = tdrift + 0 * TICKS_PER_MS;
-        event.data = param[1];
-        events.push_back(event);
-        event.diffuse = tdrift + 1 * TICKS_PER_MS;
-        event.data = -param[1];
-        events.push_back(event);
-      }
+      event.diffuse = tdrift + 4 * TICKS_PER_MS;
+      event.data = (mel[i] + 16.0)/3;
+      events.push_back(event);
+      event.diffuse = tdrift + 8 * TICKS_PER_MS;
+      event.data = (mel[i] + 16.0)/3;
+      events.push_back(event);
+      event.diffuse = tdrift + 12 * TICKS_PER_MS;
+      event.data = (mel[i] + 16.0)/3;
+      events.push_back(event);
+      event.diffuse = tdrift + 20 * TICKS_PER_MS;
+      event.data = -(mel[i] + 16.0)/3;
+      events.push_back(event);
+      event.diffuse = tdrift + 24 * TICKS_PER_MS;
+      event.data = -(mel[i] + 16.0)/3;
+      events.push_back(event);
+      event.diffuse = tdrift + 28 * TICKS_PER_MS;
+      event.data = -(mel[i] + 16.0)/3;
+      events.push_back(event);
     }
-  }
-  // Check if enough mels available
-  if (port->mels.size() < 8) {
-    yarp::os::Bottle& b = preq->prepare();
-    b.clear();
-    b.addInt((int) port->mels.size());
-    preq->write();
   }
   tsample += tdiff;
 #endif
@@ -310,11 +253,11 @@ tick_t YarpMFCCTime::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
 
 // Open ports
 //
-void YarpMFCCTime::OpenPorts() {
+void YaudWinMFCCEpis::OpenPorts() {
 #ifdef STACS_WITH_YARP
   std::string recv = portname[0] + "/recv";
   std::string request = portname[0] + "/request";
-  port = new YarpMFCCTimePort((int) param[0]);
+  port = new YaudWinMFCCEpisPort((int) param[0]);
   port->setStrict(); // try not to drop input
   port->useCallback();
   port->open(recv.c_str());
@@ -327,7 +270,7 @@ void YarpMFCCTime::OpenPorts() {
 
 // Close ports
 //
-void YarpMFCCTime::ClosePorts() {
+void YaudWinMFCCEpis::ClosePorts() {
 #ifdef STACS_WITH_YARP
   port->close();
   yarp::os::Bottle& b = preq->prepare();

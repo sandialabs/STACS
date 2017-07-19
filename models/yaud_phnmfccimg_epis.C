@@ -14,7 +14,7 @@
 * Ports
 **************************************************************************/
 
-class YarpPhoneTimePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
+class YaudPhnMFCCImgEpisPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
   private:
     // Sound samples
     real_t samplefreq;
@@ -33,8 +33,8 @@ class YarpPhoneTimePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
     //FILE *pMEL;
     //char melfile[100];
   public:
-    std::deque<std::vector<real_t>> mels;
-    YarpPhoneTimePort(int nm);
+    std::vector<std::vector<real_t>> mels;
+    YaudPhnMFCCImgEpisPort(int nm);
     //using yarp::os::BufferedPort<yarp::sig::Sound>::onRead;
     virtual void onRead (yarp::sig::Sound& ssig) {
       // Receive sound
@@ -47,6 +47,7 @@ class YarpPhoneTimePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
       //CkPrintf("Sample samples: %f, %f, %f, %f, %f\n", samplebuffer[50], samplebuffer[100], samplebuffer[150], samplebuffer[200], samplebuffer[250]);
       // Split samples into windows
       int nwindow = (((int)samplebuffer.size()) - noverlap)/(ninput - noverlap);
+      mels.clear();
       for (int w = 0; w < nwindow; ++w) {
         // Find power spectral density of window
         double* inputbuffer = static_cast<double*>(fftw_malloc(ninput * sizeof(double)));
@@ -84,7 +85,7 @@ class YarpPhoneTimePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
     }
 };
 
-YarpPhoneTimePort::YarpPhoneTimePort(int nm) {
+YaudPhnMFCCImgEpisPort::YaudPhnMFCCImgEpisPort(int nm) {
   // Set up parameters
   // Sound samples
   samplefreq = 16000.0; // Hz
@@ -148,10 +149,10 @@ YarpPhoneTimePort::YarpPhoneTimePort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpPhoneTime : public ModelTmpl < 104, YarpPhoneTime > {
+class YaudPhnMFCCImgEpis : public ModelTmpl < 105, YaudPhnMFCCImgEpis > {
   public:
     /* Constructor */
-    YarpPhoneTime() {
+    YaudPhnMFCCImgEpis() {
       // parameters
       paramlist.resize(2);
       paramlist[0] = "nmel";
@@ -169,7 +170,7 @@ class YarpPhoneTime : public ModelTmpl < 104, YarpPhoneTime > {
       portlist[0] = "in";
 
       // Local variables
-      tsample = 16 * TICKS_PER_MS;
+      tsample = 0;
     }
 
     /* Simulation */
@@ -180,11 +181,11 @@ class YarpPhoneTime : public ModelTmpl < 104, YarpPhoneTime > {
     void OpenPorts();
     void ClosePorts();
     
-    void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick);
+    void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick);
 
   private:
 #ifdef STACS_WITH_YARP
-    YarpPhoneTimePort* port;
+    YaudPhnMFCCImgEpisPort* port;
     yarp::os::BufferedPort<yarp::os::Bottle>* preq;
 #endif
     tick_t tsample;
@@ -195,104 +196,129 @@ class YarpPhoneTime : public ModelTmpl < 104, YarpPhoneTime > {
 * Class methods
 **************************************************************************/
 
-// Reset model
+// Rerun model
 //
-void YarpPhoneTime::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+void YaudPhnMFCCImgEpis::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 #ifdef STACS_WITH_YARP
-  // Request new phone
-  yarp::os::Bottle& b = preq->prepare();
-  b.clear();
-  b.addInt((int) port->mels.size());
-  preq->write();
+  if (tsample == 0 && !(port->mels.size())) {
+    // Request new phone
+    yarp::os::Bottle& b = preq->prepare();
+    b.clear();
+    b.addInt((int) port->mels.size());
+    preq->write();
+  }
 #endif
+  tsample = 0;
 }
 
 // Simulation step
 //
-tick_t YarpPhoneTime::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
+tick_t YaudPhnMFCCImgEpis::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
 #ifdef STACS_WITH_YARP
-  // Check every 16 ms
-  // TODO: move to parameters
   // Grab data from port if available
-  if ((tsample >= 16 * TICKS_PER_MS) && port->mels.size()) {
-    tsample = 0;
+  if (tsample == 0 && port->mels.size()) {
+    tsample = TICKS_PER_MS;
     std::vector<real_t> mel = port->mels.front();
-    port->mels.pop_front();
+    for (std::size_t ms = 1; ms < port->mels.size(); ++ms) {
+      for (std::size_t m = 0; m < mel.size(); ++m) {
+        mel[m] = (mel[m]*ms + port->mels[ms][m])/(ms+1);
+      }
+    }
     //CkPrintf("Popping front of deque.\n");
     // generate events
     event_t event;
     event.type = EVENT_STIM;
     event.source = REMOTE_EDGE;
-    // overlap of 16ms
-    // total time of 32ms
+    // total time of 20ms
     for (idx_t i = 0; i < (idx_t) param[0]; ++i) {
       event.index = i;
       if (mel[i] < -15.0) {
         continue;
       } else if (mel[i] < -14) {
+        event.diffuse = tdrift + 13 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 14 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -13) {
+        event.diffuse = tdrift + 12 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 13 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -12) {
+        event.diffuse = tdrift + 11 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 12 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -11) {
         event.diffuse = tdrift + 10 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 11 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -13) {
+      } else if (mel[i] < -10) {
         event.diffuse = tdrift + 9 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 10 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -12) {
+      } else if (mel[i] < -9) {
         event.diffuse = tdrift + 8 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 9 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -11) {
+      } else if (mel[i] < -8) {
         event.diffuse = tdrift + 7 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 8 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -10) {
+      } else if (mel[i] < -7) {
         event.diffuse = tdrift + 6 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 7 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -9) {
+      } else if (mel[i] < -6) {
         event.diffuse = tdrift + 5 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 6 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -8) {
+      } else if (mel[i] < -5) {
         event.diffuse = tdrift + 4 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 5 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -7) {
+      } else if (mel[i] < -4) {
         event.diffuse = tdrift + 3 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 4 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -6) {
+      } else if (mel[i] < -3) {
         event.diffuse = tdrift + 2 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
         event.diffuse = tdrift + 3 * TICKS_PER_MS;
         event.data = -param[1];
         events.push_back(event);
-      } else if (mel[i] < -5) {
+      } else if (mel[i] < -2) {
         event.diffuse = tdrift + 1 * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
@@ -308,19 +334,23 @@ tick_t YarpPhoneTime::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
         events.push_back(event);
       }
     }
+    // Request new phone
+    yarp::os::Bottle& b = preq->prepare();
+    b.clear();
+    b.addInt((int) port->mels.size());
+    preq->write();
   }
-  tsample += tdiff;
 #endif
   return tdiff;
 }
 
 // Open ports
 //
-void YarpPhoneTime::OpenPorts() {
+void YaudPhnMFCCImgEpis::OpenPorts() {
 #ifdef STACS_WITH_YARP
   std::string recv = portname[0] + "/recv";
   std::string request = portname[0] + "/request";
-  port = new YarpPhoneTimePort((int) param[0]);
+  port = new YaudPhnMFCCImgEpisPort((int) param[0]);
   port->setStrict(); // try not to drop input
   port->useCallback();
   port->open(recv.c_str());
@@ -333,7 +363,7 @@ void YarpPhoneTime::OpenPorts() {
 
 // Close ports
 //
-void YarpPhoneTime::ClosePorts() {
+void YaudPhnMFCCImgEpis::ClosePorts() {
 #ifdef STACS_WITH_YARP
   port->close();
   yarp::os::Bottle& b = preq->prepare();

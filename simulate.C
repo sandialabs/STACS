@@ -370,6 +370,11 @@ void Network::CycleSimEpisPlas() {
     }
     else {
       teps = tsim + tepisode;
+      
+      // Rerun any episodic models
+      for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
+        model[vtxmodidx[i]]->Rerun(state[i][0], stick[i][0]);
+      }
     
       // Start a new cycle (after checked data sent)
       thisProxy(partidx).SaveRecord();
@@ -514,6 +519,11 @@ void Network::CycleSimEpis() {
     }
     else {
       teps = tsim + tepisode;
+      
+      // Rerun any episodic models
+      for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
+        model[vtxmodidx[i]]->Rerun(state[i][0], stick[i][0]);
+      }
     
       // Start a new cycle (after checked data sent)
       thisProxy(partidx).SaveRecord();

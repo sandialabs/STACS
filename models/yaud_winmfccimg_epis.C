@@ -14,7 +14,7 @@
 * Ports
 **************************************************************************/
 
-class YarpPhonePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
+class YaudWinMFCCImgEpisPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
   private:
     // Sound samples
     real_t samplefreq;
@@ -34,7 +34,7 @@ class YarpPhonePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
     //char melfile[100];
   public:
     std::deque<std::vector<real_t>> mels;
-    YarpPhonePort(int nm);
+    YaudWinMFCCImgEpisPort(int nm);
     //using yarp::os::BufferedPort<yarp::sig::Sound>::onRead;
     virtual void onRead (yarp::sig::Sound& ssig) {
       // Receive sound
@@ -84,7 +84,7 @@ class YarpPhonePort : public yarp::os::BufferedPort<yarp::sig::Sound> {
     }
 };
 
-YarpPhonePort::YarpPhonePort(int nm) {
+YaudWinMFCCImgEpisPort::YaudWinMFCCImgEpisPort(int nm) {
   // Set up parameters
   // Sound samples
   samplefreq = 16000.0; // Hz
@@ -148,13 +148,14 @@ YarpPhonePort::YarpPhonePort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpPhone : public ModelTmpl < 102, YarpPhone > {
+class YaudWinMFCCImgEpis : public ModelTmpl < 104, YaudWinMFCCImgEpis > {
   public:
     /* Constructor */
-    YarpPhone() {
+    YaudWinMFCCImgEpis() {
       // parameters
-      paramlist.resize(1);
+      paramlist.resize(2);
       paramlist[0] = "nmel";
+      paramlist[1] = "ampl";
       // states
       statelist.resize(0);
       // sticks
@@ -178,12 +179,12 @@ class YarpPhone : public ModelTmpl < 102, YarpPhone > {
     /* Protocol */
     void OpenPorts();
     void ClosePorts();
-
-    void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick);
+    
+    void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick);
 
   private:
 #ifdef STACS_WITH_YARP
-    YarpPhonePort* port;
+    YaudWinMFCCImgEpisPort* port;
     yarp::os::BufferedPort<yarp::os::Bottle>* preq;
 #endif
     tick_t tsample;
@@ -194,9 +195,9 @@ class YarpPhone : public ModelTmpl < 102, YarpPhone > {
 * Class methods
 **************************************************************************/
 
-// Reset model
+// Rerun model
 //
-void YarpPhone::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+void YaudWinMFCCImgEpis::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 #ifdef STACS_WITH_YARP
   // Request new phone
   yarp::os::Bottle& b = preq->prepare();
@@ -208,7 +209,7 @@ void YarpPhone::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 
 // Simulation step
 //
-tick_t YarpPhone::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
+tick_t YaudWinMFCCImgEpis::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
 #ifdef STACS_WITH_YARP
   // Check every 16 ms
   // TODO: move to parameters
@@ -226,24 +227,86 @@ tick_t YarpPhone::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
     // total time of 32ms
     for (idx_t i = 0; i < (idx_t) param[0]; ++i) {
       event.index = i;
-      event.diffuse = tdrift + 4 * TICKS_PER_MS;
-      event.data = (mel[i] + 16.0)/3;
-      events.push_back(event);
-      event.diffuse = tdrift + 8 * TICKS_PER_MS;
-      event.data = (mel[i] + 16.0)/3;
-      events.push_back(event);
-      event.diffuse = tdrift + 12 * TICKS_PER_MS;
-      event.data = (mel[i] + 16.0)/3;
-      events.push_back(event);
-      event.diffuse = tdrift + 20 * TICKS_PER_MS;
-      event.data = -(mel[i] + 16.0)/3;
-      events.push_back(event);
-      event.diffuse = tdrift + 24 * TICKS_PER_MS;
-      event.data = -(mel[i] + 16.0)/3;
-      events.push_back(event);
-      event.diffuse = tdrift + 28 * TICKS_PER_MS;
-      event.data = -(mel[i] + 16.0)/3;
-      events.push_back(event);
+      if (mel[i] < -15.0) {
+        continue;
+      } else if (mel[i] < -14) {
+        event.diffuse = tdrift + 10 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 11 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -13) {
+        event.diffuse = tdrift + 9 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 10 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -12) {
+        event.diffuse = tdrift + 8 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 9 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -11) {
+        event.diffuse = tdrift + 7 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 8 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -10) {
+        event.diffuse = tdrift + 6 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 7 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -9) {
+        event.diffuse = tdrift + 5 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 6 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -8) {
+        event.diffuse = tdrift + 4 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 5 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -7) {
+        event.diffuse = tdrift + 3 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 4 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -6) {
+        event.diffuse = tdrift + 2 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 3 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else if (mel[i] < -5) {
+        event.diffuse = tdrift + 1 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 2 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      } else {
+        event.diffuse = tdrift + 0 * TICKS_PER_MS;
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + 1 * TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+      }
     }
   }
   tsample += tdiff;
@@ -253,11 +316,11 @@ tick_t YarpPhone::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
 
 // Open ports
 //
-void YarpPhone::OpenPorts() {
+void YaudWinMFCCImgEpis::OpenPorts() {
 #ifdef STACS_WITH_YARP
   std::string recv = portname[0] + "/recv";
   std::string request = portname[0] + "/request";
-  port = new YarpPhonePort((int) param[0]);
+  port = new YaudWinMFCCImgEpisPort((int) param[0]);
   port->setStrict(); // try not to drop input
   port->useCallback();
   port->open(recv.c_str());
@@ -270,7 +333,7 @@ void YarpPhone::OpenPorts() {
 
 // Close ports
 //
-void YarpPhone::ClosePorts() {
+void YaudWinMFCCImgEpis::ClosePorts() {
 #ifdef STACS_WITH_YARP
   port->close();
   yarp::os::Bottle& b = preq->prepare();

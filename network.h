@@ -327,11 +327,12 @@ class Model {
     virtual void OpenPorts() { }
     virtual void ClosePorts() { }
     /* Abstract Functions */
-    virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) = 0;
     virtual void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) = 0;
     virtual void Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { Jump(event, state, stick, auxidx); }
     virtual void Skip(std::vector<event_t>& events) { }
+    virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
+    virtual void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
   protected:
     /* Random Number Generation */
     std::mt19937 *rngine;
@@ -549,7 +550,7 @@ class Network : public CBase_Network {
     void CommEvent(mEvent *msg);
     void CommStamp(mEvent *msg);
     
-    // Computation
+    /* Computation */
     void SortEventCalendar();
     void SkipEventPlas();
     void SkipEvent();

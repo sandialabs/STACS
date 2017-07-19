@@ -278,15 +278,9 @@ void Network::CycleEstEpis() {
     else {
       teps = tsim + tepisode;
 
-      // Reset network for next episode
+      // Rerun any episodic models
       for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
-        // Clear events
-        for (idx_t j = 0; j < nevtday; ++j) {
-          evtcal[i][j].clear();
-        }
-        evtcol[i].clear();
-        // Reset vertices
-        model[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);
+        model[vtxmodidx[i]]->Rerun(state[i][0], stick[i][0]);
       }
 
       // Clear out groups from current episode

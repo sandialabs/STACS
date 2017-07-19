@@ -14,7 +14,7 @@
 * Ports
 **************************************************************************/
 
-class YarpAudioPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
+class YaudWinMFCCPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
   private:
     // Sound samples
     real_t samplefreq;
@@ -34,7 +34,7 @@ class YarpAudioPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
     //char melfile[100];
   public:
     std::deque<std::vector<real_t>> mels;
-    YarpAudioPort(int nm);
+    YaudWinMFCCPort(int nm);
     //using yarp::os::BufferedPort<yarp::sig::Sound>::onRead;
     virtual void onRead (yarp::sig::Sound& ssig) {
       // Receive sound
@@ -85,7 +85,7 @@ class YarpAudioPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
     }
 };
 
-YarpAudioPort::YarpAudioPort(int nm) {
+YaudWinMFCCPort::YaudWinMFCCPort(int nm) {
   // Set up parameters
   // Sound samples
   samplefreq = 16000.0; // Hz
@@ -149,10 +149,10 @@ YarpAudioPort::YarpAudioPort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YarpAudio : public ModelTmpl < 101, YarpAudio > {
+class YaudWinMFCC : public ModelTmpl < 101, YaudWinMFCC > {
   public:
     /* Constructor */
-    YarpAudio() {
+    YaudWinMFCC() {
       // parameters
       paramlist.resize(1);
       paramlist[0] = "nmel";
@@ -182,7 +182,7 @@ class YarpAudio : public ModelTmpl < 101, YarpAudio > {
 
   private:
 #ifdef STACS_WITH_YARP
-    YarpAudioPort* port;
+    YaudWinMFCCPort* port;
     yarp::os::BufferedPort<yarp::os::Bottle>* preq;
 #endif
     tick_t tsample;
@@ -195,7 +195,7 @@ class YarpAudio : public ModelTmpl < 101, YarpAudio > {
 
 // Simulation step
 //
-tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
+tick_t YaudWinMFCC::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
 #ifdef STACS_WITH_YARP
   // Check every 16 ms
   // TODO: move to parameters
@@ -247,11 +247,11 @@ tick_t YarpAudio::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, 
 
 // Open ports
 //
-void YarpAudio::OpenPorts() {
+void YaudWinMFCC::OpenPorts() {
 #ifdef STACS_WITH_YARP
   std::string recv = portname[0] + "/recv";
   std::string request = portname[0] + "/request";
-  port = new YarpAudioPort((int) param[0]);
+  port = new YaudWinMFCCPort((int) param[0]);
   port->setStrict(); // try not to drop input
   port->useCallback();
   port->open(recv.c_str());
@@ -264,7 +264,7 @@ void YarpAudio::OpenPorts() {
 
 // Close ports
 //
-void YarpAudio::ClosePorts() {
+void YaudWinMFCC::ClosePorts() {
 #ifdef STACS_WITH_YARP
   port->close();
   yarp::os::Bottle& b = preq->prepare();
