@@ -62,8 +62,8 @@ struct dist_t {
 struct model_t {
   std::string modname;
   idx_t modtype;
-  int nstate;
-  int nstick;
+  idx_t nstate;
+  idx_t nstick;
   std::vector<real_t> param;
   std::vector<std::string> port;
   bool grpactive;

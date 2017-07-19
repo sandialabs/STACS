@@ -7,7 +7,7 @@ rpcport : "/stacs/rpc"
 rpcpause: no
 
 # network
-netwkdir: "ntwrks/yaudnet"
+netwkdir: "networks/yaudnet"
 netparts: 8 # 8 network partitions
 netfiles: 4 # 4 network data files
 filebase: "yaudnet"

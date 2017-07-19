@@ -7,7 +7,7 @@ rpcport : "/stacs/rpc"
 rpcpause: yes
 
 # network
-netwkdir: "ntwrks/testnet"
+netwkdir: "networks/testnet"
 netparts: 4 # 8 network partitions
 netfiles: 2 # 4 network data files
 filebase: "testnet"

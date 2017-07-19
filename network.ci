@@ -18,8 +18,8 @@ module network {
   
   message mModel {
     idx_t modtype[];
-    int nstate[];
-    int nstick[];
+    idx_t nstate[];
+    idx_t nstick[];
     idx_t xparam[];
     real_t param[];
     idx_t xport[];
@@ -63,7 +63,7 @@ module network {
     idx_t xdata[];
     idx_t xdiffuse[];
     idx_t xindex[];
-    idx_t partidx;
+    int partidx;
     idx_t iter;
     idx_t nevtlog;
     idx_t nrecord;

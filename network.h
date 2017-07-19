@@ -174,8 +174,8 @@ class mDist : public CMessage_mDist {
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;
-    int *nstate;
-    int *nstick;
+    idx_t *nstate;
+    idx_t *nstick;
     idx_t *xparam;
     real_t *param;
     idx_t *xport;
