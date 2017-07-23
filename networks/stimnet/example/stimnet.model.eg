@@ -1,0 +1,178 @@
+---
+type: vertex
+modname: stim
+modtype: 201
+param:
+  - name: inputs
+    value: 10
+  - name: ampl
+    value: 24.0
+...
+
+---
+type: vertex
+modname: srmex
+modtype: 20
+param:
+  - name: vrest
+    value: -65.0
+  - name: vthresh
+    value: -50.0
+  - name: tau
+    value: 3.0
+  - name: tau_abs
+    value: 7.0
+state:
+  - name: v
+    type: constant
+    value: -65.0
+  - name: v_app
+    type: constant
+    value: 0.0
+  - name: tlast
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: srmin
+modtype: 20
+param:
+  - name: vrest
+    value: -65.0
+  - name: vthresh
+    value: -50.0
+  - name: tau
+    value: 3.0
+  - name: tabs
+    value: 7.0
+state:
+  - name: v
+    type: constant
+    value: -65.0
+  - name: v_app
+    type: constant
+    value: 0.0
+  - name: tlast
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: input
+modtype: 20
+param:
+  - name: vrest
+    value: -65.0
+  - name: vthresh
+    value: -50.0
+  - name: tau
+    value: 3.0
+  - name: tabs
+    value: 7.0
+state:
+  - name: v
+    type: constant
+    value: -65.0
+  - name: v_app
+    type: constant
+    value: 0.0
+  - name: tlast
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: edge
+modname: exstdp
+modtype: 21
+param:
+  - name: wmax
+    value: 8.0
+  - name: alpha
+    value: 0.1
+  - name: pdw
+    value: 1.0
+  - name: ptau
+    value: 20.0
+  - name: ndw
+    value: 0.5
+  - name: ntau
+    value: 100.0
+state:
+  - name: delay
+    type: uniform interval
+    rep: tick
+    min: 1.0
+    max: 20.0
+    int: 1.0
+  - name: weight
+    type: constant
+    value: 4.0
+  - name: tlast
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: edge
+modname: instdp
+modtype: 22
+param:
+  - name: wmax
+    value: -7.5
+  - name: alpha
+    value: 0.1
+  - name: pdw
+    value: 1.0
+  - name: ptau
+    value: 20.0
+  - name: ndw
+    value: 0.25
+state:
+  - name: delay
+    type: uniform interval
+    rep: tick
+    min: 1.0
+    max: 20.0
+    int: 1.0
+  - name: weight
+    type: constant
+    value: -4.0
+  - name: tlast
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: edge
+modname: exinput
+modtype: 23
+param:
+  - name: weight
+    value: 24.0
+state:
+  - name: delay
+    type: constant
+    rep: tick
+    value: 1.0
+...
+
+---
+type: edge
+modname: exstim
+modtype: 24
+param:
+state:
+  - name: delay
+    type: constant
+    rep: tick
+    value: 1.0
+...

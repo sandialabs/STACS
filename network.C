@@ -136,7 +136,7 @@ Network::Network(mModel *msg) {
         }
         edgaux[j][i][0].stickidx.resize(auxstick.size());
         for (std::size_t s = 0; s < auxstick.size(); ++s) {
-          edgaux[j][i][0].stickidx[s] = model[i]->getStateIdx(auxstick[s]);
+          edgaux[j][i][0].stickidx[s] = model[i]->getStickIdx(auxstick[s]);
         }
       }
     }

@@ -1,0 +1,50 @@
+vertex:
+  - modname: stim
+    order: 1
+    shape: point
+    coord: [0.0, 0.0, 0.0]
+  - modname: input
+    order: 10
+    shape: circle
+    radius: 50.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: srmex
+    order: 80
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+  - modname: srmin
+    order: 20
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+
+edge:
+  - source: stim
+    target: [input]
+    modname: exstim
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
+  - source: input
+    target: [srmex, srmin]
+    modname: exinput
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: srmex
+    target: [srmex, srmin]
+    modname: exstdp
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.3
+  - source: srmin
+    target: [srmex, srmin]
+    modname: instdp
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.3
