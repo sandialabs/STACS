@@ -1,0 +1,61 @@
+vertex:
+  - modname: thal
+    order: 1
+    shape: point
+    coord: [0.0, 0.0, 0.0]
+  - modname: stim
+    order: 1
+    shape: point
+    coord: [0.0, 0.0, 0.0]
+  - modname: input
+    order: 10
+    shape: circle
+    radius: 50.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: izhiex
+    order: 800
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+  - modname: izhiin
+    order: 200
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+
+edge:
+  - source: thal
+    target: [izhiex, izhiin]
+    modname: exthal
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
+  - source: stim
+    target: [input]
+    modname: exstim
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
+  - source: input
+    target: [izhiex, izhiin]
+    modname: exinput
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: izhiex
+    target: [izhiex, izhiin]
+    modname: exstdp
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: izhiin
+    target: [izhiex]
+    modname: instdp
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.125
