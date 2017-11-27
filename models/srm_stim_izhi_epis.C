@@ -51,6 +51,7 @@ void SRMStimIzhiEpis::Rerun(std::vector<real_t>& state, std::vector<tick_t>& sti
 // Simulation step
 //
 tick_t SRMStimIzhiEpis::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
+  // Generate basic Izhikevich patterns (ramps)
   if (newepisode) {
     bool forward = ((*unifdist)(*rngine) > 0.5);
     if (forward) {
