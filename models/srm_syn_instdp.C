@@ -14,12 +14,13 @@ class SRMSynInSTDP : public ModelTmpl < 22, SRMSynInSTDP > {
     /* Constructor */
     SRMSynInSTDP() {
       // parameters
-      paramlist.resize(5);
+      paramlist.resize(6);
       paramlist[0] = "wmax";
-      paramlist[1] = "alpha";
-      paramlist[2] = "pdw";
-      paramlist[3] = "ptau";
-      paramlist[4] = "ndw";
+      paramlist[1] = "umax";
+      paramlist[2] = "alpha";
+      paramlist[3] = "pdw";
+      paramlist[4] = "ptau";
+      paramlist[5] = "ndw";
       // states
       statelist.resize(1);
       statelist[0] = "weight";
@@ -73,17 +74,17 @@ void SRMSynInSTDP::Leap(const event_t& event, std::vector<std::vector<real_t>>& 
     if (event.source >= 0) {
       idx_t e = event.index;
       // Apply effect to neuron (vertex)
-      state[0][auxidx[0].stateidx[0]] += state[e][0];
+      state[0][auxidx[0].stateidx[0]] += state[e][0] * param[1];
       
       // Depress/facilite weight
       real_t dt = ((real_t)(event.diffuse - stick[0][auxidx[0].stickidx[0]]))/TICKS_PER_MS;
-      if (std::abs(dt) < param[3]) {
-        real_t dw = param[2];
-        state[e][0] = state[e][0] + param[1] * (param[0] - state[e][0]) * dw;
+      if (std::abs(dt) < param[4]) {
+        real_t dw = param[3];
+        state[e][0] = state[e][0] + param[2] * (param[0] - state[e][0]) * dw;
       }
       else {
-        real_t dw = param[4];
-        state[e][0] = state[e][0] - param[1] * (state[e][0]) * dw;
+        real_t dw = param[5];
+        state[e][0] = state[e][0] - param[2] * (state[e][0]) * dw;
       }
       stick[e][1] = event.diffuse;
     }
@@ -92,13 +93,13 @@ void SRMSynInSTDP::Leap(const event_t& event, std::vector<std::vector<real_t>>& 
       idx_t e = event.index;
       // Depress/facilitate weight
       real_t dt = ((real_t)(event.diffuse - stick[e][1]))/TICKS_PER_MS;
-      if (std::abs(dt) < param[3]) {
-        real_t dw = param[2];
-        state[e][0] = state[e][0] + param[1] * (param[0] - state[e][0]) * dw;
+      if (std::abs(dt) < param[4]) {
+        real_t dw = param[3];
+        state[e][0] = state[e][0] + param[2] * (param[0] - state[e][0]) * dw;
       }
       else {
-        real_t dw = param[4];
-        state[e][0] = state[e][0] - param[1] * (state[e][0]) * dw;
+        real_t dw = param[5];
+        state[e][0] = state[e][0] - param[2] * (state[e][0]) * dw;
       }
     }
   }

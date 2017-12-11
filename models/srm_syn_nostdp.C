@@ -14,8 +14,9 @@ class SRMSynNoSTDP : public ModelTmpl < 23, SRMSynNoSTDP > {
     /* Constructor */
     SRMSynNoSTDP() {
       // parameters
-      paramlist.resize(1);
+      paramlist.resize(2);
       paramlist[0] = "weight";
+      paramlist[1] = "umax";
       // states
       statelist.resize(0);
       // sticks
@@ -52,6 +53,6 @@ void SRMSynNoSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& 
   // External spike event
   if (event.type == EVENT_SPIKE && event.source >= 0) {
     // Apply effect to neuron (vertex)
-    state[0][auxidx[0].stateidx[0]] += param[0];
+    state[0][auxidx[0].stateidx[0]] += param[0] * param[1];
   }
 }

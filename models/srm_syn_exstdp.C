@@ -14,13 +14,14 @@ class SRMSynExSTDP : public ModelTmpl < 21, SRMSynExSTDP > {
     /* Constructor */
     SRMSynExSTDP() {
       // parameters
-      paramlist.resize(6);
+      paramlist.resize(7);
       paramlist[0] = "wmax";
-      paramlist[1] = "alpha";
-      paramlist[2] = "pdw";
-      paramlist[3] = "ptau";
-      paramlist[4] = "ndw";
-      paramlist[5] = "ntau";
+      paramlist[1] = "umax";
+      paramlist[2] = "alpha";
+      paramlist[3] = "pdw";
+      paramlist[4] = "ptau";
+      paramlist[5] = "ndw";
+      paramlist[6] = "ntau";
       // states
       statelist.resize(1);
       statelist[0] = "weight";
@@ -73,13 +74,13 @@ void SRMSynExSTDP::Leap(const event_t& event, std::vector<std::vector<real_t>>& 
     if (event.source >= 0) {
       idx_t e = event.index;
       // Apply effect to neuron (vertex)
-      state[0][auxidx[0].stateidx[0]] += state[e][0];
+      state[0][auxidx[0].stateidx[0]] += state[e][0] * param[1];
 
       // Depress weight
       real_t dt = ((real_t)(event.diffuse - stick[0][auxidx[0].stickidx[0]]))/TICKS_PER_MS;
-      if (dt < param[5]) {
-        real_t dw = param[4] * ((param[5] - dt)/param[5]);
-        state[e][0] = state[e][0] - param[1] * (state[e][0]) * dw;
+      if (dt < param[6]) {
+        real_t dw = param[5] * ((param[6] - dt)/param[6]);
+        state[e][0] = state[e][0] - param[2] * (state[e][0]) * dw;
       }
       stick[e][1] = event.diffuse;
     }
@@ -88,15 +89,15 @@ void SRMSynExSTDP::Leap(const event_t& event, std::vector<std::vector<real_t>>& 
       idx_t e = event.index;
       // Facilitate weight
       real_t dt = ((real_t)(event.diffuse - stick[e][1]))/TICKS_PER_MS;
-      if (dt < param[3]) {
-        real_t pthalf = param[3]/2.0;
+      if (dt < param[4]) {
+        real_t pthalf = param[4]/2.0;
         if (dt <= pthalf) {
-          real_t dw = param[2] * (dt/pthalf);
-          state[e][0] = state[e][0] + param[1] * (param[0] - state[e][0]) * dw;
+          real_t dw = param[3] * (dt/pthalf);
+          state[e][0] = state[e][0] + param[2] * (param[0] - state[e][0]) * dw;
         }
         else {
-          real_t dw = param[2] * ((param[3] - dt)/pthalf);
-          state[e][0] = state[e][0] + param[1] * (param[0] - state[e][0]) * dw;
+          real_t dw = param[3] * ((param[4] - dt)/pthalf);
+          state[e][0] = state[e][0] + param[2] * (param[0] - state[e][0]) * dw;
         }
       }
     }

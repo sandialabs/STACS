@@ -1,0 +1,50 @@
+stream:
+  - modname: yarpusps
+    coord: [0.0, 0.0, 0.0]
+
+vertex:
+  - modname: srmex
+    order: 80
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+  - modname: srmin
+    order: 20
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+  - modname: inpxl
+    order: 256
+    shape: circle
+    radius: 50.0
+    coord: [0.0, 0.0, 0.0]
+
+edge:
+  - source: srmex
+    target: [srmex, srmin]
+    modname: exstdp
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.3
+  - source: srmin
+    target: [srmex, srmin]
+    modname: instdp
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.3
+  - source: inpxl
+    target: [srmex, srmin]
+    modname: exnostdp
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: yarpusps
+    target: [inpxl]
+    modname: stimpxl
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
