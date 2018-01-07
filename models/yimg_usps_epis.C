@@ -26,10 +26,10 @@ class YimgUspsEpisPort : public yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::
       imgs.clear();
       for (std::size_t i = 0; i < img.height(); ++i) {
         for (std::size_t j = 0; j < img.width(); ++j) {
-          printf("%3d ", img.getRawImage()[i*img.height() + j]);
+          //printf("%3d ", img.getRawImage()[i*img.height() + j]);
           imgs.push_back(img.getRawImage()[i*img.height() + j]);
         }
-        printf("\n");
+        //printf("\n");
       }
     }
   private:
