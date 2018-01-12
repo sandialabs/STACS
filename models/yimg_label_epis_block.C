@@ -16,21 +16,21 @@
 * Ports
 **************************************************************************/
 
-class YimgLabelEpisBlockPort : public yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelInt> > {
+class YimgLabelEpisBlockPort : public yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelMono> > {
   public:
     std::mutex mtx;
     std::condition_variable cvar;
     bool ready;
-    std::vector<real_t> labels;
+    std::vector<char> labels;
     YimgLabelEpisBlockPort(int np);
     //using yarp::os::BufferedPort<yarp::sig::Image>::onRead;
-    virtual void onRead (yarp::sig::ImageOf<yarp::sig::PixelInt>& label) {
+    virtual void onRead (yarp::sig::ImageOf<yarp::sig::PixelMono>& label) {
       // Receive image and store
       // TODO: Check that incoming image size is equal to number of pixels
       printf("Label received\n");
       labels.clear();
       // label.height should equal number of pixels (it's a vector)
-      for (std::size_t i = 0; i < label.height(); ++i) {
+      for (std::size_t i = 0; i < label.width(); ++i) {
         labels.push_back(label.getRawImage()[i]);
       }
       std::unique_lock<std::mutex> lck(mtx);
