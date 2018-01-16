@@ -16,22 +16,25 @@
 * Ports
 **************************************************************************/
 
-class YimgLabelEpisBlockPort : public yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelMono> > {
+class YimgUspsEpisBlockPort : public yarp::os::BufferedPort<yarp::sig::ImageOf<yarp::sig::PixelMono> > {
   public:
     std::mutex mtx;
     std::condition_variable cvar;
     bool ready;
-    std::vector<char> labels;
-    YimgLabelEpisBlockPort(int np);
+    std::vector<real_t> imgs;
+    YimgUspsEpisBlockPort(int np);
     //using yarp::os::BufferedPort<yarp::sig::Image>::onRead;
-    virtual void onRead (yarp::sig::ImageOf<yarp::sig::PixelMono>& label) {
+    virtual void onRead (yarp::sig::ImageOf<yarp::sig::PixelMono>& img) {
       // Receive image and store
       // TODO: Check that incoming image size is equal to number of pixels
-      printf("Label received\n");
-      labels.clear();
-      // label.height should equal number of pixels (it's a vector)
-      for (std::size_t i = 0; i < label.height(); ++i) {
-        labels.push_back(label.getRawImage()[i]);
+      printf("Image received\n");
+      imgs.clear();
+      for (std::size_t i = 0; i < img.height(); ++i) {
+        for (std::size_t j = 0; j < img.width(); ++j) {
+          //printf("%3d ", img.getRawImage()[i*img.height() + j]);
+          imgs.push_back(img.getRawImage()[i*img.height() + j]);
+        }
+        //printf("\n");
       }
       std::unique_lock<std::mutex> lck(mtx);
       ready = true;
@@ -41,9 +44,9 @@ class YimgLabelEpisBlockPort : public yarp::os::BufferedPort<yarp::sig::ImageOf<
     yarp::os::Property conf;
 };
 
-YimgLabelEpisBlockPort::YimgLabelEpisBlockPort(int np) {
+YimgUspsEpisBlockPort::YimgUspsEpisBlockPort(int np) {
   // Get an image write device
-  CkPrintf("Streaming labels to stacs\n");
+  CkPrintf("Streaming to stacs\n");
   ready = false;
 }
 #endif
@@ -51,13 +54,13 @@ YimgLabelEpisBlockPort::YimgLabelEpisBlockPort(int np) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YimgLabelEpisBlock : public ModelTmpl < 109, YimgLabelEpisBlock > {
+class YimgUspsEpisBlock : public ModelTmpl < 209, YimgUspsEpisBlock > {
   public:
     /* Constructor */
-    YimgLabelEpisBlock() {
+    YimgUspsEpisBlock() {
       // parameters
       paramlist.resize(2);
-      paramlist[0] = "points";
+      paramlist[0] = "npxl";
       paramlist[1] = "ampl";
       // states
       statelist.resize(0);
@@ -87,7 +90,7 @@ class YimgLabelEpisBlock : public ModelTmpl < 109, YimgLabelEpisBlock > {
 
   private:
 #ifdef STACS_WITH_YARP
-    YimgLabelEpisBlockPort* port;
+    YimgUspsEpisBlockPort* port;
     yarp::os::BufferedPort<yarp::os::Bottle>* preq;
 #endif
     tick_t tsample;
@@ -100,13 +103,13 @@ class YimgLabelEpisBlock : public ModelTmpl < 109, YimgLabelEpisBlock > {
 
 // Rerun model
 //
-void YimgLabelEpisBlock::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+void YimgUspsEpisBlock::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 #ifdef STACS_WITH_YARP
-  if (tsample == 0 && !(port->labels.size())) {
+  if (tsample == 0 && !(port->imgs.size())) {
     // Request new image
     yarp::os::Bottle& b = preq->prepare();
     b.clear();
-    b.addInt((int) port->labels.size());
+    b.addInt((int) port->imgs.size());
     preq->write();
   }
 #endif
@@ -115,7 +118,7 @@ void YimgLabelEpisBlock::Rerun(std::vector<real_t>& state, std::vector<tick_t>& 
 
 // Simulation step
 //
-tick_t YimgLabelEpisBlock::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
+tick_t YimgUspsEpisBlock::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
 #ifdef STACS_WITH_YARP
   // Grab data from port if available
   if (tsample == 0) {
@@ -131,9 +134,9 @@ tick_t YimgLabelEpisBlock::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>
     event.source = REMOTE_EDGE;
     for (idx_t i = 0; i < (idx_t) param[0]; ++i) {
       event.index = i;
-      // label is raw millisecond delays
-      int delay = port->labels[i];
-      if (delay >= 0) {
+      // Multiplier goes from 0 to 255
+      int delay = (int)((256.0 - port->imgs[i]) * 24.0 / 256.0);
+      if (delay < 20) {
         event.diffuse = tdrift + delay * TICKS_PER_MS;
         event.data = param[1];
         events.push_back(event);
@@ -142,10 +145,10 @@ tick_t YimgLabelEpisBlock::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>
         events.push_back(event);
       }
     }
-    // Request new label
+    // Request new phone
     yarp::os::Bottle& b = preq->prepare();
     b.clear();
-    b.addInt((int) port->labels.size());
+    b.addInt((int) port->imgs.size());
     preq->write();
   }
 #endif
@@ -154,24 +157,24 @@ tick_t YimgLabelEpisBlock::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>
 
 // Open ports
 //
-void YimgLabelEpisBlock::OpenPorts() {
+void YimgUspsEpisBlock::OpenPorts() {
 #ifdef STACS_WITH_YARP
   std::string recv = portname[0] + "/recv";
   std::string request = portname[0] + "/request";
-  port = new YimgLabelEpisBlockPort((int) param[0]);
+  port = new YimgUspsEpisBlockPort((int) param[0]);
   port->setStrict(); // try not to drop input
   port->useCallback();
   port->open(recv.c_str());
-  CkPrintf("Receiving labels on %s\n", recv.c_str());
+  CkPrintf("Receiving USPS digits on %s\n", recv.c_str());
   preq = new yarp::os::BufferedPort<yarp::os::Bottle>();
   preq->open(request.c_str());
-  CkPrintf("Requesting labels from %s\n", request.c_str());
+  CkPrintf("Requesting USPS digits from %s\n", request.c_str());
 #endif
 }
 
 // Close ports
 //
-void YimgLabelEpisBlock::ClosePorts() {
+void YimgUspsEpisBlock::ClosePorts() {
 #ifdef STACS_WITH_YARP
   port->close();
   yarp::os::Bottle& b = preq->prepare();
