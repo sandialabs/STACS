@@ -23,6 +23,7 @@ extern /*readonly*/ idx_t nevtday;
 //
 void Network::GoAhead(mGo *msg) {
   // Increment coordination
+  CkAssert(msg->iter - iter <= 1);
   ++cadjpart[(partiter + (msg->iter - iter))%2];
   delete msg;
 
@@ -45,6 +46,7 @@ void Network::GoAhead(mGo *msg) {
 //
 void Network::CommEvent(mEvent *msg) {
   // Increment coordination
+  CkAssert(msg->iter - iter <= 1);
   ++cadjpart[(partiter + (msg->iter - iter))%2];
 
   // Event prototype
