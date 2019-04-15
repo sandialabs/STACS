@@ -349,6 +349,7 @@ void Network::LoadNetwork(mPart *msg) {
   // Set up timing
   tsim = 0;
   iter = 0;
+  commiter = 0;
   dispiter = 0;
   reciter = intrec;
   saveiter = intsave;

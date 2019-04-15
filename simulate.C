@@ -219,6 +219,9 @@ void Network::CycleSimContPlas() {
 
     // Add new records
     AddRecord();
+    
+    // Increment iteration
+    ++iter;
   }
 }
 
@@ -350,6 +353,9 @@ void Network::CycleSimCont() {
 
     // Add new records
     AddRecord();
+    
+    // Increment iteration
+    ++iter;
   }
 }
 
@@ -499,6 +505,9 @@ void Network::CycleSimEpisPlas() {
     
     // Add new records
     AddRecord();
+    
+    // Increment iteration
+    ++iter;
   }
 }
 
@@ -635,5 +644,8 @@ void Network::CycleSimEpis() {
     
     // Add new records
     AddRecord();
+    
+    // Increment iteration
+    ++iter;
   }
 }

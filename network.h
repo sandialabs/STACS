@@ -657,6 +657,7 @@ class Network : public CBase_Network {
     int compart;
     /* Coordination */
     idx_t iter;
+    idx_t commiter;
     idx_t dispiter;
     idx_t saveiter;
     idx_t reciter;

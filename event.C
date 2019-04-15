@@ -23,8 +23,7 @@ extern /*readonly*/ idx_t nevtday;
 //
 void Network::GoAhead(mGo *msg) {
   // Increment coordination
-  CkAssert(msg->iter - iter <= 1);
-  ++cadjpart[(partiter + (msg->iter - iter))%2];
+  ++cadjpart[(partiter + (msg->iter - commiter))%2];
   delete msg;
 
   // Start next cycle
@@ -34,7 +33,7 @@ void Network::GoAhead(mGo *msg) {
     partiter = (partiter+1)%2;
 
     // Increment iteration
-    ++iter;
+    ++commiter;
 
     // Start a new cycle
     //thisProxy(partidx).CycleNetwork();
@@ -46,8 +45,7 @@ void Network::GoAhead(mGo *msg) {
 //
 void Network::CommEvent(mEvent *msg) {
   // Increment coordination
-  CkAssert(msg->iter - iter <= 1);
-  ++cadjpart[(partiter + (msg->iter - iter))%2];
+  ++cadjpart[(partiter + (msg->iter - commiter))%2];
 
   // Event prototype
   event_t event;
@@ -136,7 +134,7 @@ void Network::CommEvent(mEvent *msg) {
     partiter = (partiter+1)%2;
 
     // Increment iteration
-    ++iter;
+    ++commiter;
 
     // Start a new cycle
     //thisProxy(partidx).CycleNetwork();
@@ -149,7 +147,7 @@ void Network::CommEvent(mEvent *msg) {
 //
 void Network::CommStamp(mEvent *msg) {
   // Increment coordination
-  ++cadjpart[(partiter + (msg->iter - iter))%2];
+  ++cadjpart[(partiter + (msg->iter - commiter))%2];
 
   // Event prototype
   event_t event;
@@ -251,7 +249,7 @@ void Network::CommStamp(mEvent *msg) {
     partiter = (partiter+1)%2;
 
     // Increment iteration
-    ++iter;
+    ++commiter;
 
     // Start a new cycle
     //thisProxy(partidx).CycleNetwork();
