@@ -361,6 +361,7 @@ void Network::LoadNetwork(mPart *msg) {
 #ifdef STACS_WITH_YARP
   // Set up synchronization
   synciter = IDX_T_MAX;
+  syncing = false;
 #endif
 
   // Return control to main

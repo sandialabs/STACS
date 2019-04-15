@@ -181,7 +181,23 @@ mVtxs* Main::BuildVtxs() {
   return mvtxs;
 }
 
-// Build RPC message (single)
+// Build RPC message (sync)
+//
+mRPC* Stream::BuildRPCSync(idx_t synciter) {
+  // Initialize rpc message
+  int msgSize[MSG_RPC];
+  msgSize[0] = 0;    //rpcdata
+  mRPC *mrpc = new(msgSize, 0) mRPC;
+  // Sizes
+  mrpc->nrpcdata = synciter;
+  mrpc->command = RPCCOMMAND_PAUSED;
+
+  // Return built message
+  return mrpc;
+}
+
+  
+  // Build RPC message (single)
 //
 mRPC* RPCReader::BuildRPC(idx_t command, yarp::os::Bottle message) {
   /* Message data */

@@ -62,6 +62,7 @@ void Stream::OpenRPC(CProxy_Network cpnet, const CkCallback &cbcycle, bool pause
   // Test port
   if (this->where().getPort() > 0) {
     // Setup callback
+    netpause = CkCallback(CkReductionTarget(Stream, Pause), thisProxy);
     netstop = CkCallback(CkReductionTarget(Main, Stop), mainProxy);
     // Set RPC reader
     rpcreader = new RPCReader(vtxdist, network, netcycle, netstop,
@@ -103,6 +104,7 @@ void Stream::CloseRPC() {
 * Stream synchronization callbacks
 **************************************************************************/
 
+/*
 // Network callback (continue)
 //
 void Stream::Sync() {
@@ -118,6 +120,26 @@ void Stream::Sync() {
   // Restart network
   netcycle.send();
 }
+*/
+
+// Network callback (syncing)
+//
+void Stream::Sync(idx_t synciter) {
+  //idx_t synciter = *(idx_t *)msg;
+  //delete msg;
+  // Display some information
+  CkPrintf("Syncing at %" PRIidx" \n", synciter+1);
+
+  // Set next callback
+  network.ckSetReductionClient(&netpause);
+  
+  // Broadcast command to network
+  mRPC *mrpc = BuildRPCSync(synciter+1);
+  if (mrpc != NULL) {
+    network.CommRPC(mrpc);
+  }
+}
+
 
 // Network callback (paused)
 //
@@ -186,7 +208,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Pausing Simulation\n");
 
       // Modify reduction client
-      network.ckSetReductionClient(&netpause);
+      network.ckSetReductionClient(&netsync);
     }
     else if (syncflag == RPCSYNC_SYNCED) {
       syncflag = RPCSYNC_UNSYNCED;

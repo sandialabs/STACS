@@ -21,6 +21,33 @@ extern /*readonly*/ idx_t episodes;
 
 
 /**************************************************************************
+* Charm++ Reduction
+**************************************************************************/
+
+// Reduction for type idx_t
+//
+CkReduction::reducerType max_idx;
+// Initnode
+void registerMaxIdx(void) {
+  max_idx = CkReduction::addReducer(maxIdx);
+}
+// Reduction function
+CkReductionMsg *maxIdx(int nMsg, CkReductionMsg **msgs) {
+  // Initialize to 0
+  idx_t ret = 0;
+  for (int i = 0; i < nMsg; ++i) {
+    // Sanity check
+    CkAssert(msgs[i]->getSize() == sizeof(idx_t));
+    // Extract data and reduce 
+    idx_t m = *(idx_t *)msgs[i]->getData();
+    ret = std::max(ret,m);
+  }
+  // Return maximum idx_t
+  return CkReductionMsg::buildNew(sizeof(idx_t),&ret);
+}
+
+
+/**************************************************************************
 * Network Simulation Initialization
 **************************************************************************/
 
@@ -247,18 +274,31 @@ void Network::CycleSimCont() {
     thisProxy(partidx).SaveRecord();
   }
 #ifdef STACS_WITH_YARP
-  // Synchronization from RPC
+  else if (syncing && synciter == IDX_T_MAX) {
+    // nop
+  }
   else if (iter == synciter) {
-    // Bookkkeeping
-    synciter = IDX_T_MAX;
-
-    // Display synchronization information
-    if (partidx == 0) {
-      CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
+    if (!syncing) {
+      // Bookkkeeping
+      synciter = IDX_T_MAX;
+      syncing = true;
+      
+      idx_t contiter = iter;
+      // move control to sychronization callback
+      contribute(sizeof(idx_t), &contiter, max_idx);
     }
+    else {
+      // Bookkkeeping
+      synciter = IDX_T_MAX;
+      
+      // Display synchronization information
+      if (partidx == 0) {
+        CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
+      }
 
-    // move control to sychronization callback
-    contribute(0, NULL, CkReduction::nop);
+      // move control to sychronization callback
+      contribute(0, NULL, CkReduction::nop);
+    }
   }
 #endif
   // Simulate next cycle

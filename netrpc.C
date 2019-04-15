@@ -29,16 +29,40 @@ void Network::CommRPC(mRPC *msg) {
   //
   if (msg->command == RPCCOMMAND_PAUSE ||
       msg->command == RPCCOMMAND_STOP) {
-    // Coordinate the synchronization iteration
     synciter = iter;
+    cyclepart.send();
+    // Coordinate the synchronization iteration
+    /*
+    if (commiter < iter) {
+      synciter = iter;
+      if (partiter % 2 == 0 && cadjpart[1] > 0) { ++synciter; }
+      if (partiter % 2 == 1 && cadjpart[0] > 0) { ++synciter; }
+      //if (partiter % 2 == 0 && cadjpart[1] > 0 && cadjpart[0] > 0) { ++synciter; }
+      //if (partiter % 2 == 1 && cadjpart[0] > 0 && cadjpart[1] > 0) { ++synciter; }
+    }
+    else if (commiter == iter) {
+      synciter = commiter+1;
+      if (partiter % 2 == 0 && cadjpart[1] > cadjpart[0]) { --synciter; }
+      if (partiter % 2 == 1 && cadjpart[0] > cadjpart[1]) { --synciter; }
+    }
+    else {
+      synciter = commiter;
+    }
+    synciter = commiter;
     if (partiter % 2 == 0 && cadjpart[0] > cadjpart[1]) { ++synciter; }
     if (partiter % 2 == 1 && cadjpart[1] > cadjpart[0]) { ++synciter; }
+    */
     // TODO make this print with debugging flag
     //CkPrintf("Messages on %" PRIidx ": c0: %d, c1: %d, pi: % " PRIidx "\n", partidx, cadjpart[0], cadjpart[1], partiter);
-    //CkPrintf("Pausing %" PRIidx " in iteration %" PRIidx "\n", partidx, synciter);
+    //CkPrintf("Pausing %" PRIidx " in iteration %" PRIidx " (comm: %" PRIidx ", sim: %" PRIidx ")\n", partidx, synciter, commiter, iter);
+  }
+  else if (msg->command == RPCCOMMAND_PAUSED) {
+    synciter = msg->nrpcdata;
+    cyclepart.send();
   }
   else if (msg->command == RPCCOMMAND_UNPAUSE) {
     // Resume simulation
+    syncing = false;
     cyclepart.send();
   }
   else if (msg->command == RPCCOMMAND_CHECK) {

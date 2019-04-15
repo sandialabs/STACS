@@ -174,7 +174,7 @@ class Stream : public CBase_Stream {
     void OpenRPC(CProxy_Network cpnet, const CkCallback &cbcycle, bool paused) { }
     void CloseRPC() { }
     /* Synchronization */
-    void Sync() { }
+    void Sync(CkReductionMsg *msg) { }
     void Pause() { }
 };
 #else
@@ -225,7 +225,8 @@ class Stream : public yarp::os:: RpcServer, public CBase_Stream {
     void CloseRPC();
 
     /* Synchronization */
-    void Sync();
+    void Sync(idx_t synciter);
+    mRPC* BuildRPCSync(idx_t synciter);
     void Pause();
 
   private:
@@ -234,6 +235,7 @@ class Stream : public yarp::os:: RpcServer, public CBase_Stream {
     CProxy_Network network;
     CkCallback netcycle;
     CkCallback netstop;
+    CkCallback netpause;
     /* Remote Procedure Call */
     std::string rpcport;
     RPCReader *rpcreader;

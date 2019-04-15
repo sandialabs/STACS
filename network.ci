@@ -1,5 +1,6 @@
 module network {
   initnode void registerMinTick(void);
+  initnode void registerMaxIdx(void);
   initnode void registerNetDist(void);
   initnode void registerNetGroup(void);
   initnode void registerNetEvent(void);

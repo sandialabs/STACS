@@ -47,7 +47,7 @@ mainmodule stacs {
     entry void OpenRPC(CProxy_Network cpnet, const CkCallback &cbcycle, bool paused);
     entry void CloseRPC();
 
-    entry [reductiontarget] void Sync();
+    entry [reductiontarget] void Sync(idx_t synciter);
     entry [reductiontarget] void Pause();
   };
 };

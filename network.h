@@ -132,6 +132,11 @@ struct trace_t {
 void registerMinTick(void);
 CkReductionMsg *minTick(int nMsg, CkReductionMsg **msgs);
 
+// Idx reduction
+//
+void registerMaxIdx(void);
+CkReductionMsg *maxIdx(int nMsg, CkReductionMsg **msgs);
+
 // Network Distribution Reduction
 //
 void registerNetDist(void);
@@ -667,6 +672,7 @@ class Network : public CBase_Network {
     /* RPC Control */
     CkCallback netrpc;
     idx_t synciter;
+    bool syncing;
 #endif
 };
 
