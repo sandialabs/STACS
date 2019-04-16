@@ -165,7 +165,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
   if (command == "help") {
     CkPrintf("RPC Command: Help\n");
     out.addVocab(yarp::os::Vocab::encode("many"));
-    out.add("received command: help"
+    out.addString("received command: help"
             "  commands to control simulation are:\n"
             "   - help: show this help page\n"
             "   - pause: un/pause the simulation\n"
@@ -200,7 +200,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       cmdid = RPCCOMMAND_UNPAUSE;
       CkPrintf("RPC Command: Unpausing Simulation\n");
     }
-    out.add("received command: pause");
+    out.addString("received command: pause");
   }
 
   // Stop Simulation
@@ -218,7 +218,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Command: Stopping Simulation\n");
       netstop.send();
     }
-    out.add("received command: stop");
+    out.addString("received command: stop");
   }
 
   // Saving network state
@@ -241,7 +241,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       // Modify reduction client
       network.ckSetReductionClient(&netpause);
     }
-    out.add("received command: check");
+    out.addString("received command: check");
   }
   
   // Stepping
@@ -273,7 +273,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       // Modify reduction client
       network.ckSetReductionClient(&netpause);
     }
-    out.add("received command: step");
+    out.addString("received command: step");
   }
   // Stimulation (
   //
@@ -298,7 +298,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       // Modify reduction client
       network.ckSetReductionClient(&netpause);
     }
-    out.add("received command: stim");
+    out.addString("received command: stim");
   }
   // Open YARP stream
   //
@@ -320,7 +320,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       // Modify reduction client
       network.ckSetReductionClient(&netpause);
     }
-    out.add("received command: open");
+    out.addString("received command: open");
   }
   // Close YARP stream
   //
@@ -342,11 +342,11 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       // Modify reduction client
       network.ckSetReductionClient(&netpause);
     }
-    out.add("received command: close");
+    out.addString("received command: close");
   }
   else {
     CkPrintf("RPC Message: %s\n", in.toString().c_str());
-    out.add("message recieved");
+    out.addString("message recieved");
   }
 
   // Broadcast command to network
