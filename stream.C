@@ -104,23 +104,6 @@ void Stream::CloseRPC() {
 * Stream synchronization callbacks
 **************************************************************************/
 
-/*
-// Network callback (continue)
-//
-void Stream::Sync() {
-  // Display some information
-  CkPrintf("Synced\n");
-
-  // Set Synchronization flag
-  rpcreader->SetSyncFlag(RPCSYNC_UNSYNCED);
-
-  // Reset callback
-  network.ckSetReductionClient(&netstop);
-
-  // Restart network
-  netcycle.send();
-}
-*/
 
 // Network callback (syncing)
 //
@@ -141,7 +124,7 @@ void Stream::Sync(idx_t synciter) {
 }
 
 
-// Network callback (paused)
+// Network callback (paused/synced)
 //
 void Stream::Pause() {
   // Display some information
@@ -193,12 +176,12 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
   }
 
   // Pausing
+  // (also syncronizes the simulation to the same iteration)
   //
   else if (command == "pause") {
     // Check for synchronization (toggles behavior)
     if (syncflag == RPCSYNC_SYNCING) {
       CkPrintf("RPC Error: Simulation is Syncing\n");
-      //TODO: Make sure syncflag is always set (no race conditions)
     }
     else if (syncflag == RPCSYNC_UNSYNCED) {
       syncflag = RPCSYNC_SYNCING;
@@ -228,11 +211,7 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
       CkPrintf("RPC Error: Simulation is Syncing\n");
     }
     else if (syncflag == RPCSYNC_UNSYNCED) {
-      syncflag = RPCSYNC_SYNCING;
-
-      // Stop
-      cmdid = RPCCOMMAND_STOP;
-      CkPrintf("RPC Command: Stopping Simulation\n");
+      CkPrintf("RPC Error: Simulation not Paused\n");
     }
     else if (syncflag == RPCSYNC_SYNCED) {
       // Stop while paused
@@ -299,19 +278,15 @@ bool RPCReader::read(yarp::os::ConnectionReader& connection) {
   // Stimulation (
   //
   else if (command == "stim") {
+    // The variables of <t o a d> are
+    // target (vertex), offset (in time from current iteration)
+    // amplitude (of stimulation), and duration
     // Check for synchronization
     if (syncflag == RPCSYNC_SYNCING) {
       CkPrintf("RPC Error: Simulation is Syncing\n");
     }
     else if (syncflag == RPCSYNC_UNSYNCED) {
-      syncflag = RPCSYNC_SYNCING;
-
-      // Stimulation while running
-      cmdid = RPCCOMMAND_STIM;
-      CkPrintf("RPC Command: Stimulating Simulation\n");
-
-      // Modify reduction client
-      network.ckSetReductionClient(&netsync);
+      CkPrintf("RPC Error: Simulation not Paused\n");
     }
     else if (syncflag == RPCSYNC_SYNCED) {
       syncflag = RPCSYNC_SYNCING;

@@ -16,6 +16,7 @@ extern /*readonly*/ int grpminlen;
 extern /*readonly*/ tick_t grpmaxdur;
 extern /*readonly*/ idx_t grpvtxmin;
 extern /*readonly*/ idx_t grpvtxmax;
+extern CkReduction::reducerType max_idx;
 
 
 /**************************************************************************
@@ -312,6 +313,7 @@ void Network::CycleGroup() {
     tsim = 0;
     iter = 0;
     // Reset coordination
+    commiter = 0;
     cadjpart[0] = 0;
     cadjpart[1] = 0;
     partiter = 0;
@@ -327,17 +329,31 @@ void Network::CycleGroup() {
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC
+  else if (syncing && synciter == IDX_T_MAX) {
+    // nop
+  }
   else if (iter == synciter) {
-    // Bookkkeeping
-    synciter = IDX_T_MAX;
-
-    // Display synchronization information
-    if (partidx == 0) {
-      CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
+    if (!syncing) {
+      // Bookkkeeping
+      synciter = IDX_T_MAX;
+      syncing = true;
+      
+      idx_t contiter = iter;
+      // move control to sychronization callback
+      contribute(sizeof(idx_t), &contiter, max_idx);
     }
+    else {
+      // Bookkkeeping
+      synciter = IDX_T_MAX;
+      
+      // Display synchronization information
+      if (partidx == 0) {
+        CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
+      }
 
-    // move control to sychronization callback
-    contribute(0, NULL, CkReduction::nop);
+      // move control to sychronization callback
+      contribute(0, NULL, CkReduction::nop);
+    }
   }
 #endif
   else {
@@ -527,6 +543,9 @@ void Network::CycleGroup() {
     
     // Increment simulated time
     tsim += tstep;
+
+    // Increment iteration
+    ++iter;
   }
 }
 
