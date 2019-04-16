@@ -74,7 +74,8 @@ class YimgLabelEpis : public ModelTmpl < 107, YimgLabelEpis > {
     void OpenPorts();
     void ClosePorts();
     
-    void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick);
+    /* Control Flow */
+    void Renew(std::vector<real_t>& state, std::vector<tick_t>& stick);
 
   private:
 #ifdef STACS_WITH_YARP
@@ -89,9 +90,9 @@ class YimgLabelEpis : public ModelTmpl < 107, YimgLabelEpis > {
 * Class methods
 **************************************************************************/
 
-// Rerun model
+// Renew model
 //
-void YimgLabelEpis::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+void YimgLabelEpis::Renew(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 #ifdef STACS_WITH_YARP
   if (tsample == 0 && !(port->labels.size())) {
     // Request new image

@@ -190,7 +190,8 @@ class YaudPhnMFCCImgEpisBlock : public ModelTmpl < 108, YaudPhnMFCCImgEpisBlock 
     void OpenPorts();
     void ClosePorts();
     
-    void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick);
+    /* Control Flow */
+    void Renew(std::vector<real_t>& state, std::vector<tick_t>& stick);
 
   private:
 #ifdef STACS_WITH_YARP
@@ -205,9 +206,9 @@ class YaudPhnMFCCImgEpisBlock : public ModelTmpl < 108, YaudPhnMFCCImgEpisBlock 
 * Class methods
 **************************************************************************/
 
-// Rerun model
+// Renew model
 //
-void YaudPhnMFCCImgEpisBlock::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+void YaudPhnMFCCImgEpisBlock::Renew(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 #ifdef STACS_WITH_YARP
   if (tsample == 0 && !(port->mels.size())) {
     // Request new phone

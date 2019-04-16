@@ -289,28 +289,28 @@ void Network::SortEventCalendar() {
 
 // Perform periodic events
 //
-void Network::SkipEvent() {
-  std::vector<event_t>::iterator event = evtskip.begin();
+void Network::LeapEvent() {
+  std::vector<event_t>::iterator event = leapevt.begin();
   // Compute periodic events
-  while (event != evtskip.end() && event->diffuse <= tsim) {
+  while (event != leapevt.end() && event->diffuse <= tsim) {
     // Set model index
     idx_t n = event->source;
     // Loop through all models
-    for (std::size_t m = 0; m < skipidx[n].size(); ++m) {
-      event->index = skipidx[n][m][1];
+    for (std::size_t m = 0; m < leapidx[n].size(); ++m) {
+      event->index = leapidx[n][m][1];
       if (event->index) {
-        model[n]->Jump(*event, state[skipidx[n][m][0]], stick[skipidx[n][m][0]], edgaux[n][vtxmodidx[skipidx[n][m][0]]]);
+        model[n]->Leap(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], edgaux[n][vtxmodidx[leapidx[n][m][0]]]);
       }
       else {
-        model[n]->Jump(*event, state[skipidx[n][m][0]], stick[skipidx[n][m][0]], vtxaux[skipidx[n][m][0]]);
+        model[n]->Leap(*event, state[leapidx[n][m][0]], stick[leapidx[n][m][0]], vtxaux[leapidx[n][m][0]]);
       }
     }
     // Update timing
     event->diffuse += (tick_t)(event->data*TICKS_PER_MS);
     ++event;
   }
-  std::sort(evtskip.begin(), evtskip.end());
-  tskip = evtskip.front().diffuse;
+  std::sort(leapevt.begin(), leapevt.end());
+  tleap = leapevt.front().diffuse;
 }
 
 // Handle generated events (for communication)

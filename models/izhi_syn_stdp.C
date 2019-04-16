@@ -41,7 +41,10 @@ class IzhiSynSTDP : public ModelTmpl < 12, IzhiSynSTDP > {
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
-    void Skip(std::vector<event_t>& events);
+    
+    /* Periodic Events */
+    void Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
+    void getLeap(std::vector<event_t>& events);
 };
 
 
@@ -92,7 +95,12 @@ void IzhiSynSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& s
       stick[e][2] = event.diffuse;
     }
   }
-  else if (event.type == EVENT_SYNUP) {
+}
+
+// Periodic events
+//
+void IzhiSynSTDP::Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
+  if (event.type == EVENT_SYNUP) {
     idx_t e = event.index;
     // Update weight only every second
     state[e][0] += 0.01 + state[e][1];
@@ -107,16 +115,15 @@ void IzhiSynSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& s
   }
 }
 
-// Periodic events
-//
-void IzhiSynSTDP::Skip(std::vector<event_t>& events) {
-  event_t event;
-  event.diffuse = 0;
-  event.type = EVENT_SYNUP;
-  event.source = -1;
-  event.index = 0;
-  event.data = param[2];
-  events.push_back(event);
+void IzhiSynSTDP::getLeap(std::vector<event_t>& events) {
+  if (plastic) {
+    event_t event;
+    event.diffuse = 0;
+    event.type = EVENT_SYNUP;
+    event.source = -1;
+    event.index = 0;
+    event.data = param[2];
+    events.push_back(event);
+  }
 }
-
 

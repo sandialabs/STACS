@@ -369,8 +369,8 @@ void Network::CycleGroup() {
     }
     
     // Check for periodic events
-    if (tsim >= tskip) {
-      SkipEvent();
+    if (tsim >= tleap) {
+      LeapEvent();
     }
     
     // Perform computation

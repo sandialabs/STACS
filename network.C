@@ -150,27 +150,27 @@ Network::Network(mModel *msg) {
     }
   }
   // set up periodic events
-  evtskip.clear();
-  skiplist.resize(model.size(), false);
-  skipidx.resize(model.size());
+  leapevt.clear();
+  leaplist.resize(model.size(), false);
+  leapidx.resize(model.size());
   events.clear();
   for (std::size_t n = 1; n < model.size(); ++n) {
-    model[n]->Skip(events);
+    model[n]->getLeap(events);
     if (events.size()) {
-      skiplist[n] = true;
+      leaplist[n] = true;
       for (std::size_t e = 0; e < events.size(); ++e) {
         events[e].source = (idx_t) n;
-        evtskip.push_back(events[e]);
+        leapevt.push_back(events[e]);
       }
       events.clear();
     }
   }
-  if (evtskip.size()) {
-    std::sort(evtskip.begin(), evtskip.end());
-    tskip = evtskip.front().diffuse;
+  if (leapevt.size()) {
+    std::sort(leapevt.begin(), leapevt.end());
+    tleap = leapevt.front().diffuse;
   }
   else {
-    tskip = TICK_T_MAX; // never skip
+    tleap = TICK_T_MAX; // never leap
   }
 
   // Return control to main
@@ -271,8 +271,8 @@ void Network::LoadNetwork(mPart *msg) {
     jstate += model[vtxmodidx[i]]->getNState();
     stick[i][0] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + model[vtxmodidx[i]]->getNStick());
     jstick += model[vtxmodidx[i]]->getNStick();
-    if (skiplist[vtxmodidx[i]]) {
-      skipidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
+    if (leaplist[vtxmodidx[i]]) {
+      leapidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
     }
     // copy over edge data
     for (idx_t j = 0; j < adjcy[i].size(); ++j) {
@@ -287,8 +287,8 @@ void Network::LoadNetwork(mPart *msg) {
       jstate += model[edgmodidx[i][j]]->getNState();
       stick[i][j+1] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + model[edgmodidx[i][j]]->getNStick());
       jstick += model[edgmodidx[i][j]]->getNStick();
-      if (skiplist[edgmodidx[i][j]]) {
-        skipidx[edgmodidx[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
+      if (leaplist[edgmodidx[i][j]]) {
+        leapidx[edgmodidx[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
       }
     }
     // set up auxiliary state

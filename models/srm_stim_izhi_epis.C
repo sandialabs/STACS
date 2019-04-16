@@ -29,14 +29,16 @@ class SRMStimIzhiEpis : public ModelTmpl < 201, SRMStimIzhiEpis > {
       auxstick.resize(0);
       // ports
       portlist.resize(0);
-
+      // Local variables
       newepisode = true;
     }
     
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
-    void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick);
+
+    /* Control Flow */
+    void Renew(std::vector<real_t>& state, std::vector<tick_t>& stick);
 };
 
 
@@ -44,7 +46,7 @@ class SRMStimIzhiEpis : public ModelTmpl < 201, SRMStimIzhiEpis > {
 * Class methods
 **************************************************************************/
 
-void SRMStimIzhiEpis::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+void SRMStimIzhiEpis::Renew(std::vector<real_t>& state, std::vector<tick_t>& stick) {
   newepisode = true;
 }
 

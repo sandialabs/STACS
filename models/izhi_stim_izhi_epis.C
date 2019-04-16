@@ -36,7 +36,9 @@ class IzhiStimIzhiEpis : public ModelTmpl < 106, IzhiStimIzhiEpis > {
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
-    void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick);
+
+    /* Control Flow */
+    void Renew(std::vector<real_t>& state, std::vector<tick_t>& stick);
 };
 
 
@@ -44,7 +46,7 @@ class IzhiStimIzhiEpis : public ModelTmpl < 106, IzhiStimIzhiEpis > {
 * Class methods
 **************************************************************************/
 
-void IzhiStimIzhiEpis::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+void IzhiStimIzhiEpis::Renew(std::vector<real_t>& state, std::vector<tick_t>& stick) {
   newepisode = true;
 }
 

@@ -94,9 +94,9 @@ void Network::CycleSim() {
     else {
       teps = tsim + tepisode;
       
-      // Rerun any episodic models
+      // Renew any episodic models
       for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
-        model[vtxmodidx[i]]->Rerun(state[i][0], stick[i][0]);
+        model[vtxmodidx[i]]->Renew(state[i][0], stick[i][0]);
       }
     
       // Start a new cycle (after checked data sent)
@@ -171,8 +171,8 @@ void Network::CycleSim() {
     }
     
     // Check for periodic events
-    if (tsim >= tskip) {
-      SkipEvent();
+    if (tsim >= tleap) {
+      LeapEvent();
     }
     
     // Perform computation

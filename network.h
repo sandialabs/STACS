@@ -309,6 +309,7 @@ class Model {
       idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
       return (index < sticklist.size() ? index : -1);
     }
+    // TODO: Move polychronization stuff out of model
     bool getPlastic() const { return plastic; }
     bool getActive() const { return active; }
     bool getMother() const { return mother; }
@@ -328,19 +329,22 @@ class Model {
         p += portname[i].size() + 1;
       }
     }
-    void setPlastic(bool plasticmode) { plastic = plasticmode; }
+    void setPlastic(bool plas) { plastic = plas; }
     void setActive(bool grpactive) { active = grpactive; }
     void setMother(bool grpmother) { mother = grpmother; }
     void setAnchor(bool grpanchor) { anchor = grpanchor; }
+    /* Computational Abstract Functions */
+    virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) = 0;
+    virtual void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) = 0;
+    /* Periodic Computation */
+    virtual void Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
+    virtual void getLeap(std::vector<event_t>& events) { }
     /* Protocol Functions */
     virtual void OpenPorts() { }
     virtual void ClosePorts() { }
-    /* Abstract Functions */
-    virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) = 0;
-    virtual void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) = 0;
-    virtual void Skip(std::vector<event_t>& events) { }
+    /* Control Flow */
+    virtual void Renew(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
     virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
-    virtual void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
   protected:
     /* Random Number Generation */
     std::mt19937 *rngine;
@@ -355,9 +359,10 @@ class Model {
     std::vector<std::string> portlist;
     /* Model Data */
     std::vector<real_t> param;
-    bool plastic;
     /* Protocol */
     std::vector<std::string> portname;
+    /* Control Flow */
+    bool plastic;
     /* Polychronization */
     bool active;
     bool mother;
@@ -553,7 +558,7 @@ class Network : public CBase_Network {
     
     /* Computation */
     void SortEventCalendar();
-    void SkipEvent();
+    void LeapEvent();
     void HandleEvent(event_t &event, const idx_t i);
     void EstimateGroup(const idx_t i);
     
@@ -618,10 +623,10 @@ class Network : public CBase_Network {
     std::vector<event_t> evtext; // external events (and extra spillover)
     std::vector<event_t> evtrpc; // events generated from RPC
     /* Periodic Events */
-    tick_t tskip;
-    std::vector<event_t> evtskip; // set of periodic events
-    std::vector<bool> skiplist; // models with periodic events
-    std::vector<std::vector<std::array<idx_t, 2>>> skipidx; // indices into models
+    tick_t tleap;
+    std::vector<event_t> leapevt; // set of periodic events
+    std::vector<bool> leaplist; // models with periodic events
+    std::vector<std::vector<std::array<idx_t, 2>>> leapidx; // indices into models
     /* Recording */
     std::vector<event_t> evtlog; // event logging
     std::vector<bool> evtloglist; // types of events to log

@@ -180,7 +180,8 @@ class YaudWinMFCCImgEpis : public ModelTmpl < 104, YaudWinMFCCImgEpis > {
     void OpenPorts();
     void ClosePorts();
     
-    void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick);
+    /* Control Flow */
+    void Renew(std::vector<real_t>& state, std::vector<tick_t>& stick);
 
   private:
 #ifdef STACS_WITH_YARP
@@ -195,9 +196,9 @@ class YaudWinMFCCImgEpis : public ModelTmpl < 104, YaudWinMFCCImgEpis > {
 * Class methods
 **************************************************************************/
 
-// Rerun model
+// Renew model
 //
-void YaudWinMFCCImgEpis::Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) {
+void YaudWinMFCCImgEpis::Renew(std::vector<real_t>& state, std::vector<tick_t>& stick) {
 #ifdef STACS_WITH_YARP
   // Request new phone
   yarp::os::Bottle& b = preq->prepare();
