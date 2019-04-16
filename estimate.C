@@ -181,7 +181,7 @@ void Network::CycleEst() {
       
       // Display synchronization information
       if (partidx == 0) {
-        CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
+        CkPrintf("  Synchronized at iteration %" PRIidx "\n", iter);
       }
 
       // move control to sychronization callback

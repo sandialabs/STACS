@@ -108,15 +108,11 @@ void Stream::CloseRPC() {
 // Network callback (syncing)
 //
 void Stream::Sync(idx_t synciter) {
-  //idx_t synciter = *(idx_t *)msg;
-  //delete msg;
-  // Display some information
-  CkPrintf("Syncing at %" PRIidx" \n", synciter+1);
-
   // Set next callback
   network.ckSetReductionClient(&netpause);
   
   // Broadcast command to network
+  // Synchronize at next iteration
   mRPC *mrpc = BuildRPCSync(synciter+1);
   if (mrpc != NULL) {
     network.CommRPC(mrpc);
@@ -128,7 +124,7 @@ void Stream::Sync(idx_t synciter) {
 //
 void Stream::Pause() {
   // Display some information
-  CkPrintf("Paused\n");
+  CkPrintf("Simulation Paused\n");
 
   // Set Synchronization flag
   rpcreader->SetSyncFlag(RPCSYNC_SYNCED);
