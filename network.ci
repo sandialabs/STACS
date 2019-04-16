@@ -29,6 +29,8 @@ module network {
     bool grpmother[];
     bool grpanchor[];
     idx_t nmodel;
+    bool plastic;
+    bool episodic;
   };
 
   message mPart {
@@ -108,19 +110,11 @@ module network {
     entry Network(mModel *msg);
     entry void LoadNetwork(mPart *msg);
     
-    entry void InitSimContPlas(CProxy_Netdata cpdata);
-    entry void InitSimEpisPlas(CProxy_Netdata cpdata);
-    entry void InitSimCont(CProxy_Netdata cpdata);
-    entry void InitSimEpis(CProxy_Netdata cpdata);
-    entry void CycleSimContPlas();
-    entry void CycleSimEpisPlas();
-    entry void CycleSimCont();
-    entry void CycleSimEpis();
+    entry void InitSim(CProxy_Netdata cpdata);
+    entry void CycleSim();
     
-    entry void InitEstCont(CProxy_Netdata cpdata);
-    entry void InitEstEpis(CProxy_Netdata cpdata);
-    entry void CycleEstCont();
-    entry void CycleEstEpis();
+    entry void InitEst(CProxy_Netdata cpdata);
+    entry void CycleEst();
     
     entry void GoAhead(mGo *msg);
     entry void CommEvent(mEvent *msg);

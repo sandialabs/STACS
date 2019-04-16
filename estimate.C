@@ -17,6 +17,7 @@ extern /*readonly*/ idx_t intrec;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tepisode;
 extern /*readonly*/ idx_t episodes;
+extern CkReduction::reducerType max_idx;
 
 
 /**************************************************************************
@@ -48,26 +49,10 @@ CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs) {
 
 // Coordination with NetData chare array
 //
-void Network::InitEstCont(CProxy_Netdata cpdata) {
+void Network::InitEst(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleEstCont(), partidx, thisProxy);
-  
-  // Request network part from input
-  netdata(fileidx).LoadNetwork(partidx,
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
-}
-
-// Coordination with NetData chare array
-//
-void Network::InitEstEpis(CProxy_Netdata cpdata) {
-  // Set proxies
-  netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleEstEpis(), partidx, thisProxy);
-
-  // Initialization
-  teps = 0;
-  epsidx = -1;
+  cyclepart = CkCallback(CkIndex_Network::CycleEst(), partidx, thisProxy);
   
   // Request network part from input
   netdata(fileidx).LoadNetwork(partidx,
@@ -130,146 +115,28 @@ void Network::SaveFinalEstimate() {
 
 
 /**************************************************************************
-* Network Estimation Cycle (continuous)
+* Network Estimation Cycle
 **************************************************************************/
 
 // Main control flow
 //
-void Network::CycleEstCont() {
+// TODO: Merge this into simulation cycle too sometime?
+void Network::CycleEst() {
   // Check if simulation time is complete
-  if (tsim >= tmax) {
+  if (tsim >= tmax && !episodic) {
     // return control to main
     contribute(0, NULL, CkReduction::nop);
   }
   // Recording
-  else if (iter == reciter) {
+  else if (iter == reciter && !episodic) {
     // Bookkeeping
     reciter += intrec;
 
     // Send records
-    thisProxy(partidx).SaveEstimate();
+    thisProxy(partidx).SaveRecord();
   }
-#ifdef STACS_WITH_YARP
-  // Synchronization from RPC
-  else if (iter == synciter) {
-    // Bookkkeeping
-    synciter = IDX_T_MAX;
-
-    // Display synchronization information
-    if (partidx == 0) {
-      CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
-    }
-
-    // move control to sychronization callback
-    contribute(0, NULL, CkReduction::nop);
-  }
-#endif
-  // Simulate next cycle
-  else {
-    // Display iteration information
-    if (iter >= dispiter && partidx == 0) {
-      dispiter += intdisp;
-      CkPrintf("  Estimating iteration %" PRIidx "\n", iter);
-      //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
-    }
-    
-    // Bookkeeping
-    idx_t evtday = iter%nevtday;
-    tick_t tstop = tsim + tstep;
-
-    // Clear event buffer
-    evtext.clear();
-    
-    // Redistribute any events (on new year)
-    if (evtday == 0) {
-      SortEventCalendar();
-    }
-    
-    // Check for periodic events
-    if (tsim >= tskip) {
-      SkipEvent();
-    }
-    
-    // Perform computation
-    for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
-      // Timing
-      tick_t tdrift = tsim;
-
-      // Sort events
-      std::sort(evtcal[i][evtday].begin(), evtcal[i][evtday].end());
-
-      // Perform events starting at beginning of step
-      std::vector<event_t>::iterator event = evtcal[i][evtday].begin();
-      while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
-        // edge events
-        if (event->index) {
-          model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
-        }
-        // vertex events
-        else {
-          model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
-        }
-        ++event;
-      }
-
-      // Polychronization
-      EstimateGroup(i);
-
-      // Computation
-      while (tdrift < tstop) {
-        // Step through model drift (vertex)
-        tdrift += model[vtxmodidx[i]]->Step(tdrift, tstop - tdrift, state[i][0], stick[i][0], events);
-
-        // Handle generated events (if any)
-        if (events.size()) {
-          for (std::size_t e = 0; e < events.size(); ++e) {
-            HandleEvent(events[e], i);
-          }
-          // clear log for next time
-          events.clear();
-        }
-        
-        // Perform events up to tdrift
-        while (event != evtcal[i][evtday].end() && event->diffuse <= tdrift) {
-          // edge events
-          if (event->index) {
-            model[edgmodidx[i][event->index-1]]->Jump(*event, state[i], stick[i], edgaux[edgmodidx[i][event->index-1]][vtxmodidx[i]]);
-          }
-          // vertex events
-          else {
-            model[vtxmodidx[i]]->Jump(*event, state[i], stick[i], vtxaux[i]);
-          }
-          ++event;
-        }
-      }
-
-      // Clear event queue
-      evtcal[i][evtday].clear();
-    }
-
-    // Send messages to entire network
-    // TODO: Reduce communication due to monitoring
-    mEvent *mevent = BuildEvent();
-    thisProxy.CommStamp(mevent);
-
-    // Increment simulated time
-    tsim += tstep;
-
-    // Add new records
-    AddRecord();
-  }
-}
-
-
-/**************************************************************************
-* Network Estimation Cycle (episodic)
-**************************************************************************/
-
-// Main control flow
-//
-void Network::CycleEstEpis() {
   // Check if episode is complete
-  if (tsim >= teps) {
+  else if (tsim >= teps && episodic) {
     // Check if all episodes are complete
     if (++epsidx >= episodes) {
       // return control to main
@@ -277,53 +144,72 @@ void Network::CycleEstEpis() {
     }
     else {
       teps = tsim + tepisode;
-
+      
       // Rerun any episodic models
       for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
         model[vtxmodidx[i]]->Rerun(state[i][0], stick[i][0]);
       }
-
+      
       // Clear out groups from current episode
       for (std::size_t i = 0; i < grpwindow.size(); ++i) {
         for (std::size_t p = 0; p < grpwindow[i].size(); ++p) {
           grpwindow[i][p].clear();
         }
       }
-
-      // Send records and estimates
-      thisProxy(partidx).SaveEstimate();
+    
+      // Start a new cycle (after checked data sent)
+      thisProxy(partidx).SaveRecord();
     }
   }
 #ifdef STACS_WITH_YARP
-  // Synchronization from RPC
+  else if (syncing && synciter == IDX_T_MAX) {
+    // nop
+  }
   else if (iter == synciter) {
-    // Bookkkeeping
-    synciter = IDX_T_MAX;
-
-    // Display synchronization information
-    if (partidx == 0) {
-      CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
+    if (!syncing) {
+      // Bookkkeeping
+      synciter = IDX_T_MAX;
+      syncing = true;
+      
+      idx_t contiter = iter;
+      // move control to sychronization callback
+      contribute(sizeof(idx_t), &contiter, max_idx);
     }
+    else {
+      // Bookkkeeping
+      synciter = IDX_T_MAX;
+      
+      // Display synchronization information
+      if (partidx == 0) {
+        CkPrintf("  Synchronizing at iteration %" PRIidx "\n", iter);
+      }
 
-    // move control to sychronization callback
-    contribute(0, NULL, CkReduction::nop);
+      // move control to sychronization callback
+      contribute(0, NULL, CkReduction::nop);
+    }
   }
 #endif
   // Simulate next cycle
   else {
     // Display iteration information
-    if (iter == dispiter && partidx == 0) {
+    if (iter >= dispiter && partidx == 0) {
       dispiter += intdisp;
-      CkPrintf("  Estimating episode %" PRIidx "\n", epsidx);
+      if (episodic) {
+        CkPrintf("  Estimating episode %" PRIidx "\n", epsidx);
+      }
+      else {
+        CkPrintf("  Estimating iteration %" PRIidx "\n", iter);
+        //CkPrintf("    Simulating time %" PRIrealsec " seconds\n", ((real_t) tsim)/(TICKS_PER_MS*1000));
+      }
     }
-
+    
     // Bookkeeping
     idx_t evtday = iter%nevtday;
     tick_t tstop = tsim + tstep;
 
     // Clear event buffer
     evtext.clear();
-
+    
     // Redistribute any events (on new year)
     if (evtday == 0) {
       SortEventCalendar();
@@ -393,16 +279,17 @@ void Network::CycleEstEpis() {
 
     // Send messages to entire network
     // TODO: Reduce communication due to monitoring
-    //       Make two communication channels
-    //       One for events, and the other for stamps
     mEvent *mevent = BuildEvent();
     thisProxy.CommStamp(mevent);
 
     // Increment simulated time
     tsim += tstep;
-    
+
     // Add new records
     AddRecord();
+    
+    // Increment iteration
+    ++iter;
   }
 }
 

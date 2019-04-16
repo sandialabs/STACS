@@ -67,6 +67,10 @@ Network::Network(mModel *msg) {
   // Set up random number generator
   rngine.seed(randseed+partidx);
   unifdist = new std::uniform_real_distribution<real_t> (0.0, 1.0);
+  
+  // Simulation configuration
+  plastic = msg->plastic;
+  episodic = msg->episodic;
 
   // Network Models
   for (std::size_t i = 0; i < model.size(); ++i) {
@@ -80,6 +84,7 @@ Network::Network(mModel *msg) {
   model[0]->setActive(false);
   model[0]->setMother(false);
   model[0]->setAnchor(false);
+  model[0]->setPlastic(false);
   // User defined models
   for (idx_t i = 1; i < msg->nmodel+1; ++i) {
     // Create model object
@@ -93,6 +98,7 @@ Network::Network(mModel *msg) {
     model[i]->setActive(msg->grpactive[i-1]);
     model[i]->setMother(msg->grpmother[i-1]);
     model[i]->setAnchor(msg->grpanchor[i-1]);
+    model[i]->setPlastic(msg->plastic);
 
     // Print out model information
     /*
@@ -115,6 +121,8 @@ Network::Network(mModel *msg) {
   record.clear();
   recordlist.clear();
   // TODO: Put this in the yml config file
+  // TODO: Actually, fold this into a recording model
+  //       that combines into a multi-vertex thing
   // Record spikes
   evtloglist[EVENT_SPIKE] = true;
 
@@ -352,7 +360,9 @@ void Network::LoadNetwork(mPart *msg) {
   commiter = 0;
   dispiter = 0;
   reciter = intrec;
-  saveiter = intsave;
+  saveiter = plastic ? intsave : IDX_T_MAX;
+  teps = episodic ? 0 : TICK_T_MAX;
+  epsidx = -1;
   // Set up coordination
   cadjpart[0] = 0;
   cadjpart[1] = 0;

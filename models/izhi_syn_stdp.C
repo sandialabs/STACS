@@ -41,7 +41,6 @@ class IzhiSynSTDP : public ModelTmpl < 12, IzhiSynSTDP > {
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
-    void Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
     void Skip(std::vector<event_t>& events);
 };
 
@@ -59,16 +58,13 @@ tick_t IzhiSynSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state
 // Simulation jump
 //
 void IzhiSynSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
-  if (event.type == EVENT_SPIKE && event.source >= 0) {
-    // Apply effect to neuron (vertex)
-    state[0][auxidx[0].stateidx[0]] += state[event.index][0];
+  if (!plastic) {
+    if (event.type == EVENT_SPIKE && event.source >= 0) {
+      // Apply effect to neuron (vertex)
+      state[0][auxidx[0].stateidx[0]] += state[event.index][0];
+    }
   }
-}
-
-// Simulation leap
-//
-void IzhiSynSTDP::Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
-  if (event.type == EVENT_SPIKE) {
+  else if (event.type == EVENT_SPIKE) {
     // External spike event
     if (event.source >= 0) {
       idx_t e = event.index;

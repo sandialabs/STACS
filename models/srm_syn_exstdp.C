@@ -42,7 +42,6 @@ class SRMSynExSTDP : public ModelTmpl < 21, SRMSynExSTDP > {
     /* Simulation */
     tick_t Step(tick_t tdrift, tick_t diff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
     void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
-    void Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx);
 };
 
 
@@ -59,17 +58,14 @@ tick_t SRMSynExSTDP::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
 // Simulation jump
 //
 void SRMSynExSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
-  // External spike event
-  if (event.type == EVENT_SPIKE && event.source >= 0) {
-    // Apply effect to neuron (vertex)
-    state[0][auxidx[0].stateidx[0]] += state[event.index][0];
+  if (!plastic) {
+    // External spike event
+    if (event.type == EVENT_SPIKE && event.source >= 0) {
+      // Apply effect to neuron (vertex)
+      state[0][auxidx[0].stateidx[0]] += state[event.index][0];
+    }
   }
-}
-
-// Simulation leap
-//
-void SRMSynExSTDP::Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
-  if (event.type == EVENT_SPIKE) {
+  else if (event.type == EVENT_SPIKE) {
     // External spike event
     if (event.source >= 0) {
       idx_t e = event.index;

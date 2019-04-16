@@ -148,15 +148,6 @@ void Main::Init() {
                  randseed, (plastic ? "yes" : "no"),
                  ((real_t)(tstep/TICKS_PER_MS)), teventq,
                  ((real_t)(tepisode/TICKS_PER_MS)), episodes);
-        // Set compute cycle
-        if (plastic) {
-          netcycle = CkCallback(CkIndex_Network::CycleSimEpisPlas(), network);
-          network.InitSimEpisPlas(netdata);
-        }
-        else {
-          netcycle = CkCallback(CkIndex_Network::CycleSimEpis(), network);
-          network.InitSimEpis(netdata);
-        }
       }
       else {
         CkPrintf("  Random Number Seed  (randseed): %u\n"
@@ -170,16 +161,10 @@ void Main::Init() {
                  randseed, (plastic ? "yes" : "no"),
                  ((real_t)(tstep/TICKS_PER_MS)), teventq, tdisplay,
                  trecord, tsave, ((real_t)(tmax/TICKS_PER_MS)));
-        // Set compute cycle
-        if (plastic) {
-          netcycle = CkCallback(CkIndex_Network::CycleSimContPlas(), network);
-          network.InitSimContPlas(netdata);
-        }
-        else {
-          netcycle = CkCallback(CkIndex_Network::CycleSimCont(), network);
-          network.InitSimCont(netdata);
-        }
       }
+      // Set compute cycle
+      netcycle = CkCallback(CkIndex_Network::CycleSim(), network);
+      network.InitSim(netdata);
     }
     else if (runmode == RUNMODE_FINDGROUP) {
       // collect active models
@@ -233,9 +218,6 @@ void Main::Init() {
                  "  Number of Episodes  (episodes): %" PRIidx "\n",
                  randseed, groupdir.c_str(), ((real_t)(tstep/TICKS_PER_MS)), teventq,
                  ((real_t)(tepisode/TICKS_PER_MS)), episodes);
-        // Set compute cycle
-        netcycle = CkCallback(CkIndex_Network::CycleEstEpis(), network);
-        network.InitEstEpis(netdata);
       }
       else {
         CkPrintf("  Random Number Seed  (randseed): %" PRIidx "\n"
@@ -247,10 +229,10 @@ void Main::Init() {
                  "  Max Simulation Time     (tmax): %" PRIrealms "ms\n",
                  randseed, groupdir.c_str(), ((real_t)(tstep/TICKS_PER_MS)), teventq,
                  tdisplay, trecord, ((real_t)(tmax/TICKS_PER_MS)));
-        // Set compute cycle
-        netcycle = CkCallback(CkIndex_Network::CycleEstCont(), network);
-        network.InitEstCont(netdata);
       }
+      // Set compute cycle
+      netcycle = CkCallback(CkIndex_Network::CycleEst(), network);
+      network.InitEst(netdata);
     }
     
 #ifdef STACS_WITH_YARP

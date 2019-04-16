@@ -189,6 +189,8 @@ class mModel : public CMessage_mModel {
     bool *grpmother;
     bool *grpanchor;
     idx_t nmodel;
+    bool plastic;
+    bool episodic;
 };
 
 // Network partition data
@@ -307,6 +309,7 @@ class Model {
       idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
       return (index < sticklist.size() ? index : -1);
     }
+    bool getPlastic() const { return plastic; }
     bool getActive() const { return active; }
     bool getMother() const { return mother; }
     bool getAnchor() const { return anchor; }
@@ -325,6 +328,7 @@ class Model {
         p += portname[i].size() + 1;
       }
     }
+    void setPlastic(bool plasticmode) { plastic = plasticmode; }
     void setActive(bool grpactive) { active = grpactive; }
     void setMother(bool grpmother) { mother = grpmother; }
     void setAnchor(bool grpanchor) { anchor = grpanchor; }
@@ -334,7 +338,6 @@ class Model {
     /* Abstract Functions */
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) = 0;
     virtual void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) = 0;
-    virtual void Leap(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { Jump(event, state, stick, auxidx); }
     virtual void Skip(std::vector<event_t>& events) { }
     virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
     virtual void Rerun(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
@@ -352,6 +355,7 @@ class Model {
     std::vector<std::string> portlist;
     /* Model Data */
     std::vector<real_t> param;
+    bool plastic;
     /* Protocol */
     std::vector<std::string> portname;
     /* Polychronization */
@@ -533,20 +537,12 @@ class Network : public CBase_Network {
     void LoadNetwork(mPart *msg);
     
     /* Simulation */
-    void InitSimContPlas(CProxy_Netdata cpdata);
-    void InitSimEpisPlas(CProxy_Netdata cpdata);
-    void InitSimCont(CProxy_Netdata cpdata);
-    void InitSimEpis(CProxy_Netdata cpdata);
-    void CycleSimContPlas();
-    void CycleSimEpisPlas();
-    void CycleSimCont();
-    void CycleSimEpis();
+    void InitSim(CProxy_Netdata cpdata);
+    void CycleSim();
     
     /* Estimation */
-    void InitEstCont(CProxy_Netdata cpdata);
-    void InitEstEpis(CProxy_Netdata cpdata);
-    void CycleEstCont();
-    void CycleEstEpis();
+    void InitEst(CProxy_Netdata cpdata);
+    void CycleEst();
 
     /* Communication */
     void CreateComm();
@@ -557,9 +553,7 @@ class Network : public CBase_Network {
     
     /* Computation */
     void SortEventCalendar();
-    void SkipEventPlas();
     void SkipEvent();
-    void HandleEventPlas(event_t &event, const idx_t i);
     void HandleEvent(event_t &event, const idx_t i);
     void EstimateGroup(const idx_t i);
     
@@ -651,6 +645,9 @@ class Network : public CBase_Network {
     CProxy_Netdata netdata;
     CkCallback cyclepart;
     int partidx, fileidx;
+    /* Configuration */
+    bool plastic;
+    bool episodic;
     /* Timing */
     tick_t tsim;
     tick_t teps;

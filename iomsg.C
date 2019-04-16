@@ -109,6 +109,9 @@ mModel* Main::BuildModel() {
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = models.size();
+  // Configuration
+  mmodel->plastic = plastic;
+  mmodel->episodic = episodic;
 
   // Prefixes starts with zero
   mmodel->xparam[0] = 0;
