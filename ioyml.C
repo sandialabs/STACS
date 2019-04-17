@@ -341,7 +341,7 @@ int Main::ReadModel() {
 
   // Setup model data
   models.resize(modfile.size());
-  std::unordered_map<std::string, std::size_t> modnamemap;
+  std::unordered_map<std::string, std::size_t> modmap;
 
   // Get model data
   for (std::size_t i = 0; i < modfile.size(); ++i) {
@@ -398,7 +398,7 @@ int Main::ReadModel() {
     // Concrete model
     else {
       // Create list of model indices (for composite models)
-      modnamemap[models[i].modname] = i;
+      modmap[models[i].modname] = i;
 
       // Params are their own 'node'
       YAML::Node param = modfile[i]["param"];
@@ -479,8 +479,8 @@ int Main::ReadModel() {
       for (std::size_t j = 0; j < models[i].port.size(); ++j) {
         // Get first model name out of string
         std::string modname = models[i].port[j].substr(0, models[i].port[j].find(' '));
-        models[i].nstate += models[modnamemap[modname]].nstate;
-        models[i].nstick += models[modnamemap[modname]].nstick;
+        models[i].nstate += models[modmap[modname]].nstate;
+        models[i].nstick += models[modmap[modname]].nstick;
         std::ostringstream part;
         part << " " << modname;
         modelparts.append(part.str());
