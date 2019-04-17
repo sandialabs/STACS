@@ -341,6 +341,7 @@ int Main::ReadModel() {
 
   // Setup model data
   models.resize(modfile.size());
+  std::unordered_map<std::string, std::size_t> modnamemap;
 
   // Get model data
   for (std::size_t i = 0; i < modfile.size(); ++i) {
@@ -358,49 +359,90 @@ int Main::ReadModel() {
       CkPrintf("  modtype: %s\n", e.what());
       return 1;
     }
-    
-    // Params are their own 'node'
-    YAML::Node param = modfile[i]["param"];
-    models[i].param.resize(param.size());
-    for (std::size_t j = 0; j < param.size(); ++j) {
-      try {
-        models[i].param[j] = param[j]["value"].as<real_t>();
-      } catch (YAML::RepresentationException& e) {
-        CkPrintf("  param: %s\n", e.what());
-        return 1;
-      }
-    }
-    
-    // States are their own 'node'
-    YAML::Node state = modfile[i]["state"];
-    // Count states and sticks
-    models[i].nstate = 0;
-    models[i].nstick = 0;
-    for (std::size_t j = 0; j < state.size(); ++j) {
-      std::string reptype;
-      try {
-        // reptype
-        reptype = state[j]["rep"].as<std::string>();
-      } catch (YAML::RepresentationException& e) {
-        reptype = std::string("real");
-      }
-      if (reptype == "tick") {
-        ++models[i].nstick;
-      }
-      else {
-        ++models[i].nstate;
-      }
-    }
 
-    // Ports are their own 'node'
-    YAML::Node port = modfile[i]["port"];
-    models[i].port.resize(port.size());
-    for (std::size_t j = 0; j < port.size(); ++j) {
-      try {
-        models[i].port[j] = port[j]["value"].as<std::string>();
-      } catch (YAML::RepresentationException& e) {
-        CkPrintf("  port: %s\n", e.what());
-        return 1;
+    // Composite model (should be for vertices only?)
+    if (models[i].modtype == 0) {
+      // Parts are their own 'node'
+      YAML::Node part = modfile[i]["part"];
+      // Use port list for model names here
+      models[i].port.resize(part.size());
+      for (std::size_t j = 0; j < part.size(); ++j) {
+        try {
+          // source model for part
+          models[i].port[j] = part[j]["source"].as<std::string>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  part source: %s\n", e.what());
+          return 1;
+        }
+        std::vector<std::string> targets;
+        try {
+          // target list for part
+          targets = part[j]["target"].as<std::vector<std::string>>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  part target: %s\n", e.what());
+          return 1;
+        }
+        // Add targets to end of modnames
+        for (std::size_t s = 0; s < targets.size(); ++s) {
+          std::ostringstream target;
+          target << " " << targets[s];
+          models[i].port[j].append(target.str());
+        }
+      }
+      // Composite models don't have their own parameters
+      models[i].param.resize(0);
+      // To be filled in after all models read in
+      models[i].nstate = 0;
+      models[i].nstick = 0;
+    }
+    // Concrete model
+    else {
+      // Create list of model indices (for composite models)
+      modnamemap[models[i].modname] = i;
+
+      // Params are their own 'node'
+      YAML::Node param = modfile[i]["param"];
+      models[i].param.resize(param.size());
+      for (std::size_t j = 0; j < param.size(); ++j) {
+        try {
+          models[i].param[j] = param[j]["value"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  param: %s\n", e.what());
+          return 1;
+        }
+      }
+
+      // States are their own 'node'
+      YAML::Node state = modfile[i]["state"];
+      // Count states and sticks
+      models[i].nstate = 0;
+      models[i].nstick = 0;
+      for (std::size_t j = 0; j < state.size(); ++j) {
+        std::string reptype;
+        try {
+          // reptype
+          reptype = state[j]["rep"].as<std::string>();
+        } catch (YAML::RepresentationException& e) {
+          reptype = std::string("real");
+        }
+        if (reptype == "tick") {
+          ++models[i].nstick;
+        }
+        else {
+          ++models[i].nstate;
+        }
+      }
+
+      // Ports are their own 'node'
+      YAML::Node port = modfile[i]["port"];
+      models[i].port.resize(port.size());
+      for (std::size_t j = 0; j < port.size(); ++j) {
+        try {
+          models[i].port[j] = port[j]["value"].as<std::string>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  port: %s\n", e.what());
+          return 1;
+        }
       }
     }
 
@@ -428,19 +470,39 @@ int Main::ReadModel() {
         break;
       }
     }
-  
-    // Print out model information
-    std::string modelports;
-    // collect ports
-    for (idx_t j = 0; j < models[i].port.size(); ++j) {
-      std::ostringstream port;
-      port << " " << models[i].port[j];
-      modelports.append(port.str());
+  }
+  // Fill in composite models and print out information
+  for (std::size_t i = 0; i < models.size(); ++i) {
+    if (models[i].modtype == 0) {
+      // Print out model information
+      std::string modelparts;
+      for (std::size_t j = 0; j < models[i].port.size(); ++j) {
+        // Get first model name out of string
+        std::string modname = models[i].port[j].substr(0, models[i].port[j].find(' '));
+        models[i].nstate += models[modnamemap[modname]].nstate;
+        models[i].nstick += models[modnamemap[modname]].nstick;
+        std::ostringstream part;
+        part << " " << modname;
+        modelparts.append(part.str());
+      }
+      CkPrintf("  Model: %d   Name: %s   Type: %d   States: %u   Parts:%s\n",
+          i+1, models[i].modname.c_str(), models[i].modtype, models[i].nstate + models[i].nstick,
+          modelparts.c_str());
     }
-    // TODO: modtype to name for base model
-    CkPrintf("  Model: %d   Name: %s   Type: %d   States: %u   Params: %u   Ports:%s\n",
-        i+1, models[i].modname.c_str(), models[i].modtype, models[i].nstate + models[i].nstick,
-        models[i].param.size(), (modelports == "") ? " None" : modelports.c_str());
+    else {
+      // Print out model information
+      std::string modelports;
+      // collect ports
+      for (std::size_t j = 0; j < models[i].port.size(); ++j) {
+        std::ostringstream port;
+        port << " " << models[i].port[j];
+        modelports.append(port.str());
+      }
+      // TODO: modtype to name for base model
+      CkPrintf("  Model: %d   Name: %s   Type: %d   States: %u   Params: %u   Ports:%s\n",
+          i+1, models[i].modname.c_str(), models[i].modtype, models[i].nstate + models[i].nstick,
+          models[i].param.size(), (modelports == "") ? " None" : modelports.c_str());
+    }
   }
 
   // Return success

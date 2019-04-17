@@ -9,6 +9,7 @@
 
 #include <string>
 #include <sstream>
+#include <unordered_map>
 #include "typedefs.h"
 #include "timing.h"
 #include "ckmulticast.h"
