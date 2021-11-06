@@ -51,7 +51,7 @@ CkReductionMsg *netGroup(int nMsg, CkReductionMsg **msgs) {
 void Network::InitGroup(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleGroup(), partidx, thisProxy);
+  cyclepart = CkCallback(CkIndex_Network::CycleGroup(), thisProxy(partidx));
 
   // Initialization
   tcomp = 0;
@@ -62,7 +62,7 @@ void Network::InitGroup(CProxy_Netdata cpdata) {
   
   // Request network part from input
   netdata(fileidx).LoadNetwork(partidx, 
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(partidx)));
 }
 
 
@@ -325,7 +325,7 @@ void Network::CycleGroup() {
     
     // Reduce Group information
     contribute(grpleg.size()*sizeof(route_t), grpleg.data(), net_group, 
-        CkCallback(CkIndex_Network::EvalGroup(NULL), compart, thisProxy));
+        CkCallback(CkIndex_Network::EvalGroup(NULL), thisProxy(compart)));
   }
 #ifdef STACS_WITH_YARP
   // Synchronization from RPC

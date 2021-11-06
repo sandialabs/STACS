@@ -52,11 +52,12 @@ CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs) {
 void Network::InitEst(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleEst(), partidx, thisProxy);
+  //cyclepart = CkCallback(CkIndex_Network::CycleEst(), partidx, thisProxy);
+  cyclepart = CkCallback(CkIndex_Network::CycleEst(), thisProxy(partidx));
   
   // Request network part from input
   netdata(fileidx).LoadNetwork(partidx,
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(partidx)));
 }
 
 
@@ -83,7 +84,7 @@ void Network::SaveEstimate() {
   }
   // Reduce group information
   contribute(grplog.size()*sizeof(event_t), grplog.data(), net_event, 
-      CkCallback(CkIndex_Netdata::SaveEstimate(NULL), 0, netdata));
+      CkCallback(CkIndex_Netdata::SaveEstimate(NULL), netdata(0)));
   grplog.clear();
   
   // Start a new cycle (data sent)
@@ -109,7 +110,7 @@ void Network::SaveFinalEstimate() {
   }
   // Reduce group information
   contribute(grplog.size()*sizeof(event_t), grplog.data(), net_event, 
-      CkCallback(CkIndex_Netdata::SaveFinalEstimate(NULL), 0, netdata));
+      CkCallback(CkIndex_Netdata::SaveFinalEstimate(NULL), netdata(0)));
   grplog.clear();
 }
 
