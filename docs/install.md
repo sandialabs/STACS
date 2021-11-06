@@ -142,7 +142,8 @@ http://www.yarp.it/install_yarp_linux.html
 CMake settings:  
 `CMAKE_INSTALL_PREFIX $NETDIR/yarp`  
 `CREATE_GUIS, set to ON`  
-`CREATE_LIB_MATH, set to ON`
+`CREATE_LIB_MATH, set to ON`  
+`CMAKE_SKIP_INSTALL_RPATH, set to ON`
 
 	make
 	sudo make install
