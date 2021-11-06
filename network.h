@@ -288,9 +288,9 @@ class mRPC : public CMessage_mRPC {
 
 // Network Model
 //
-class Model {
+class NetModel {
   public:
-    virtual ~Model() { }
+    virtual ~NetModel() { }
     /* Getters */
     idx_t getModType() const { return modtype; }
     idx_t getNParam() const { return paramlist.size(); }
@@ -372,9 +372,9 @@ class Model {
 // Network model template
 //
 template <idx_t TYPE, typename IMPL>
-class ModelTmpl : public Model {
+class ModelTmpl : public NetModel {
   public:
-    static Model* Create() { return new IMPL(); }
+    static NetModel* Create() { return new IMPL(); }
     static const idx_t MODELTYPE; // for registration
     static void Enable() { volatile idx_t x = MODELTYPE; }
   protected:
@@ -388,7 +388,7 @@ class ModelTmpl : public Model {
 //
 class ModelFactory {
   public:
-    typedef Model* (*t_pfFactory)();
+    typedef NetModel* (*t_pfFactory)();
 
     static ModelFactory *newModel() {
       static ModelFactory factory;
@@ -403,7 +403,7 @@ class ModelFactory {
     }
 
     /* Create concrete object */
-    Model *Create(idx_t modtype) {
+    NetModel *Create(idx_t modtype) {
       return modellist[modtype]();
     }
 
@@ -515,7 +515,7 @@ class Netdata : public CBase_Netdata {
     std::vector<idx_t> eventdist;
     CkCallback maindist;
     /* Network Model */
-    std::vector<Model*> model;      // collection of model objects (empty)
+    std::vector<NetModel*> model;      // collection of model objects (empty)
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     /* Bookkeeping */
@@ -608,7 +608,7 @@ class Network : public CBase_Network {
     std::vector<std::vector<idx_t>> adjcy; // local vertex adjacency to global index
     std::unordered_map<idx_t, std::vector<std::array<idx_t, 2>>> adjmap; // mapping from global index to vector of target vertices and their adjcency
     /* Network Models */
-    std::vector<Model*> model; // collection of model objects
+    std::vector<NetModel*> model; // collection of model objects
     std::vector<std::vector<idx_t>> edgmodidx; // edge model index
     /* Network Data */
     std::vector<real_t> xyz; // spatial coordinates per vertex
