@@ -175,7 +175,7 @@ class Stream : public CBase_Stream {
     void OpenRPC(CProxy_Network cpnet, const CkCallback &cbcycle, bool paused) { }
     void CloseRPC() { }
     /* Synchronization */
-    void Sync(idx_t synciter);
+    void Sync(idx_t synciter) { };
     void Pause() { }
 };
 #else

@@ -56,11 +56,11 @@ CkReductionMsg *maxIdx(int nMsg, CkReductionMsg **msgs) {
 void Network::InitSim(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleSim(), partidx, thisProxy);
+  cyclepart = CkCallback(CkIndex_Network::CycleSim(), thisProxy(partidx));
 
   // Request network part from input
   netdata(fileidx).LoadNetwork(partidx,
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), partidx, thisProxy));
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(partidx)));
 }
 
 
