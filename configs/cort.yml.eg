@@ -1,0 +1,25 @@
+# simulation
+runmode : "simulate"
+randseed: 2032
+plastic : no
+episodic: no
+rpcport : "/stacs/rpc"
+rpcpause: no
+
+# network
+netwkdir: "networks/cortnet"
+netparts: 210 # 8 network partitions
+netfiles: 210 # 4 network data files
+filebase: "cortnet"
+fileload: ""
+filesave: ".out"
+recordir: "record"
+groupdir: "group"
+
+# timing
+tstep   : 0.1 # 0.1 ms
+teventq : 5.0 # 5 ms
+tdisplay: 10.0 # 10 ms
+trecord : 100.0 # 100 ms
+tsave   : 500.0 # 1 second
+tmax    : 500.0 # 1 second

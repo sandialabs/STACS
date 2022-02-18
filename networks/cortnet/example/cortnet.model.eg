@@ -1,0 +1,407 @@
+---
+type: vertex
+modname: lif23e
+modtype: 50
+param:
+  - name: V_thresh
+    value: 15.0
+  - name: tau_ref
+    value: 2.0
+  - name: tau_m
+    value: 10.0
+  - name: C_m
+    value: 250.0
+  - name: tau_syn
+    value: 0.5
+state:
+  - name: V
+    type: constant
+    value: 0.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: t_last
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif23i
+modtype: 50
+param:
+  - name: V_thresh
+    value: 15.0
+  - name: tau_ref
+    value: 2.0
+  - name: tau_m
+    value: 10.0
+  - name: C_m
+    value: 250.0
+  - name: tau_syn
+    value: 0.5
+state:
+  - name: V
+    type: constant
+    value: 0.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: t_last
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif4e
+modtype: 50
+param:
+  - name: V_thresh
+    value: 15.0
+  - name: tau_ref
+    value: 2.0
+  - name: tau_m
+    value: 10.0
+  - name: C_m
+    value: 250.0
+  - name: tau_syn
+    value: 0.5
+state:
+  - name: V
+    type: constant
+    value: 0.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: t_last
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif4i
+modtype: 50
+param:
+  - name: V_thresh
+    value: 15.0
+  - name: tau_ref
+    value: 2.0
+  - name: tau_m
+    value: 10.0
+  - name: C_m
+    value: 250.0
+  - name: tau_syn
+    value: 0.5
+state:
+  - name: V
+    type: constant
+    value: 0.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: t_last
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif5e
+modtype: 50
+param:
+  - name: V_thresh
+    value: 15.0
+  - name: tau_ref
+    value: 2.0
+  - name: tau_m
+    value: 10.0
+  - name: C_m
+    value: 250.0
+  - name: tau_syn
+    value: 0.5
+state:
+  - name: V
+    type: constant
+    value: 0.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: t_last
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif5i
+modtype: 50
+param:
+  - name: V_thresh
+    value: 15.0
+  - name: tau_ref
+    value: 2.0
+  - name: tau_m
+    value: 10.0
+  - name: C_m
+    value: 250.0
+  - name: tau_syn
+    value: 0.5
+state:
+  - name: V
+    type: constant
+    value: 0.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: t_last
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif6e
+modtype: 50
+param:
+  - name: V_thresh
+    value: 15.0
+  - name: tau_ref
+    value: 2.0
+  - name: tau_m
+    value: 10.0
+  - name: C_m
+    value: 250.0
+  - name: tau_syn
+    value: 0.5
+state:
+  - name: V
+    type: constant
+    value: 0.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: t_last
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif6i
+modtype: 50
+param:
+  - name: V_thresh
+    value: 15.0
+  - name: tau_ref
+    value: 2.0
+  - name: tau_m
+    value: 10.0
+  - name: C_m
+    value: 250.0
+  - name: tau_syn
+    value: 0.5
+state:
+  - name: V
+    type: constant
+    value: 0.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: t_last
+    type: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: vertex
+modname: psn23e
+modtype: 52
+param:
+  - name: rate
+    type: constant
+    value: 8.0
+  - name: order
+    type: constant
+    value: 1600.0
+state:
+...
+
+---
+type: vertex
+modname: psn23i
+modtype: 52
+param:
+  - name: rate
+    type: constant
+    value: 8.0
+  - name: order
+    type: constant
+    value: 1500.0
+state:
+...
+
+---
+type: vertex
+modname: psn4e
+modtype: 52
+param:
+  - name: rate
+    type: constant
+    value: 8.0
+  - name: order
+    type: constant
+    value: 2100.0
+state:
+...
+
+---
+type: vertex
+modname: psn4i
+modtype: 52
+param:
+  - name: rate
+    type: constant
+    value: 8.0
+  - name: order
+    type: constant
+    value: 1900.0
+state:
+...
+
+---
+type: vertex
+modname: psn5e
+modtype: 52
+param:
+  - name: rate
+    type: constant
+    value: 8.0
+  - name: order
+    type: constant
+    value: 2000.0
+state:
+...
+
+---
+type: vertex
+modname: psn5i
+modtype: 52
+param:
+  - name: rate
+    type: constant
+    value: 8.0
+  - name: order
+    type: constant
+    value: 1900.0
+state:
+...
+
+---
+type: vertex
+modname: psn6e
+modtype: 52
+param:
+  - name: rate
+    type: constant
+    value: 8.0
+  - name: order
+    type: constant
+    value: 2900.0
+state:
+...
+
+---
+type: vertex
+modname: psn6i
+modtype: 52
+param:
+  - name: rate
+    type: constant
+    value: 8.0
+  - name: order
+    type: constant
+    value: 2100.0
+state:
+...
+
+---
+type: edge
+modname: syne
+modtype: 51
+param:
+state:
+  - name: delay
+    type: lower bounded normal
+    rep: tick
+    mean: 1.5
+    std: 0.75
+    bound: 0.1
+  - name: weight
+    type: bounded normal
+    mean: 87.8
+    std: 8.8
+    bound: 80.0
+...
+
+---
+type: edge
+modname: syne2
+modtype: 51
+param:
+state:
+  - name: delay
+    type: lower bounded normal
+    rep: tick
+    mean: 1.5
+    std: 0.75
+    bound: 0.1
+  - name: weight
+    type: bounded normal
+    mean: 175.6
+    std: 17.6
+    bound: 160.0
+...
+
+---
+type: edge
+modname: syni
+modtype: 51
+param:
+state:
+  - name: delay
+    type: lower bounded normal
+    rep: tick
+    mean: 0.8
+    std: 0.4
+    bound: 0.1
+  - name: weight
+    type: bounded normal
+    mean: -351.2
+    std: 35.2
+    bound: 320.0
+...
+
+---
+type: edge
+modname: synp
+modtype: 51
+param:
+state:
+  - name: delay
+    type: constant
+    rep: tick
+    value: 1.0
+  - name: weight
+    type: constant
+    value: 87.8
+...
