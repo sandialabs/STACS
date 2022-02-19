@@ -15,7 +15,7 @@ CHARMFLAGS = -module CkMulticast -language charm++
 PROJFLAGS  = -tracemode projections -tracemode summary
 YARPFLAGS  = -DSTACS_WITH_YARP
 
-LIB        = -std=c++11
+LIB        = -std=c++14
 LDLIB      = -lm -lyaml-cpp -lfftw3
 YARPLDLIB  = -lYARP_init -lyarpcar -lYARP_OS \
              -lYARP_sig -lYARP_math -lYARP_dev \
@@ -49,5 +49,5 @@ endif
 # OS related
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
-  LIB += -stdlib=libc++ -mmacosx-version-min=10.7
+  LIB += -stdlib=libc++ -mmacosx-version-min=10.15
 endif
