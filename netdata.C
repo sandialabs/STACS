@@ -10,6 +10,7 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
+extern /*readonly*/ unsigned randseed;
 extern /*readonly*/ CProxy_Main mainProxy;
 extern /*readonly*/ int netfiles;
 extern /*readonly*/ int netparts;
@@ -44,7 +45,7 @@ CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs) {
 
 // Netdata constructor
 //
-Netdata::Netdata(mDist *msg) {
+Netdata::Netdata(mModelData *msg) {
   // Bookkeeping
   fileidx = thisIndex;
   int ndiv = netparts/netfiles;
@@ -52,21 +53,152 @@ Netdata::Netdata(mDist *msg) {
   cpart = rpart = 0;
   npart = ndiv + (fileidx < nrem);
   xpart = fileidx*ndiv + (fileidx < nrem ? fileidx : nrem);
+  
+  // Bookkeeping 2
+  datidx = thisIndex;
+  nprt = ndiv + (datidx < nrem);
+  xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
 
-  // Persistence
-  vtxdist.resize(netparts+1);
-  edgdist.resize(netparts+1);
-  statedist.resize(netparts+1);
-  stickdist.resize(netparts+1);
-  eventdist.resize(netparts+1);
-  for (idx_t i = 0; i < netparts+1; ++i) {
-    vtxdist[i] = msg->vtxdist[i];
-    edgdist[i] = msg->edgdist[i];
-    statedist[i] = msg->statedist[i];
-    stickdist[i] = msg->stickdist[i];
-    eventdist[i] = msg->eventdist[i];
+  // Set up random number generator
+  rngine.seed(randseed+datidx);
+  unifdist = new std::uniform_real_distribution<real_t> (0.0, 1.0);
+  normdist = new std::normal_distribution<real_t> (0.0, 1.0);
+
+  // RNG types (for errors)
+  rngtype.resize(RNGTYPE_NRNG);
+  rngtype[RNGTYPE_CONST] = std::string("constant");
+  rngtype[RNGTYPE_UNIF] = std::string("uniform");
+  rngtype[RNGTYPE_UNINT] = std::string("uniform interval");
+  rngtype[RNGTYPE_NORM] = std::string("normal");
+  rngtype[RNGTYPE_BNORM] = std::string("bounded normal");
+  rngtype[RNGTYPE_BNORM] = std::string("lower bounded normal");
+  rngtype[RNGTYPE_LIN] = std::string("linear");
+  rngtype[RNGTYPE_LBLIN] = std::string("lower bounded linear");
+  rngtype[RNGTYPE_UBLIN] = std::string("upper bounded linear");
+  rngtype[RNGTYPE_BLIN] = std::string("bounded linear");
+  rngtype[RNGTYPE_FILE] = std::string("file");
+
+  // Set up counters
+  idx_t jstateparam = 0;
+  idx_t jstickparam = 0;
+
+  // Set up maps
+  modmap.clear();
+  modname.resize(msg->nmodel+1);
+  modname[0] = std::string("none");
+  modmap[modname[0]] = 0;
+  // Read in models
+  modeldata.resize(msg->nmodel);
+  for (std::size_t i = 0; i < modeldata.size(); ++i) {
+    // modname
+    modeldata[i].modname = std::string(msg->modname + msg->xmodname[i], msg->modname + msg->xmodname[i+1]);
+    modname[i+1] = modeldata[i].modname;
+    modmap[modeldata[i].modname] = i+1;
+    // type
+    modeldata[i].type = msg->type[i];
+    // prepare containers
+    modeldata[i].statetype.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
+    modeldata[i].stateparam.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
+    for (std::size_t j = 0; j < modeldata[i].statetype.size(); ++j) {
+      // statetype
+      modeldata[i].statetype[j] = msg->statetype[msg->xstatetype[i] + j];
+      switch (modeldata[i].statetype[j]) {
+        case RNGTYPE_CONST:
+          modeldata[i].stateparam[j].resize(RNGPARAM_CONST);
+          break;
+        case RNGTYPE_UNIF:
+          modeldata[i].stateparam[j].resize(RNGPARAM_UNIF);
+          break;
+        case RNGTYPE_UNINT:
+          modeldata[i].stateparam[j].resize(RNGPARAM_UNINT);
+          break;
+        case RNGTYPE_NORM:
+          modeldata[i].stateparam[j].resize(RNGPARAM_NORM);
+          break;
+        case RNGTYPE_BNORM:
+          modeldata[i].stateparam[j].resize(RNGPARAM_BNORM);
+          break;
+        case RNGTYPE_LBNORM:
+          modeldata[i].stateparam[j].resize(RNGPARAM_LBNORM);
+          break;
+        case RNGTYPE_LIN:
+          modeldata[i].stateparam[j].resize(RNGPARAM_LIN);
+          break;
+        case RNGTYPE_BLIN:
+          modeldata[i].stateparam[j].resize(RNGPARAM_BLIN);
+          break;
+        case RNGTYPE_FILE:
+          modeldata[i].stateparam[j].resize(RNGPARAM_FILE);
+          break;
+        default:
+          CkPrintf("Error: unknown statetype\n");
+          break;
+      }
+      for (std::size_t s = 0; s < modeldata[i].stateparam[j].size(); ++s) {
+        modeldata[i].stateparam[j][s] = msg->stateparam[jstateparam++];
+      }
+    }
+    // prepare containers
+    modeldata[i].sticktype.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
+    modeldata[i].stickparam.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
+    for (std::size_t j = 0; j < modeldata[i].sticktype.size(); ++j) {
+      // sticktype
+      modeldata[i].sticktype[j] = msg->sticktype[msg->xsticktype[i] + j];
+      switch (modeldata[i].sticktype[j]) {
+        case RNGTYPE_CONST:
+          modeldata[i].stickparam[j].resize(RNGPARAM_CONST);
+          break;
+        case RNGTYPE_UNIF:
+          modeldata[i].stickparam[j].resize(RNGPARAM_UNIF);
+          break;
+        case RNGTYPE_UNINT:
+          modeldata[i].stickparam[j].resize(RNGPARAM_UNINT);
+          break;
+        case RNGTYPE_NORM:
+          modeldata[i].stickparam[j].resize(RNGPARAM_NORM);
+          break;
+        case RNGTYPE_BNORM:
+          modeldata[i].stickparam[j].resize(RNGPARAM_BNORM);
+          break;
+        case RNGTYPE_LBNORM:
+          modeldata[i].stickparam[j].resize(RNGPARAM_LBNORM);
+          break;
+        case RNGTYPE_LIN:
+          modeldata[i].stickparam[j].resize(RNGPARAM_LIN);
+          break;
+        case RNGTYPE_BLIN:
+          modeldata[i].stickparam[j].resize(RNGPARAM_BLIN);
+          break;
+        case RNGTYPE_FILE:
+          modeldata[i].stickparam[j].resize(RNGPARAM_FILE);
+          break;
+        default:
+          CkPrintf("Error: unknown statetype\n");
+          break;
+      }
+      for (std::size_t s = 0; s < modeldata[i].stickparam[j].size(); ++s) {
+        modeldata[i].stickparam[j][s] = msg->stickparam[jstickparam++];
+      }
+    }
   }
+  // Sanity check
+  CkAssert(jstateparam == msg->nstateparam);
+  CkAssert(jstickparam == msg->nstickparam);
+
+  // Read in data files
+  datafiles.resize(msg->ndatafiles);
+  for (std::size_t i = 0; i < datafiles.size(); ++i) {
+    // filename
+    datafiles[i].filename = std::string(msg->datafiles + msg->xdatafiles[i], msg->datafiles + msg->xdatafiles[i+1]);
+    // read in data (as matrix)
+    if (ReadDataCSV(datafiles[i])) {
+      CkPrintf("Error reading data file %s...\n", datafiles[i].filename.c_str());
+      CkExit();
+    }
+  }
+
   // Models
+  // TODO: set up models the same way as network
   for (std::size_t i = 0; i < model.size(); ++i) {
     delete model[i];
   }
@@ -89,17 +221,6 @@ Netdata::Netdata(mDist *msg) {
     */
   }
   delete msg;
-
-  // Network distribution
-  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
-  
-  // Data
-  parts.resize(npart);
-  records.resize(npart);
-
-  // Read in files
-  CkPrintf("Reading network data files %" PRIidx "\n", fileidx);
-  ReadNetwork();
 
 #ifdef STACS_WITH_YARP
   // Open yarp
@@ -129,6 +250,36 @@ Netdata::~Netdata() {
 * Load Network Data
 **************************************************************************/
 
+void Netdata::LoadData(mDist *msg) {
+  // Persistence
+  vtxdist.resize(netparts+1);
+  edgdist.resize(netparts+1);
+  statedist.resize(netparts+1);
+  stickdist.resize(netparts+1);
+  eventdist.resize(netparts+1);
+  for (idx_t i = 0; i < netparts+1; ++i) {
+    vtxdist[i] = msg->vtxdist[i];
+    edgdist[i] = msg->edgdist[i];
+    statedist[i] = msg->statedist[i];
+    stickdist[i] = msg->stickdist[i];
+    eventdist[i] = msg->eventdist[i];
+  }
+
+  // Network distribution
+  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
+  
+  // Data
+  parts.resize(npart);
+  records.resize(npart);
+
+  // Read in files
+  CkPrintf("Reading network data files %" PRIidx "\n", fileidx);
+  ReadNetwork();
+
+  // Return control to main
+  contribute(0, NULL, CkReduction::nop);
+}
+
 // Send data to network partition
 //
 void Netdata::LoadNetwork(int partidx, const CkCallback &cbpart) {
@@ -140,6 +291,17 @@ void Netdata::LoadNetwork(int partidx, const CkCallback &cbpart) {
 /**************************************************************************
 * Save Network Data
 **************************************************************************/
+
+// Save data from built network
+//
+void Netdata::SaveBuild() {
+  // Write data
+  WriteBuild();
+
+  // Return control to main
+  contribute(npart*sizeof(dist_t), netdist.data(), net_dist,
+      CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
+}
 
 // Save data from network partition
 //

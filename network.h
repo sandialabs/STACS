@@ -17,6 +17,7 @@
 #include <vector>
 #include "typedefs.h"
 #include "timing.h"
+#include "build.h"
 #include "event.h"
 #include "record.h"
 #include "ckmulticast.h"
@@ -34,6 +35,18 @@
 // Network Size Distributions
 //
 struct dist_t;
+
+struct modeldata_t;
+struct vertex_t;
+struct edge_t;
+
+// Data files
+//
+struct datafile_t {
+  std::string filename;
+  // Sparse matrix (can also be used as a vector)
+  std::vector<std::unordered_map<idx_t, real_t>> matrix;
+};
 
 // Auxiliary indices
 //
@@ -159,7 +172,7 @@ CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs);
 
 // Graph adjacency distribution
 //
-#define MSG_Dist 8
+#define MSG_Dist 5
 class mDist : public CMessage_mDist {
   public:
     idx_t *vtxdist; // number of vertices in partitions
@@ -167,18 +180,16 @@ class mDist : public CMessage_mDist {
     idx_t *statedist; // number of states in partitions
     idx_t *stickdist; // number of ticks in partitions
     idx_t *eventdist; // number of events in partitions
-    idx_t *modtype;
-    idx_t *xmodname;
-    char *modname;
-    idx_t nmodel;
 };
 
 // Network model information
 //
-#define MSG_Model 10
+#define MSG_Model 12
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;
+    idx_t *xmodname;
+    char *modname;
     idx_t *nstate;
     idx_t *nstick;
     idx_t *xparam;
@@ -192,6 +203,73 @@ class mModel : public CMessage_mModel {
     bool plastic;
     bool episodic;
 };
+
+// Model Information
+//
+#define MSG_ModelData 12
+class mModelData : public CMessage_mModelData {
+  public:
+    idx_t *type;        // type of model (vertex/edge)
+    idx_t *modtype;     // model index identifier
+    idx_t *xmodname;    // model name prefix
+    char *modname;      // model name
+    idx_t *xstatetype;    // state generation prefix
+    idx_t *xsticktype;    // stick generation prefix
+    idx_t *statetype;     // state generation type
+    idx_t *sticktype;     // stick representation type
+    real_t *stateparam;   // state generation parameters
+    real_t *stickparam;   // stick generation parameters
+    idx_t *xdatafiles;  // prefix sum for filenames
+    char *datafiles;    // filenames (concatenated)
+    idx_t nmodel;
+    idx_t nstateparam;
+    idx_t nstickparam;
+    idx_t ndatafiles;
+};
+
+
+#define MSG_Graph 17
+class mGraph : public CMessage_mGraph {
+  public:
+    idx_t *vtxmodidx;     // Which vertex to build (modidx from modmap)
+    idx_t *vtxorder;      // How many of each vertex to build
+    idx_t *vtxshape;      // What shape to build vertices
+    idx_t *xvtxparam;     // shape parameters prefix
+    real_t *vtxparam;     // shape parameters
+    real_t *vtxcoord;     // coordinate parameters
+    idx_t *edgsource;     // source modidx of edge
+    idx_t *xedgtarget;    // target prefix
+    idx_t *edgtarget;     // target modidx of edge
+    idx_t *edgmodidx;     // modidx of edge
+    real_t *edgcutoff;    // cutoff distance of connection
+    idx_t *xedgconntype;  // connection type prefix
+    idx_t *edgconntype;   // connection type (computes probability threshold)
+    idx_t *medgprobparam; // connection probability sizes
+    real_t *edgprobparam; // connection probability parameters
+    idx_t *medgmaskparam; // connection mask sizes
+    idx_t *edgmaskparam;  // connection mask parameters
+    idx_t nvtx;
+    idx_t nvtxparam;
+    idx_t nedg;
+    idx_t nedgtarget;
+    idx_t nedgconntype;
+    idx_t nedgprobparam;
+    idx_t nedgmaskparam;
+};
+
+#define MSG_Conn 6
+class mConn : public CMessage_mConn {
+  public:
+    idx_t *vtxmodidx;   // vertex model
+    idx_t *vtxordidx;   // vertex model order
+    real_t *xyz;        // vertex coordinates
+    idx_t *xadj;        // prefix for adjacency
+    idx_t *adjcy;       // adjacent vertices
+    idx_t *edgmodidx;   // edge models
+    idx_t datidx;
+    idx_t nvtx;
+};
+
 
 // Network partition data
 //
@@ -445,11 +523,31 @@ class NoneModel : public ModelTmpl < 0, NoneModel > {
 class Netdata : public CBase_Netdata {
   public:
     /* Constructors and Destructors */
-    Netdata(mDist *msg);
+    Netdata(mModelData *msg);
     Netdata(CkMigrateMessage *msg);
     ~Netdata();
 
+    /* Building */
+    void Build(mGraph *msg);
+    std::vector<real_t> BuildEdgState(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
+    std::vector<tick_t> BuildEdgStick(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
+    void SaveBuild();
+    void WriteBuild();
+    //void CopytoPart();
+
+    /* Connecting */
+    void Connect(mConn *msg);
+    void ConnRequest(idx_t reqidx);
+    mConn* BuildPrevConn(idx_t reqidx);
+    mConn* BuildCurrConn();
+    mConn* BuildNextConn();
+    idx_t MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t targetidx, real_t dist);
+    
+    /* Reading Datafiles */
+    int ReadDataCSV(datafile_t &datafile);
+
     /* Loading */
+    void LoadData(mDist *msg);
     void LoadNetwork(int partidx, const CkCallback &cbnet);
     void ReadNetwork();
 
@@ -500,6 +598,80 @@ class Netdata : public CBase_Netdata {
         *endptr = (char *)(any ? s - 1 : nptr);
       return (modidx);
     }
+    // Compute sigmoid
+    real_t sigmoid(real_t x, real_t maxprob, real_t midpoint, real_t slope) {
+      return maxprob * (1.0 - 1.0/(1.0 + std::exp( -slope * (x - midpoint) )));
+    }
+    // RNG State constant
+    real_t rngconst(real_t *param) {
+      return param[0];
+    }
+    // RNG State uniform
+    real_t rngunif(real_t *param) {
+      return param[0] + (param[1] - param[0])*((*unifdist)(rngine));
+    }
+    // RNG State uniform interval
+    real_t rngunint(real_t *param) {
+      return param[0] + param[2] * std::floor((((param[1] - param[0])/param[2])+1)*((*unifdist)(rngine)));
+    }
+    // RNG State normal
+    real_t rngnorm(real_t *param) {
+      return param[0] + (std::abs(param[1]))*((*normdist)(rngine));
+    }
+    // RNG State bounded normal
+    real_t rngbnorm(real_t *param) {
+      real_t state = (*normdist)(rngine);
+      real_t bound = std::abs(param[2]);
+      if (state > bound) { state = bound; }
+      else if (state < -bound) { state = -bound; }
+      return param[0] + (std::abs(param[1]))*state;
+    }
+    // RNG State lower bounded normal
+    real_t rnglbnorm(real_t *param) {
+      real_t state = (*normdist)(rngine);
+      state = param[0] + (std::abs(param[1]))*state;
+      if (state < param[2]) { state = param[2]; }
+      return state;
+    }
+    // RNG State linear
+    real_t rnglin(real_t *param, real_t dist) {
+      return dist*param[0] + param[1];
+    }
+    // RNG State lower bounded linear
+    real_t rnglblin(real_t *param, real_t dist) {
+      real_t state = dist*param[0] + param[1];
+      if (state < param[2]) {
+        state = param[3];
+      }
+      return state;
+    }
+    // RNG State bounded linear
+    real_t rngblin(real_t *param, real_t dist) {
+      real_t state = dist*param[0] + param[1];
+      if (state < param[2]) {
+        state = param[2];
+      }
+      if (state > param[3]) {
+        state = param[3];
+      }
+      return state;
+    }
+    // From datafile
+    // (currently conforms to numpy savetxt format for csv)
+    // Dimensions are stored: targetdim x sourcedim
+    real_t rngfile(real_t *param, idx_t sourceidx, idx_t targetidx) {
+      real_t state = 0.0;
+      if (targetidx >= datafiles[(idx_t) (param[0])].matrix.size() ||
+          datafiles[(idx_t) (param[0])].matrix[targetidx].find(sourceidx) ==
+          datafiles[(idx_t) (param[0])].matrix[targetidx].end()) {
+        // TODO: Throw an error if element doesn't exist
+        CkPrintf("  error: datafile %s does not have element %" PRIidx ", %" PRIidx "\n",
+                 datafiles[(idx_t) (param[0])].filename.c_str(), sourceidx, targetidx);
+      } else {
+        state = datafiles[(idx_t) (param[0])].matrix[targetidx][sourceidx];
+      }
+      return state;
+    }
 
   private:
     /* Network Data */
@@ -516,12 +688,49 @@ class Netdata : public CBase_Netdata {
     CkCallback maindist;
     /* Network Model */
     std::vector<NetModel*> model;      // collection of model objects (empty)
+    std::vector<modeldata_t> modeldata;
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
+    /* Build Data */
+    std::vector<real_t> xyz;
+    std::vector<std::vector<idx_t>> adjcy;
+    std::vector<std::vector<std::vector<real_t>>> state;
+        // first level is the vertex, second level is the models, third is state data
+    std::vector<std::vector<std::vector<tick_t>>> stick;
+    std::vector<std::vector<event_t>> event;
+    /* Models */
+    std::vector<std::string> rngtype; // rng types in order of definitions
+    std::vector<idx_t> vtxmodidx; // vertex model index into netmodel
+    std::vector<idx_t> vtxordidx; // vertex index within model order
+    std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
+    std::vector<datafile_t> datafiles;
+    /* Connection information */
+    std::vector<std::vector<std::vector<idx_t>>> adjcyconn;
+        // first level is the data parts, second level are per vertex, third level is edges
+    std::list<idx_t> adjcyreq; // parts that are requesting thier adjacency info
+    std::vector<std::vector<std::vector<idx_t>>> edgmodidxconn; // edge model index into netmodel
+        // first level is the data parts, second level are per vertex, third level is edges
+    /* Graph information */
+    std::vector<vertex_t> vertices; // vertex models and build information
+    std::vector<edge_t> edges; // edge models and connection information
+    /* Random Number Generation */
+    std::mt19937 rngine;
+    std::uniform_real_distribution<real_t> *unifdist;
+    std::normal_distribution<real_t> *normdist;
     /* Bookkeeping */
     int fileidx;
     int cpart, rpart;
     int npart, xpart;
+    /* Additional Bookkeeping */
+    int datidx;
+    int cpdat;
+    idx_t cpprt;
+    idx_t nprt, xprt;
+    idx_t norder; // total order
+    idx_t norderdat; // order per data
+    std::vector<idx_t> norderprt;  // order of vertices per network part
+    std::vector<std::vector<idx_t>> nordervtx;  // order of vertex models 
+    std::vector<std::vector<idx_t>> xordervtx;  // prefix of vertex models
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;

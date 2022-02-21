@@ -23,15 +23,6 @@ extern /*readonly*/ tick_t tstep;
 // Build distribution for netdata
 //
 mDist* Main::BuildDist() {
-  /* Bookkeeping */
-  idx_t nmodname;
-
-  // Get total name sizes
-  nmodname = 0;
-  for (std::size_t i = 0; i < models.size(); ++i) {
-    nmodname += models[i].modname.size();
-  }
-
   // Initialize distribution message
   int msgSize[MSG_Dist];
   msgSize[0] = netparts+1;      // vtxdist
@@ -39,11 +30,7 @@ mDist* Main::BuildDist() {
   msgSize[2] = netparts+1;      // statedist
   msgSize[3] = netparts+1;      // stickdist
   msgSize[4] = netparts+1;      // eventdist
-  msgSize[5] = models.size();   // modtype
-  msgSize[6] = models.size()+1; // xmodname
-  msgSize[7] = nmodname;        // modname
   mDist *mdist = new(msgSize, 0) mDist;
-  mdist->nmodel = models.size();
 
   // Get distribution info
   for (int i = 0; i < netparts+1; ++i) {
@@ -59,20 +46,6 @@ mDist* Main::BuildDist() {
     mdist->eventdist[i] = netdist[i].nevent;
   }
 
-  // Prefixes starts with zero
-  mdist->xmodname[0] = 0;
-
-  // Get model info
-  for (std::size_t i = 0; i < models.size(); ++i) {
-    // modtype
-    mdist->modtype[i] = models[i].modtype;
-    // xmodname
-    mdist->xmodname[i+1] = mdist->xmodname[i] + models[i].modname.size();
-    for (std::size_t j = 0; j < models[i].modname.size(); ++j) {
-      mdist->modname[mdist->xmodname[i] + j] = models[i].modname[j];
-    }
-  }
-
   // Return distribution message
   return mdist;
 }
@@ -81,8 +54,15 @@ mDist* Main::BuildDist() {
 //
 mModel* Main::BuildModel() {
   /* Bookkeeping */
+  idx_t nmodname;
   int nparam;
   int nport;
+
+  // Get total name sizes
+  nmodname = 0;
+  for (std::size_t i = 0; i < models.size(); ++i) {
+    nmodname += models[i].modname.size();
+  }
 
   // Get total size of param
   nparam = 0;
@@ -97,15 +77,17 @@ mModel* Main::BuildModel() {
   // Initialize model message
   int msgSize[MSG_Model];
   msgSize[0] = models.size();     // modtype
-  msgSize[1] = models.size();     // state
-  msgSize[2] = models.size();     // stick
-  msgSize[3] = models.size()+1;   // xparam
-  msgSize[4] = nparam;            // param
-  msgSize[5] = models.size()+1;   // xport
-  msgSize[6] = nport;             // port
-  msgSize[7] = models.size();     // grpactive
-  msgSize[8] = models.size();     // grpmother
-  msgSize[9] = models.size();     // grpanchor
+  msgSize[1] = models.size()+1;   // xmodname
+  msgSize[2] = nmodname;          // modname
+  msgSize[3] = models.size();     // state
+  msgSize[4] = models.size();     // stick
+  msgSize[5] = models.size()+1;   // xparam
+  msgSize[6] = nparam;            // param
+  msgSize[7] = models.size()+1;   // xport
+  msgSize[8] = nport;             // port
+  msgSize[9] = models.size();     // grpactive
+  msgSize[10] = models.size();     // grpmother
+  msgSize[11] = models.size();     // grpanchor
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = models.size();
@@ -114,13 +96,19 @@ mModel* Main::BuildModel() {
   mmodel->episodic = episodic;
 
   // Prefixes starts with zero
+  mmodel->xmodname[0] = 0;
   mmodel->xparam[0] = 0;
   mmodel->xport[0] = 0;
-  
+
   // Copy over model information
   for (std::size_t i = 0; i < models.size(); ++i) {
     // modtype
     mmodel->modtype[i] = models[i].modtype;
+    // xmodname
+    mmodel->xmodname[i+1] = mmodel->xmodname[i] + models[i].modname.size();
+    for (std::size_t j = 0; j < models[i].modname.size(); ++j) {
+      mmodel->modname[mmodel->xmodname[i] + j] = models[i].modname[j];
+    }
     // nstate
     mmodel->nstate[i] = models[i].nstate;
     // nstick
@@ -152,6 +140,248 @@ mModel* Main::BuildModel() {
 
   // Return model
   return mmodel;
+}
+
+// Build models for network
+//
+mModelData* Main::BuildModelData() {
+  /* Bookkeeping */
+  idx_t nmodname;
+  idx_t nstatetype;
+  idx_t nstateparam;
+  idx_t jstateparam;
+  idx_t nsticktype;
+  idx_t nstickparam;
+  idx_t jstickparam;
+  idx_t ndatafile;
+
+  // Get total size of param
+  nmodname = 0;
+  nstatetype = 0;
+  nstateparam = 0;
+  nsticktype = 0;
+  nstickparam = 0;
+  for (std::size_t i = 0; i < modeldata.size(); ++i) {
+    nmodname += modeldata[i].modname.size();
+    nstatetype += modeldata[i].statetype.size();
+    nsticktype += modeldata[i].sticktype.size();
+    for (std::size_t j = 0; j < modeldata[i].statetype.size(); ++j) {
+      nstateparam += modeldata[i].stateparam[j].size();
+    }
+    for (std::size_t j = 0; j < modeldata[i].sticktype.size(); ++j) {
+      nstickparam += modeldata[i].stickparam[j].size();
+    }
+  }
+  ndatafile = 0;
+  for (std::size_t i = 0; i < datafiles.size(); ++i) {
+    ndatafile += datafiles[i].size();
+  }
+
+  // Initialize model message
+  int msgSize[MSG_ModelData];
+  msgSize[0] = modeldata.size();     // type
+  msgSize[1] = modeldata.size();     // modtype
+  msgSize[2] = modeldata.size()+1;   // xmodname
+  msgSize[3] = nmodname;          // modname
+  msgSize[4] = modeldata.size()+1;   // xstatetype
+  msgSize[5] = modeldata.size()+1;   // xsticktype
+  msgSize[6] = nstatetype;        // statetype
+  msgSize[7] = nsticktype;        // sticktype
+  msgSize[8] = nstateparam;       // stateparam
+  msgSize[9] = nstickparam;       // stickparam
+  msgSize[10] = datafiles.size()+1;  // xdatafiles
+  msgSize[11] = ndatafile;          // datafiles
+  mModelData *mmodel = new(msgSize, 0) mModelData;
+  // Sizes
+  mmodel->nmodel = modeldata.size();
+  mmodel->nstateparam = nstateparam;
+  mmodel->nstickparam = nstickparam;
+  mmodel->ndatafiles = datafiles.size();
+
+  // Prefixes starts with zero
+  mmodel->xmodname[0] = 0;
+  mmodel->xstatetype[0] = 0;
+  mmodel->xsticktype[0] = 0;
+  mmodel->xdatafiles[0] = 0;
+
+  // Set up counters
+  jstateparam = 0;
+  jstickparam = 0;
+
+  // Copy over model information
+  for (std::size_t i = 0; i < modeldata.size(); ++i) {
+    // type
+    mmodel->type[i] = modeldata[i].type;
+    // modtype
+    mmodel->modtype[i] = models[i].modtype;
+    // xmodname
+    mmodel->xmodname[i+1] = mmodel->xmodname[i] + modeldata[i].modname.size();
+    for (std::size_t j = 0; j < modeldata[i].modname.size(); ++j) {
+      // modname
+      mmodel->modname[mmodel->xmodname[i] + j] = modeldata[i].modname[j];
+    }
+    // xstatetype
+    mmodel->xstatetype[i+1] = mmodel->xstatetype[i] + modeldata[i].statetype.size();
+    for (std::size_t j = 0; j < modeldata[i].statetype.size(); ++j) {
+      // statetype
+      mmodel->statetype[mmodel->xstatetype[i]+j] = modeldata[i].statetype[j];
+      for (std::size_t s = 0; s < modeldata[i].stateparam[j].size(); ++s) {
+        mmodel->stateparam[jstateparam++] = modeldata[i].stateparam[j][s];
+      }
+    }
+    // xsticktype
+    mmodel->xsticktype[i+1] = mmodel->xsticktype[i] + modeldata[i].sticktype.size();
+    for (std::size_t j = 0; j < modeldata[i].sticktype.size(); ++j) {
+      // sticktype
+      mmodel->sticktype[mmodel->xsticktype[i]+j] = modeldata[i].sticktype[j];
+      for (std::size_t s = 0; s < modeldata[i].stickparam[j].size(); ++s) {
+        mmodel->stickparam[jstickparam++] = modeldata[i].stickparam[j][s];
+      }
+    }
+  }
+  CkAssert(jstateparam == nstateparam);
+  CkAssert(jstickparam == nstickparam);
+
+  // Data files
+  for (std::size_t i = 0; i < datafiles.size(); ++i) {
+    // xdatafiles
+    mmodel->xdatafiles[i+1] = mmodel->xdatafiles[i] + datafiles[i].size();
+    for (std::size_t j = 0; j < datafiles[i].size(); ++j) {
+      // datafiles
+      mmodel->datafiles[mmodel->xdatafiles[i] + j] = datafiles[i][j];
+    }
+  }
+
+  // Return model
+  return mmodel;
+}
+
+
+// Build graph information for network
+//
+mGraph* Main::BuildGraph() {
+  /* Bookkeeping */
+  idx_t nvtxparam;
+  idx_t jvtxparam;
+  idx_t nedgtarget;
+  idx_t jedgtarget;
+  idx_t nedgconntype;
+  idx_t jedgconntype;
+  idx_t nedgprobparam;
+  idx_t jedgprobparam;
+  idx_t nedgmaskparam;
+  idx_t jedgmaskparam;
+
+  // get total size of param
+  nvtxparam = 0;
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    nvtxparam += vertices[i].param.size();
+  }
+  nedgtarget = 0;
+  nedgconntype = 0;
+  nedgprobparam = 0;
+  nedgmaskparam = 0;
+  for (std::size_t i = 0; i < edges.size(); ++i) {
+    nedgtarget += edges[i].target.size();
+    nedgconntype += edges[i].conntype.size();
+    for (std::size_t j = 0; j < edges[i].conntype.size(); ++j) {
+      nedgprobparam += edges[i].probparam[j].size();
+      nedgmaskparam += edges[i].maskparam[j].size();
+    }
+  }
+
+  // Initialize graph message
+  int msgSize[MSG_Graph];
+  msgSize[0] = vertices.size();   // vtxmodidx
+  msgSize[1] = vertices.size();   // vtxorder
+  msgSize[2] = vertices.size();   // vtxshape
+  msgSize[3] = vertices.size()+1; // xvtxparam
+  msgSize[4] = nvtxparam;         // vtxparam
+  msgSize[5] = vertices.size()*3; // vtxcoord
+  msgSize[6] = edges.size();      // edgsource
+  msgSize[7] = edges.size()+1;    // xedgtarget
+  msgSize[8] = nedgtarget;        // edgtarget
+  msgSize[9] = edges.size();      // edgmodidx
+  msgSize[10] = edges.size();     // edgcutoff
+  msgSize[11] = edges.size()+1;   // xedgconntype
+  msgSize[12] = nedgconntype;     // edgconntype
+  msgSize[13] = nedgconntype;     // medgprobparam
+  msgSize[14] = nedgprobparam;    // edgprobparam
+  msgSize[15] = nedgconntype;     // medgmaskparam
+  msgSize[16] = nedgmaskparam;    // edgmaskparam
+  mGraph *mgraph = new(msgSize, 0) mGraph;
+  // Sizes
+  mgraph->nvtx = vertices.size();
+  mgraph->nvtxparam = nvtxparam;
+  mgraph->nedg = edges.size();
+  mgraph->nedgtarget = nedgtarget;
+  mgraph->nedgconntype = nedgconntype;
+  mgraph->nedgprobparam = nedgprobparam;
+  mgraph->nedgmaskparam = nedgmaskparam;
+
+  // prefixes start at zero
+  mgraph->xvtxparam[0] = 0;
+  
+  // set up counters
+  jvtxparam = 0;
+
+  // Streams and Vertices
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    mgraph->vtxmodidx[i] = vertices[i].modidx;
+    mgraph->vtxorder[i] = vertices[i].order;
+    mgraph->vtxshape[i] = vertices[i].shape;
+    mgraph->xvtxparam[i+1] = mgraph->xvtxparam[i] + vertices[i].param.size();
+    for (std::size_t j = 0; j < vertices[i].param.size(); ++j) {
+      mgraph->vtxparam[jvtxparam++] = vertices[i].param[j];
+    }
+    mgraph->vtxcoord[i*3+0] = vertices[i].coord[0];
+    mgraph->vtxcoord[i*3+1] = vertices[i].coord[1];
+    mgraph->vtxcoord[i*3+2] = vertices[i].coord[2];
+  }
+  // sanity check
+  CkAssert(jvtxparam == nvtxparam);
+
+  // prefixes start at zero
+  mgraph->xedgtarget[0] = 0;
+  mgraph->xedgconntype[0] = 0;
+
+  // set up counters
+  jedgtarget = 0;
+  jedgconntype = 0;
+  jedgprobparam = 0;
+  jedgmaskparam = 0;
+
+  // Edges
+  for (std::size_t i = 0; i < edges.size(); ++i) {
+    mgraph->edgsource[i] = edges[i].source;
+    mgraph->edgmodidx[i] = edges[i].modidx;
+    mgraph->edgcutoff[i] = edges[i].cutoff;
+
+    mgraph->xedgtarget[i+1] = mgraph->xedgtarget[i] + edges[i].target.size();
+    for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
+      mgraph->edgtarget[jedgtarget++] = edges[i].target[j];
+    }
+
+    mgraph->xedgconntype[i+1] = mgraph->xedgconntype[i] + edges[i].conntype.size();
+    for (std::size_t j = 0; j < edges[i].conntype.size(); ++j) {
+      mgraph->edgconntype[jedgconntype] = edges[i].conntype[j];
+      mgraph->medgprobparam[jedgconntype] = edges[i].probparam[j].size();
+      mgraph->medgmaskparam[jedgconntype++] = edges[i].maskparam[j].size();
+      for (std::size_t k = 0; k < edges[i].probparam[j].size(); ++k) {
+        mgraph->edgprobparam[jedgprobparam++] = edges[i].probparam[j][k];
+      }
+      for (std::size_t k = 0; k < edges[i].maskparam[j].size(); ++k) {
+        mgraph->edgmaskparam[jedgmaskparam++] = edges[i].maskparam[j][k];
+      }
+    }
+  }
+  CkAssert(jedgtarget == nedgtarget);
+  CkAssert(jedgconntype == nedgconntype);
+  CkAssert(jedgprobparam == nedgprobparam);
+  CkAssert(jedgmaskparam == nedgmaskparam);
+
+  // return graph
+  return mgraph;
 }
 
 

@@ -72,6 +72,38 @@ struct model_t {
   bool grpanchor;
 };
 
+// Model data
+//
+struct modeldata_t {
+  idx_t type;
+  std::string modname;
+  std::vector<idx_t> statetype;
+  std::vector<std::vector<real_t>> stateparam;
+  std::vector<idx_t> sticktype;
+  std::vector<std::vector<real_t>> stickparam;
+};
+
+// Vertices
+//
+struct vertex_t {
+  idx_t modidx;
+  idx_t order;
+  idx_t shape;
+  std::vector<real_t> param;
+  std::vector<real_t> coord;
+};
+
+// Edges
+//
+struct edge_t {
+  idx_t source;
+  std::vector<idx_t> target;
+  idx_t modidx;
+  real_t cutoff;
+  std::vector<idx_t> conntype;
+  std::vector<std::vector<real_t>> probparam;
+  std::vector<std::vector<idx_t>> maskparam;
+};
 
 /**************************************************************************
 * Charm++ Messages
@@ -104,15 +136,20 @@ class Main : public CBase_Main {
     int ReadConfig(std::string configfile);
     int ReadDist();
     int ReadModel();
+    int ReadModelData();
+    int ReadGraph();
 
     /* Chare Messages */
     mDist* BuildDist();
     mModel* BuildModel();
+    mModelData* BuildModelData();
+    mGraph* BuildGraph();
 #ifdef STACS_WITH_YARP
     mVtxs* BuildVtxs();
 #endif
 
     /* Stacs */
+    void Control();
     void Init();
     void Start();
     void Stop();
@@ -131,6 +168,13 @@ class Main : public CBase_Main {
     /* Network */
     std::vector<dist_t> netdist;
     std::vector<model_t> models;
+    std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
+    std::vector<modeldata_t> modeldata;
+    std::vector<std::string> datafiles;
+    /* Graph information */
+    std::vector<vertex_t> vertices;
+    std::vector<edge_t> edges;
+    std::vector<std::string> graphtype;
     /* Configuration */
     std::string runmode;
     bool plastic;
@@ -149,6 +193,8 @@ class Main : public CBase_Main {
     /* Bookkeeping */
     int ninit, cinit;
     int nhalt, chalt;
+    bool buildflag;
+    bool writeflag;
 #ifdef STACS_WITH_YARP
     /* YARP */
     CProxy_Stream stream;

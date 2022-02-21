@@ -45,25 +45,57 @@ Main::Main(CkArgMsg *msg) {
   CkPrintf("\nSimulation Tool for Asynchrnous Cortical Streams (stacs)\n");
 
   // Command line arguments
+  // TODO: distinguish between runmode (stacs, genet) and simmode (sim, fg, est)
+  // For right now, the following still depends on the config.yml to get runmode
   std::string configfile;
   if (msg->argc < 2) {
     configfile = std::string(CONFIG_DEFAULT);
+    runmode = std::string(RUNMODE_DEFAULT);
+  }
+  else if (msg->argc == 2) {
+    configfile = std::string(msg->argv[1]);
+    runmode = std::string(RUNMODE_DEFAULT);
+  }
+  else if (msg->argc == 3) {
+    configfile = msg->argv[1];
+    runmode = msg->argv[2];
+    // TODO: better checking here
+    if (runmode != "simulate" && runmode != "build") {
+      CkPrintf("Error: run mode %s not valid\n"
+               "       valid modes: build, simulate\n", runmode.c_str());
+      CkExit();
+    }
   }
   else {
-    configfile = std::string(msg->argv[1]);
+    CkPrintf("Usage: [config file] [run mode]\n");
+    CkExit();
   }
   delete msg;
-
+    
   // Read configuration
   if (ReadConfig(configfile)) {
     CkPrintf("Error reading configuration...\n");
     CkExit();
   }
 
+  // Read model information
+  if (ReadModel()) {
+    CkPrintf("Error reading model information...\n");
+    CkExit();
+  }
+  
+  // Read model information
+  if (ReadModelData()) {
+    CkPrintf("Error reading model information...\n");
+    CkExit();
+  }
+  
   // Charm information
+  mainProxy = thisProxy;
+  mCastGrpId = CProxy_CkMulticastMgr::ckNew();
   real_t netpe = (real_t)netparts/CkNumPes();
   if (netpe < 1) { netpe = 1; }
-
+  
   // Display configuration information
   CkPrintf("  STACS Run Mode      (runmode): %s\n"
            "  Network Data Files (netfiles): %d\n"
@@ -72,47 +104,23 @@ Main::Main(CkArgMsg *msg) {
            "  Network Partitions per PE    : %.2g\n",
            runmode.c_str(), netfiles, netparts, CkNumPes(), netpe);
 
-  // Read graph distribution
-  if (ReadDist()) {
-    CkPrintf("Error reading graph distribution...\n");
-    CkExit();
-  }
-  // Convert group percentage to index
-  grpvtxmin = (idx_t)(std::floor(grpvtxminreal * netdist[netparts].nvtx));
-  grpvtxmax = (idx_t)(std::floor(grpvtxmaxreal * netdist[netparts].nvtx));
-
-  // Read model information
-  if (ReadModel()) {
-    CkPrintf("Error reading model information...\n");
-    CkExit();
-  }
   
-  // Setup some Charm++ variables
-  mainProxy = thisProxy;
-  mCastGrpId = CProxy_CkMulticastMgr::ckNew();
+  // Netdata chare array (used in all runmodes)
+  // Set Round Robin Mapping
+  // TODO: Ideally set this to one chare per compute node
+  CkArrayOptions netdataopts(netfiles);
+  CProxy_RRMap rrMap = CProxy_RRMap::ckNew();
+  netdataopts.setMap(rrMap);
+  // Create chare array with model information
+  mModelData *mmodel = BuildModelData();
+  netdata = CProxy_Netdata::ckNew(mmodel, netdataopts);
+  // Set callback to return control to main
+  CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+  netdata.ckSetReductionClient(&cbcontrol);
 
-  // Initialize coordination
-  cinit = 0;
-  ninit = 0;
-
-  // Setup chare arrays
-  CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
-  // netfile
-  ++ninit;
-  mDist *mdist = BuildDist();
-  netdata = CProxy_Netdata::ckNew(mdist, netfiles);
-  netdata.ckSetReductionClient(&cbinit);
-  // network
-  ++ninit;
-  mModel *mmodel = BuildModel();
-  network = CProxy_Network::ckNew(mmodel, netparts);
-  network.ckSetReductionClient(&cbinit);
-#ifdef STACS_WITH_YARP
-  // stream
-  ++ninit;
-  mVtxs *mvtxs = BuildVtxs();
-  stream = CProxy_Stream::ckNew(mvtxs);
-#endif
+  // bookkeeping for program control
+  buildflag = true;
+  writeflag = true;
 }
 
 // Main migration
@@ -126,6 +134,81 @@ Main::Main(CkMigrateMessage *msg) {
 * STACS Startup
 **************************************************************************/
 
+// Coordination for file input, initialized chare arrays
+//
+void Main::Control() {
+  // Determine program control based on the run mode
+  // TODO: consolidate build and simulate into a single runmode (i.e. for smaller networks)
+
+  // Network needs to be built
+  if (runmode == "build") {
+    if (buildflag) {
+      CkPrintf("Building network\n");
+      buildflag = false;
+
+      // Read graph information
+      if (ReadGraph()) {
+        CkPrintf("Error reading graph specification...\n");
+        CkExit();
+      }
+      mGraph *mgraph = BuildGraph();
+
+      // Build Network
+      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+      netdata.Build(mgraph);
+      netdata.ckSetReductionClient(&cbcontrol);
+    }
+    else if (writeflag) {
+      CkPrintf("Writing network\n");
+      writeflag = false;
+
+      // Halting coordination
+      chalt = 0;
+      nhalt = 0;
+      // Set callback for halting (actually not needed)
+      CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
+      netdata.ckSetReductionClient(&cbhalt);
+      // Write network to disk
+      netdata.SaveBuild();
+      ++nhalt;
+    }
+  }
+
+  // Simulate an already built network
+  else if (runmode == "simulate") {
+    // Read graph distribution files
+    if (ReadDist()) {
+      CkPrintf("Error reading graph distribution...\n");
+      CkExit();
+    }
+    // Convert group percentage to index
+    grpvtxmin = (idx_t)(std::floor(grpvtxminreal * netdist[netparts].nvtx));
+    grpvtxmax = (idx_t)(std::floor(grpvtxmaxreal * netdist[netparts].nvtx));
+
+    // Initialize coordination
+    cinit = 0;
+    ninit = 0;
+    CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
+
+    // Loading network data from file
+    ++ninit;
+    mDist *mdist = BuildDist();
+    netdata.LoadData(mdist);
+    netdata.ckSetReductionClient(&cbinit);
+    // Network chare array is used in simulation
+    ++ninit;
+    mModel *mmodel = BuildModel();
+    network = CProxy_Network::ckNew(mmodel, netparts);
+    network.ckSetReductionClient(&cbinit);
+#ifdef STACS_WITH_YARP
+    // stream
+    ++ninit;
+    mVtxs *mvtxs = BuildVtxs();
+    stream = CProxy_Stream::ckNew(mvtxs);
+#endif
+  }
+}
+  
 // Coordination for file input, initialized chare arrays
 //
 void Main::Init() {

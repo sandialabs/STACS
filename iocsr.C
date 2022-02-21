@@ -18,6 +18,7 @@
 **************************************************************************/
 extern /*readonly*/ std::string netwkdir;
 extern /*readonly*/ int netparts;
+extern /*readonly*/ int netfiles;
 extern /*readonly*/ std::string filebase;
 extern /*readonly*/ std::string fileload;
 extern /*readonly*/ std::string filesave;
@@ -87,6 +88,7 @@ int Main::ReadDist() {
 int Main::WriteDist() {
   /* File operations */
   FILE *pDist;
+  FILE *pMetis;
   char csrfile[100];
   /* Bookkeeping */
   idx_t nvtx;
@@ -99,7 +101,9 @@ int Main::WriteDist() {
   CkPrintf("Writing network distribution\n");
   sprintf(csrfile, "%s/%s%s.dist", netwkdir.c_str(), filebase.c_str(), filesave.c_str());//(check ? ".check" : filesave.c_str()));
   pDist = fopen(csrfile,"w");
-  if (pDist == NULL) {
+  sprintf(csrfile, "%s/%s%s.metis", netwkdir.c_str(), filebase.c_str(), filesave.c_str());
+  pMetis = fopen(csrfile,"w");
+  if (pDist == NULL || pMetis == NULL) {
     printf("Error opening file for writing\n");
     return 1;
   }
@@ -118,9 +122,25 @@ int Main::WriteDist() {
     nevent += netdist[i].nevent;
     fprintf(pDist, "%" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx " %" PRIidx "\n", nvtx, nedg, nstate, nstick, nevent);
   }
+  
+  // For Metis
+  nvtx = nedg = 0;
+  fprintf(pMetis, "%" PRIidx " %" PRIidx "\n", nvtx, nedg);
+  for (int datidx = 0; datidx < netfiles; ++datidx) {
+    idx_t ndiv = netparts/netfiles;
+    idx_t nrem = netparts%netfiles;
+    idx_t nprt = ndiv + (datidx < nrem);
+    idx_t xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
+    for (idx_t jprt = 0; jprt < nprt; ++jprt) {
+      nvtx += netdist[xprt+jprt].nvtx;
+      nedg += netdist[xprt+jprt].nedg;
+    }
+    fprintf(pMetis, "%" PRIidx " %" PRIidx "\n", nvtx, nedg);
+  }
 
   // Cleanup
   fclose(pDist);
+  fclose(pMetis);
 
   return 0;
 }
@@ -450,6 +470,117 @@ void Netdata::WriteNetwork() {
 }
 
 
+// Write graph adjacency distribution
+//
+void Netdata::WriteBuild() {
+  /* Bookkeeping */
+  idx_t jvtxidx;
+  /* File operations */
+  FILE *pCoord;
+  FILE *pAdjcy;
+  FILE *pState;
+  FILE *pEvent;
+  char csrfile[100];
+
+  // Open files for writing
+  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
+  pCoord = fopen(csrfile,"w");
+  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
+  pAdjcy = fopen(csrfile,"w");
+  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
+  pState = fopen(csrfile,"w");
+  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
+  pEvent = fopen(csrfile,"w");
+  if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
+    CkPrintf("Error opening files for writing %d\n", datidx);
+    CkExit();
+  }
+  
+  // Set up distribution
+  netdist.resize(nprt);
+  jvtxidx = 0;
+
+  // Loop through parts
+  for (idx_t k = 0; k < nprt; ++k) {
+    netdist[k].partidx = xprt+k;
+    netdist[k].nvtx = norderprt[k];
+    netdist[k].nedg = 0;
+    netdist[k].nstate = 0;
+    netdist[k].nstick = 0;
+    netdist[k].nevent = 0;
+
+    // Graph adjacency information
+    for (idx_t i = 0; i < norderprt[k]; ++i) {
+      // vertex coordinates
+      fprintf(pCoord, " %" PRIrealfull " %" PRIrealfull " %" PRIrealfull "\n",
+          xyz[jvtxidx*3+0], xyz[jvtxidx*3+1], xyz[jvtxidx*3+2]);
+
+      // vertex state
+      fprintf(pState, " %s", modname[vtxmodidx[jvtxidx]].c_str());
+      CkAssert(vtxmodidx[jvtxidx] > 0);
+      netdist[k].nstate += state[jvtxidx][0].size();
+      netdist[k].nstick += stick[jvtxidx][0].size();
+      for (std::size_t s = 0; s < modeldata[vtxmodidx[jvtxidx]-1].statetype.size(); ++s) {
+        fprintf(pState, " %" PRIrealfull "", state[jvtxidx][0][s]);
+      }
+      for (std::size_t s = 0; s < modeldata[vtxmodidx[jvtxidx]-1].sticktype.size(); ++s) {
+        fprintf(pState, " %" PRItickhex "", stick[jvtxidx][0][s]);
+      }
+      
+      // edge state
+      netdist[k].nedg += edgmodidx[jvtxidx].size();
+      CkAssert(state[jvtxidx].size() == edgmodidx[jvtxidx].size() + 1);
+      for (std::size_t j = 0; j < edgmodidx[jvtxidx].size(); ++j) {
+        fprintf(pState, " %s", modname[edgmodidx[jvtxidx][j]].c_str());
+        netdist[k].nstate += state[jvtxidx][j+1].size();
+        netdist[k].nstick += stick[jvtxidx][j+1].size();
+        if (edgmodidx[jvtxidx][j] > 0) {
+          for (std::size_t s = 0; s < modeldata[edgmodidx[jvtxidx][j]-1].statetype.size(); ++s) {
+            fprintf(pState, " %" PRIrealfull "", state[jvtxidx][j+1][s]);
+          }
+          for (std::size_t s = 0; s < modeldata[edgmodidx[jvtxidx][j]-1].sticktype.size(); ++s) {
+            fprintf(pState, " %" PRItickhex "", stick[jvtxidx][j+1][s]);
+          }
+        }
+      }
+
+      // adjacency information
+      CkAssert(adjcy[jvtxidx].size() == edgmodidx[jvtxidx].size());
+      for (std::size_t j = 0; j < adjcy[jvtxidx].size(); ++j) {
+        fprintf(pAdjcy, " %" PRIidx "", adjcy[jvtxidx][j]);
+      }
+
+      // event information
+      netdist[k].nevent += event[jvtxidx].size();
+      fprintf(pEvent, " %d", event[jvtxidx].size());
+      for (std::size_t j = 0; j < event[jvtxidx].size(); ++j) {
+        if (event[jvtxidx][j].type == EVENT_SPIKE) {
+          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx "",
+              event[jvtxidx][j].diffuse, event[jvtxidx][j].type, event[jvtxidx][j].source, event[jvtxidx][j].index);
+        }
+        else {
+          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx " %" PRIrealfull "",
+              event[jvtxidx][j].diffuse, event[jvtxidx][j].type, event[jvtxidx][j].source, event[jvtxidx][j].index, event[jvtxidx][j].data);
+        }
+      }
+
+      // one set per vertex
+      fprintf(pState, "\n");
+      fprintf(pAdjcy, "\n");
+      fprintf(pEvent, "\n");
+      ++jvtxidx;
+    }
+  }
+  CkAssert(jvtxidx == norderdat);
+
+  // Cleanup
+  fclose(pCoord);
+  fclose(pAdjcy);
+  fclose(pState);
+  fclose(pEvent);
+}
+
+
 /**************************************************************************
 * Record Information
 **************************************************************************/
@@ -676,3 +807,72 @@ void Netdata::WriteEstimate() {
   }
 }
 
+/**************************************************************************
+* GeNet (network data files)
+**************************************************************************/
+
+
+// Read data file (csv)
+//
+int Netdata::ReadDataCSV(datafile_t &datafile) {
+  FILE *pData;
+  char csvfile[100];
+  char *line;
+  char *oldstr, *newstr;
+
+  // Prepare buffer
+  line = new char[MAXLINE];
+
+  // Open files for reading
+  // TODO: single-node file reads instead of per-process
+  //       integrate this with MPI-IO?
+  sprintf(csvfile, "%s/%s", netwkdir.c_str(), datafile.filename.c_str());
+  pData = fopen(csvfile,"r");
+  if (pData == NULL || line == NULL) {
+    CkPrintf("Error opening file for reading\n");
+    return 1;
+  }
+
+  // Initialize matrix
+  datafile.matrix.clear();
+
+  // Read csv into matrix
+  // Dimensions are stored: targetdim x sourcedim
+  // TODO: transpose the input file when reading?
+  //       storage in csr-target-major order makes a
+  //       single-threaded read-distribute more practical
+  for (idx_t j = 0;; ++j) {
+    // read in row
+    while(fgets(line, MAXLINE, pData) && line[0] == '%');
+    if (feof(pData)) { break; }
+    oldstr = line;
+    newstr = NULL;
+    std::unordered_map<idx_t, real_t> row;
+    // read in columns (comma delimited)
+    idx_t i = 0;
+    for (;;) {
+      // check for empty element
+      // element
+      real_t element;
+      element = strtoreal(oldstr, &newstr);
+      oldstr = newstr;
+      // Add element to row
+      row.emplace(i, element);
+      //CkPrintf("  %" PRIidx ", %" PRIidx ": %" PRIreal "\n", i, j, element);
+      // check for next element
+      // TODO: is this robust enough?
+      while (isspace(oldstr[0])) { ++oldstr; }
+      while (oldstr[0] == ',') { ++oldstr; ++i; }
+      // check for end of line (added by fgets)
+      if (oldstr[0] == '\0') { break; }
+    }
+    // Add to matrix
+    datafile.matrix.push_back(row);
+  }
+
+  // Cleanup
+  fclose(pData);
+  delete[] line;
+
+  return 0;
+}

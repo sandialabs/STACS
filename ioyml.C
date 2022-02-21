@@ -10,6 +10,7 @@
 
 #include <random>
 #include "stacs.h"
+#include "build.h"
 
 // Using yaml-cpp (specification version 1.2)
 #include "yaml-cpp/yaml.h"
@@ -58,18 +59,18 @@ int Main::ReadConfig(std::string configfile) {
   // Process configuration information
   // Simulation
   // Run mode
-  try {
-    runmode = config["runmode"].as<std::string>();
-  } catch (YAML::RepresentationException& e) {
-    runmode = std::string(RUNMODE_DEFAULT);
-    CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
-  }
-  if (runmode != std::string(RUNMODE_SIMULATE) && 
-      runmode != std::string(RUNMODE_FINDGROUP) && 
-      runmode != std::string(RUNMODE_ESTIMATE)) {
-    runmode = std::string(RUNMODE_DEFAULT);
-    CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
-  }
+  //try {
+  //  runmode = config["runmode"].as<std::string>();
+  //} catch (YAML::RepresentationException& e) {
+  //  runmode = std::string(RUNMODE_DEFAULT);
+  //  CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
+  //}
+  //if (runmode != std::string(RUNMODE_SIMULATE) && 
+  //    runmode != std::string(RUNMODE_FINDGROUP) && 
+  //    runmode != std::string(RUNMODE_ESTIMATE)) {
+  //  runmode = std::string(RUNMODE_DEFAULT);
+  //  CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
+  //}
   // Random number seed
   try {
      randseed = config["randseed"].as<unsigned>();
@@ -151,6 +152,9 @@ int Main::ReadConfig(std::string configfile) {
   } catch (YAML::RepresentationException& e) {
     filesave = std::string(FILESAVE_DEFAULT);
     CkPrintf("  filesave not defined, defaulting to: \"%s\"\n", filesave.c_str());
+  }
+  if (runmode == "build") {
+    filesave = std::string("");
   }
   // Records output directory
   try {
@@ -505,6 +509,952 @@ int Main::ReadModel() {
     }
   }
 
+  // Return success
+  return 0;
+}
+
+int Main::ReadModelData() {
+  // Load model file
+  CkPrintf("Loading models from %s/%s.model\n", netwkdir.c_str(), filebase.c_str());
+  YAML::Node modfile;
+  try {
+    modfile = YAML::LoadAllFromFile(netwkdir + "/" + filebase + ".model");
+  } catch (YAML::BadFile& e) {
+    CkPrintf("  %s\n", e.what());
+    return 1;
+  }
+
+  // Setup model data
+  modeldata.resize(modfile.size());
+  // Data file names
+  datafiles.clear();
+  // Model map
+  modmap.clear();
+  modmap[std::string("none")] = 0;
+  
+  // Graph types
+  graphtype.resize(GRAPHTYPE_NTYPE);
+  graphtype[GRAPHTYPE_STR] = std::string("stream");
+  graphtype[GRAPHTYPE_VTX] = std::string("vertex");
+  graphtype[GRAPHTYPE_EDG] = std::string("edge");
+
+  // Get model data
+  for (std::size_t i = 0; i < modfile.size(); ++i) {
+    std::string type;
+
+    try {
+      // type
+      type = modfile[i]["type"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  type: %s\n", e.what());
+      return 1;
+    }
+    // Set type
+    if (type == "stream") {
+      modeldata[i].type = GRAPHTYPE_STR;
+    }
+    else if (type == "vertex") {
+      modeldata[i].type = GRAPHTYPE_VTX;
+    }
+    else if (type == "edge") {
+      modeldata[i].type = GRAPHTYPE_EDG;
+    }
+    else {
+      CkPrintf("  type: '%s' unknown type\n", type.c_str());
+      return 1;
+    }
+    try {
+      // modname
+      modeldata[i].modname = modfile[i]["modname"].as<std::string>();
+      // modmap
+      modmap[modeldata[i].modname] = i+1;
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  modname: %s\n", e.what());
+      return 1;
+    }
+
+    // States are their own 'node'
+    YAML::Node state = modfile[i]["state"];
+    if (state.size() == 0) {
+      CkPrintf("  warning: %s has no state\n", modeldata[i].modname.c_str());
+    }
+
+    // Count sticks
+    idx_t nstate = 0;
+    idx_t nstick = 0;
+    for (std::size_t j = 0; j < state.size(); ++j) {
+      std::string reptype;
+      try {
+        // reptype
+        reptype = state[j]["rep"].as<std::string>();
+      } catch (YAML::RepresentationException& e) {
+        reptype = std::string("real");
+      }
+      if (reptype == "tick") {
+        ++nstick;
+      }
+      else {
+        ++nstate;
+      }
+    }
+
+    // preallocate space
+    modeldata[i].statetype.resize(nstate);
+    modeldata[i].stateparam.resize(nstate);
+    modeldata[i].sticktype.resize(nstick);
+    modeldata[i].stickparam.resize(nstick);
+    idx_t jstate = 0;
+    idx_t jstick = 0;
+
+    // loop through the states
+    for (std::size_t j = 0; j < state.size(); ++j) {
+      std::string rngtype;
+      std::string reptype;
+      try {
+        // rngtype
+        rngtype = state[j]["type"].as<std::string>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  state type: %s\n", e.what());
+        return 1;
+      }
+
+      try {
+        // reptype
+        reptype = state[j]["rep"].as<std::string>();
+      } catch (YAML::RepresentationException& e) {
+        reptype = std::string("real");
+      }
+      if (reptype != "tick") {
+        reptype = std::string("real");
+      }
+
+      // based on rng type, get params
+      if (rngtype == "constant") {
+        if (reptype == "tick") {
+          // Constant value
+          modeldata[i].sticktype[jstick] = RNGTYPE_CONST;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_CONST);
+          try {
+            // value
+            modeldata[i].stickparam[jstick][0] = state[j]["value"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state constant value: %s\n", e.what());
+            return 1;
+          }
+          ++jstick;
+        }
+        else {
+          // Constant value
+          modeldata[i].statetype[jstate] = RNGTYPE_CONST;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_CONST);
+          try {
+            // value
+            modeldata[i].stateparam[jstate][0] = state[j]["value"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state constant value: %s\n", e.what());
+            return 1;
+          }
+          ++jstate;
+        }
+      }
+      else if (rngtype == "uniform") {
+        if (reptype == "tick") {
+          // Uniform distribution
+          modeldata[i].sticktype[jstick] = RNGTYPE_UNIF;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_UNIF);
+          try {
+            // min value
+            modeldata[i].stickparam[jstick][0] = state[j]["min"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform min: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // max value
+            modeldata[i].stickparam[jstick][1] = state[j]["max"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform max: %s\n", e.what());
+            return 1;
+          }
+          ++jstick;
+        }
+        else {
+          // Uniform distribution
+          modeldata[i].statetype[jstate] = RNGTYPE_UNIF;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_UNIF);
+          try {
+            // min value
+            modeldata[i].stateparam[jstate][0] = state[j]["min"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform min: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // max value
+            modeldata[i].stateparam[jstate][1] = state[j]["max"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform max: %s\n", e.what());
+            return 1;
+          }
+          ++jstate;
+        }
+      }
+      else if (rngtype == "uniform interval") {
+        if (reptype == "tick") {
+          // Uniform distribution (intervalled)
+          modeldata[i].sticktype[jstick] = RNGTYPE_UNINT;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_UNINT);
+          try {
+            // min value
+            modeldata[i].stickparam[jstick][0] = state[j]["min"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform min: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // max value
+            modeldata[i].stickparam[jstick][1] = state[j]["max"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform max: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // int value
+            modeldata[i].stickparam[jstick][2] = state[j]["int"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform int: %s\n", e.what());
+            return 1;
+          }
+          ++jstick;
+        }
+        else {
+          // Uniform distribution (intervalled)
+          modeldata[i].statetype[jstate] = RNGTYPE_UNINT;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_UNINT);
+          try {
+            // min value
+            modeldata[i].stateparam[jstate][0] = state[j]["min"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform min: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // max value
+            modeldata[i].stateparam[jstate][1] = state[j]["max"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform max: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // int value
+            modeldata[i].stateparam[jstate][2] = state[j]["int"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state uniform int: %s\n", e.what());
+            return 1;
+          }
+          ++jstate;
+        }
+      }
+      else if (rngtype == "normal") {
+        if (reptype == "tick") {
+          // Normal distribution
+          modeldata[i].sticktype[jstick] = RNGTYPE_NORM;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_NORM);
+          try {
+            // mean
+            modeldata[i].stickparam[jstick][0] = state[j]["mean"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state normal mean: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // standard deviation
+            modeldata[i].stickparam[jstick][1] = state[j]["std"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state normal std: %s\n", e.what());
+            return 1;
+          }
+          ++jstick;
+        }
+        else {
+          // Normal distribution
+          modeldata[i].statetype[jstate] = RNGTYPE_NORM;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_NORM);
+          try {
+            // mean
+            modeldata[i].stateparam[jstate][0] = state[j]["mean"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state normal mean: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // standard deviation
+            modeldata[i].stateparam[jstate][1] = state[j]["std"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state normal std: %s\n", e.what());
+            return 1;
+          }
+          ++jstate;
+        }
+      }
+      else if (rngtype == "bounded normal") {
+        if (reptype == "tick") {
+          // Normal distribution
+          modeldata[i].sticktype[jstick] = RNGTYPE_BNORM;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_BNORM);
+          try {
+            // mean
+            modeldata[i].stickparam[jstick][0] = state[j]["mean"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded normal mean: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // standard deviation
+            modeldata[i].stickparam[jstick][1] = state[j]["std"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded normal std: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // bounds
+            modeldata[i].stickparam[jstick][2] = state[j]["bound"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded normal bound: %s\n", e.what());
+            return 1;
+          }
+          ++jstick;
+        }
+        else {
+          // Normal distribution
+          modeldata[i].statetype[jstate] = RNGTYPE_BNORM;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_BNORM);
+          try {
+            // mean
+            modeldata[i].stateparam[jstate][0] = state[j]["mean"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded normal mean: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // standard deviation
+            modeldata[i].stateparam[jstate][1] = state[j]["std"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded normal std: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // bounds
+            modeldata[i].stateparam[jstate][2] = state[j]["bound"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded normal bound: %s\n", e.what());
+            return 1;
+          }
+          ++jstate;
+        }
+      }
+      else if (rngtype == "lower bounded normal") {
+        if (reptype == "tick") {
+          // Normal distribution
+          modeldata[i].sticktype[jstick] = RNGTYPE_LBNORM;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_LBNORM);
+          try {
+            // mean
+            modeldata[i].stickparam[jstick][0] = state[j]["mean"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state lower bounded normal mean: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // standard deviation
+            modeldata[i].stickparam[jstick][1] = state[j]["std"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state lower bounded normal std: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // bounds
+            modeldata[i].stickparam[jstick][2] = state[j]["bound"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state lower bounded normal bound: %s\n", e.what());
+            return 1;
+          }
+          ++jstick;
+        }
+        else {
+          // Normal distribution
+          modeldata[i].statetype[jstate] = RNGTYPE_LBNORM;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_LBNORM);
+          try {
+            // mean
+            modeldata[i].stateparam[jstate][0] = state[j]["mean"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state lower bounded normal mean: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // standard deviation
+            modeldata[i].stateparam[jstate][1] = state[j]["std"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state lower bounded normal std: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // bounds
+            modeldata[i].stateparam[jstate][2] = state[j]["bound"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state lower bounded normal bound: %s\n", e.what());
+            return 1;
+          }
+          ++jstate;
+        }
+      }
+      else if (rngtype == "linear") {
+        if (reptype == "tick") {
+          // Proportional to distance
+          modeldata[i].sticktype[jstick] = RNGTYPE_LIN;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_LIN);
+          try {
+            // scale
+            modeldata[i].stickparam[jstick][0] = state[j]["scale"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state linear scale: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // offset
+            modeldata[i].stickparam[jstick][1] = state[j]["offset"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  warning: state linear offset not defined,\n"
+                "           defaulting to 0\n");
+            modeldata[i].stickparam[jstick][1] = 0.0;
+          }
+          ++jstick;
+        }
+        else {
+          // Proportional to distance
+          modeldata[i].statetype[jstate] = RNGTYPE_LIN;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_LIN);
+          try {
+            // scale
+            modeldata[i].stateparam[jstate][0] = state[j]["scale"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state linear scale: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // offset
+            modeldata[i].stateparam[jstate][1] = state[j]["offset"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  warning: state linear offset not defined,\n"
+                "           defaulting to 0\n");
+            modeldata[i].stateparam[jstate][1] = 0.0;
+          }
+          ++jstate;
+        }
+      }
+      else if (rngtype == "bounded linear") {
+        if (reptype == "tick") {
+          // Proportional to distance
+          modeldata[i].sticktype[jstick] = RNGTYPE_BLIN;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_BLIN);
+          try {
+            // scale
+            modeldata[i].stickparam[jstick][0] = state[j]["scale"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded linear scale: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // offset
+            modeldata[i].stickparam[jstick][1] = state[j]["offset"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  warning: state linear offset not defined,\n"
+                "           defaulting to 0\n");
+            modeldata[i].stickparam[jstick][1] = 0.0;
+          }
+          try {
+            // min value
+            modeldata[i].stickparam[jstick][2] = state[j]["min"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded linear min: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // max value
+            modeldata[i].stickparam[jstick][3] = state[j]["max"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded linear max: %s\n", e.what());
+            return 1;
+          }
+          ++jstick;
+        }
+        else {
+          // Proportional to distance
+          modeldata[i].statetype[jstate] = RNGTYPE_BLIN;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_BLIN);
+          try {
+            // scale
+            modeldata[i].stateparam[jstate][0] = state[j]["scale"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded linear scale: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // offset
+            modeldata[i].stateparam[jstate][1] = state[j]["offset"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  warning: state linear offset not defined,\n"
+                "           defaulting to 0\n");
+            modeldata[i].stateparam[jstate][1] = 0.0;
+          }
+          try {
+            // min value
+            modeldata[i].stateparam[jstate][2] = state[j]["min"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded linear min: %s\n", e.what());
+            return 1;
+          }
+          try {
+            // max value
+            modeldata[i].stateparam[jstate][3] = state[j]["max"].as<real_t>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state bounded linear max: %s\n", e.what());
+            return 1;
+          }
+          ++jstate;
+        }
+      }
+      else if (rngtype == "file") {
+        if (reptype == "tick") {
+          // From file
+          modeldata[i].sticktype[jstick] = RNGTYPE_FILE;
+          modeldata[i].stickparam[jstick].resize(RNGPARAM_FILE);
+          try {
+            // filename
+            // Add this filename to a list, and set the
+            // model parameter to the filename's index in that list
+            // TODO: check that the filename isn't already on the list
+            //       (e.g. using the same matrix for connections as weights)
+            modeldata[i].stickparam[jstick][0] = (real_t) datafiles.size();
+            datafiles.push_back(state[j]["filename"].as<std::string>());
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state file name: %s\n", e.what());
+            return 1;
+          }
+          ++jstick;
+        }
+        else {
+          // From file
+          modeldata[i].statetype[jstate] = RNGTYPE_FILE;
+          modeldata[i].stateparam[jstate].resize(RNGPARAM_FILE);
+          try {
+            // filename
+            modeldata[i].stateparam[jstate][0] = (real_t) datafiles.size();
+            datafiles.push_back(state[j]["filename"].as<std::string>());
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state file name: %s\n", e.what());
+            return 1;
+          }
+          ++jstate;
+        }
+      }
+      else {
+        CkPrintf("  error: '%s' unknown state type\n", rngtype.c_str());
+        return 1;
+      }
+    }
+    CkAssert(jstate == nstate);
+    CkAssert(jstick == nstick);
+  }
+
+  // Return success
+  return 0;
+}
+
+
+// Read in graph information
+//
+int Main::ReadGraph() {
+  // Load model file
+  CkPrintf("Loading graph from %s/%s.graph\n", netwkdir.c_str(), filebase.c_str());
+  YAML::Node graphfile;
+  try {
+    graphfile = YAML::LoadFile(netwkdir + "/" + filebase + ".graph");
+  } catch (YAML::BadFile& e) {
+    CkPrintf("  %s\n", e.what());
+    return 1;
+  }
+
+  // Streams and vertices
+  YAML::Node stream = graphfile["stream"];
+  YAML::Node vertex = graphfile["vertex"];
+  if (vertex.size() + stream.size() == 0) {
+    CkPrintf("  error: graph has no vertices\n");
+    return 1;
+  }
+
+  // preallocate space
+  idx_t jvtx = 0;
+  idx_t nvtx = vertex.size() + stream.size();
+  vertices.clear();
+  vertices.resize(nvtx);
+  
+  // loop through the streams
+  for (std::size_t i = 0; i < stream.size(); ++i) {
+    std::string name;
+    try {
+      // modname
+      name = stream[i]["modname"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  stream modname: %s\n", e.what());
+      return 1;
+    }
+    if (modmap.find(name) == modmap.end()) {
+      CkPrintf("  error: model %s not defined\n", name.c_str());
+      return 1;
+    }
+    else {
+      vertices[jvtx].modidx = modmap[name];
+    }
+    // order
+    vertices[jvtx].order = 1;
+    // shape
+    vertices[jvtx].shape = VTXSHAPE_POINT;
+    vertices[jvtx].param.resize(VTXPARAM_POINT);
+    try {
+      // coord
+      vertices[jvtx].coord = stream[i]["coord"].as<std::vector<real_t>>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  warning: coord not defined, defaulting to [0.0, 0.0, 0.0]\n");
+      vertices[jvtx].coord = {0.0, 0.0, 0.0};
+    }
+    if (vertices[jvtx].coord.size() != 3) {
+      CkPrintf("  error: stream coord dimensions\n");
+      return 1;
+    }
+    ++jvtx;
+  }
+
+  // loop through the vertices
+  for (std::size_t i = 0; i < vertex.size(); ++i) {
+    std::string name;
+    try {
+      // modname
+      name = vertex[i]["modname"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  vertex modname: %s\n", e.what());
+      return 1;
+    }
+    if (modmap.find(name) == modmap.end()) {
+      CkPrintf("  error: model %s not defined\n", name.c_str());
+      return 1;
+    }
+    else {
+      vertices[jvtx].modidx = modmap[name];
+    }
+    try {
+      // order
+      vertices[jvtx].order = vertex[i]["order"].as<idx_t>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  vertex order: %s\n", e.what());
+      return 1;
+    }
+    try {
+      // shape
+      name = vertex[i]["shape"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  vertex shape: %s\n", e.what());
+      return 1;
+    }
+    if (name == "point") {
+      vertices[jvtx].shape = VTXSHAPE_POINT;
+      vertices[jvtx].param.resize(VTXPARAM_POINT);
+    }
+    else if (name == "circle") {
+      vertices[jvtx].shape = VTXSHAPE_CIRCLE;
+      vertices[jvtx].param.resize(VTXPARAM_CIRCLE);
+      try {
+        // radius
+        vertices[jvtx].param[0] = vertex[i]["radius"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  vertex circle radius: %s\n", e.what());
+        return 1;
+      }
+    }
+    else if (name == "sphere") {
+      vertices[jvtx].shape = VTXSHAPE_SPHERE;
+      vertices[jvtx].param.resize(VTXPARAM_SPHERE);
+      try {
+        // radius
+        vertices[jvtx].param[0] = vertex[i]["radius"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  vertex circle radius: %s\n", e.what());
+        return 1;
+      }
+    }
+    else if (name == "rectangle") {
+      vertices[jvtx].shape = VTXSHAPE_RECT;
+      vertices[jvtx].param.resize(VTXPARAM_RECT);
+      try {
+        // width
+        vertices[jvtx].param[0] = vertex[i]["width"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  vertex rectangle width: %s\n", e.what());
+        return 1;
+      }
+      try {
+        // height
+        vertices[jvtx].param[1] = vertex[i]["height"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  vertex rectangle height: %s\n", e.what());
+        return 1;
+      }
+    }
+    else {
+      CkPrintf("  error: '%s' unknown shape\n", name.c_str());
+      return 1;
+    }
+    try {
+      // coord
+      vertices[jvtx].coord = vertex[i]["coord"].as<std::vector<real_t>>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  warning: coord not defined, defaulting to [0.0, 0.0, 0.0]\n");
+      vertices[jvtx].coord = {0.0, 0.0, 0.0};
+    }
+    if (vertices[jvtx].coord.size() != 3) {
+      CkPrintf("  error: vertex coord dimensions\n");
+      return 1;
+    }
+    ++jvtx;
+  }
+  CkAssert(jvtx == nvtx);
+  
+  // Edges
+  YAML::Node edge = graphfile["edge"];
+  if (edge.size() == 0) {
+    CkPrintf("  error: graph has no edges\n");
+    return 1;
+  }
+
+  // preallocate space
+  edges.clear();
+  edges.resize(edge.size());
+
+  // loop through the edges
+  for (std::size_t i = 0; i < edges.size(); ++i) {
+    std::string name;
+    std::vector<std::string> names;
+    try {
+      // source
+      name = edge[i]["source"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  edge source: %s\n", e.what());
+      return 1;
+    }
+    if (modmap.find(name) == modmap.end()) {
+      CkPrintf("  error: model %s not defined\n", name.c_str());
+      return 1;
+    }
+    else {
+      edges[i].source = modmap[name];
+    }
+    edges[i].target.clear();
+    try {
+      // target(s)
+      names = edge[i]["target"].as<std::vector<std::string>>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  edge targets: %s\n", e.what());
+      return 1;
+    }
+    for (std::size_t j = 0; j < names.size(); ++j) {
+      if (modmap.find(names[j]) == modmap.end()) {
+        CkPrintf("  error: model %s not defined\n", name.c_str());
+        return 1;
+      }
+      else {
+        edges[i].target.push_back(modmap[names[j]]);
+      }
+    }
+    try {
+      // modname
+      name = edge[i]["modname"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  edge modname: %s\n", e.what());
+      return 1;
+    }
+    if (modmap.find(name) == modmap.end()) {
+      CkPrintf("  error: model %s not defined\n", name.c_str());
+      return 1;
+    }
+    else {
+      edges[i].modidx = modmap[name];
+    }
+    try {
+      // cutoff
+      edges[i].cutoff = edge[i]["cutoff"].as<real_t>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  warning: cutoff not defined, defaulting to none\n");
+      edges[i].cutoff = 0.0;
+    }
+
+    // Connection types are their own 'node'
+    YAML::Node conn = edge[i]["connect"];
+    if (conn.size() == 0) {
+      CkPrintf("  error: edge %s has no connections\n", name.c_str());
+    }
+
+    // preallocate space
+    edges[i].conntype.resize(conn.size());
+    edges[i].probparam.resize(conn.size());
+    edges[i].maskparam.resize(conn.size());
+
+    // loop through the connections
+    for (std::size_t j = 0; j < conn.size(); ++j) {
+      std::string conntype;
+      try {
+        // conntype
+        conntype = conn[j]["type"].as<std::string>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  connect type: %s\n", e.what());
+        return 1;
+      }
+      // based on connection type, get params
+      if (conntype == "uniform") {
+        // Randomly connect
+        edges[i].conntype[j] = CONNTYPE_UNIF;
+        edges[i].probparam[j].resize(PROBPARAM_UNIF);
+        edges[i].maskparam[j].resize(MASKPARAM_UNIF);
+        try {
+          // probability threshold
+          edges[i].probparam[j][0] = conn[j]["prob"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect random prob: %s\n", e.what());
+          return 1;
+        }
+      }
+      else if (conntype == "sigmoid") {
+        // Connect according to sigmoid property
+        edges[i].conntype[j] = CONNTYPE_SIG;
+        edges[i].probparam[j].resize(PROBPARAM_SIG);
+        edges[i].maskparam[j].resize(MASKPARAM_SIG);
+        try {
+          // maximum probability
+          edges[i].probparam[j][0] = conn[j]["maxprob"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sigmoid maxprob: %s\n", e.what());
+          return 1;
+        }
+        try {
+          // sigmoid midpoint
+          edges[i].probparam[j][1] = conn[j]["midpoint"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sigmoid midpoint: %s\n", e.what());
+          return 1;
+        }
+        try {
+          // sigmoid slope
+          edges[i].probparam[j][2] = conn[j]["slope"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sigmoid slope: %s\n", e.what());
+          return 1;
+        }
+      }
+      else if (conntype == "index") {
+        // Connect by index of source and target
+        edges[i].conntype[j] = CONNTYPE_IDX;
+        edges[i].probparam[j].resize(PROBPARAM_IDX);
+        edges[i].maskparam[j].resize(MASKPARAM_IDX);
+        // By index requires single source and target
+        if (edges[i].target.size() > 1) {
+          CkPrintf("  connect index is single target only\n");
+          return 1;
+        }
+        // source and target order
+        for (std::size_t v = 0; v < vertices.size(); ++v) {
+          if (edges[i].source == vertices[v].modidx) {
+            edges[i].maskparam[j][0] = vertices[v].order;
+          }
+          if (edges[i].target[0] == vertices[v].modidx) {
+            edges[i].maskparam[j][1] = vertices[v].order;
+          }
+        }
+        try {
+          // connection source multiplier
+          edges[i].maskparam[j][2] = conn[j]["srcmul"].as<idx_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect index srcmul: %s\n", e.what());
+          return 1;
+        }
+        try {
+          // connection source offset
+          edges[i].maskparam[j][3] = conn[j]["srcoff"].as<idx_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect index srcoff: %s\n", e.what());
+          return 1;
+        }
+      }
+      else if (conntype == "file") {
+        // Connect by whatever is in a datafile
+        edges[i].conntype[j] = CONNTYPE_FILE;
+        edges[i].probparam[j].resize(PROBPARAM_FILE);
+        edges[i].maskparam[j].resize(MASKPARAM_FILE);
+        // By file requires single source and target
+        if (edges[i].target.size() > 1) {
+          CkPrintf("  connect file is single target only\n");
+          return 1;
+        }
+        // source and target order
+        for (std::size_t v = 0; v < vertices.size(); ++v) {
+          if (edges[i].source == vertices[v].modidx) {
+            edges[i].maskparam[j][0] = vertices[v].order;
+          }
+          if (edges[i].target[0] == vertices[v].modidx) {
+            edges[i].maskparam[j][1] = vertices[v].order;
+          }
+        }
+        try {
+          // file name
+          edges[i].probparam[j][0] = (real_t) datafiles.size();
+          datafiles.push_back(conn[j]["filename"].as<std::string>());
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect file name: %s\n", e.what());
+          return 1;
+        }
+      }
+      else {
+        CkPrintf("  error: '%s' unknown connection type\n", conntype.c_str());
+        return 1;
+      }
+    }
+  }
+
+  // Check that only one type of edge may exist between any two given vertices
+  // TODO: Enable multiple edges between vertices one day
+  std::vector<std::vector<idx_t>> connections;
+  connections.resize(modeldata.size()+1);
+  for (std::size_t i = 0; i < edges.size(); ++i) {
+    for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
+      // add source target pairs
+      connections[edges[i].source].push_back(edges[i].target[j]);
+      // Sanity check that there are no 'none' sources or targets
+      CkAssert(edges[i].source);
+      CkAssert(edges[i].target[j]);
+    }
+  }
+  // check for duplicates (connections[0] is 'none' model)
+  for (std::size_t i = 1; i < connections.size(); ++i) {
+    std::sort(connections[i].begin(), connections[i].end());
+    for (std::size_t j = 1; j < connections[i].size(); ++j) {
+      if (connections[i][j] == connections[i][j-1]) {
+        CkPrintf("  error: multiple connection types between vertices\n"
+                 "         %s to %s not allowed (yet)\n",
+                 modeldata[i-1].modname.c_str(), modeldata[connections[i][j]-1].modname.c_str());
+        return 1;
+      }
+    }
+  }
+  
   // Return success
   return 0;
 }

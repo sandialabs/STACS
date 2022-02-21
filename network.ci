@@ -11,14 +11,12 @@ module network {
     idx_t statedist[];
     idx_t stickdist[];
     idx_t eventdist[];
-    idx_t modtype[];
-    idx_t xmodname[];
-    char modname[];
-    idx_t nmodel;
   };
   
   message mModel {
     idx_t modtype[];
+    idx_t xmodname[];
+    char modname[];
     idx_t nstate[];
     idx_t nstick[];
     idx_t xparam[];
@@ -31,6 +29,64 @@ module network {
     idx_t nmodel;
     bool plastic;
     bool episodic;
+  };
+  
+  message mModelData {
+    idx_t type[];
+    idx_t modtype[];
+    idx_t xmodname[];
+    char modname[];
+    idx_t xstatetype[];
+    idx_t xsticktype[];
+    idx_t statetype[];
+    idx_t sticktype[];
+    real_t stateparam[];
+    real_t stickparam[];
+    idx_t xdatafiles[];
+    char datafiles[];
+    idx_t nmodel;
+    idx_t nstateparam;
+    idx_t nstickparam;
+    idx_t ndatafiles;
+  };
+  
+  
+  message mGraph {
+    idx_t vtxmodidx[];
+    idx_t vtxorder[];
+    idx_t vtxshape[];
+    idx_t xvtxparam[];
+    real_t vtxparam[];
+    real_t vtxcoord[];
+    idx_t edgsource[];
+    idx_t xedgtarget[];
+    idx_t edgtarget[];
+    idx_t edgmodidx[];
+    real_t edgcutoff[];
+    idx_t xedgconntype[];
+    idx_t edgconntype[];
+    idx_t medgprobparam[];
+    real_t edgprobparam[];
+    idx_t medgmaskparam[];
+    idx_t edgmaskparam[];
+    idx_t nvtx;
+    idx_t nvtxparam;
+    idx_t nedg;
+    idx_t nedgtarget;
+    idx_t nedgconntype;
+    idx_t nedgprobparam;
+    idx_t nedgmaskparam;
+  };
+
+  message mConn {
+    idx_t vtxmodidx[];
+    idx_t vtxordidx[];
+    real_t xyz[];
+    idx_t xadj[];
+    idx_t adjcy[];
+    idx_t edgmodidx[];
+    int datidx;
+    idx_t nvtx;
   };
 
   message mPart {
@@ -93,7 +149,14 @@ module network {
   };
   
   array [1D] Netdata {
-    entry Netdata(mDist *msg);
+    entry Netdata(mModelData *msg);
+    
+    entry void Build(mGraph *msg);
+    entry void SaveBuild();
+    entry void Connect(mConn *msg);
+    entry void ConnRequest(idx_t reqidx);
+    
+    entry void LoadData(mDist *msg);
     entry void LoadNetwork(int partidx, const CkCallback &cbpart);
     
     entry void SaveNetwork(mPart *msg);
