@@ -45,7 +45,7 @@ CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs) {
 
 // Netdata constructor
 //
-Netdata::Netdata(mModelData *msg) {
+Netdata::Netdata(mModel *msg) {
   // Bookkeeping
   fileidx = thisIndex;
   int ndiv = netparts/netfiles;
@@ -95,7 +95,7 @@ Netdata::Netdata(mModelData *msg) {
     modname[i+1] = modeldata[i].modname;
     modmap[modeldata[i].modname] = i+1;
     // type
-    modeldata[i].type = msg->type[i];
+    modeldata[i].graphtype = msg->graphtype[i];
     // prepare containers
     modeldata[i].statetype.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
     modeldata[i].stateparam.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);

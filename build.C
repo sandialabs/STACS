@@ -232,7 +232,7 @@ void Netdata::Build(mGraph *msg) {
     // 0 is reserved for 'none' edge type
     CkAssert(vtxmodidx[i] > 0);
     idx_t modidx = vtxmodidx[i] - 1;
-    CkAssert(modeldata[modidx].type == GRAPHTYPE_VTX || modeldata[modidx].type == GRAPHTYPE_STR);
+    CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_VTX || modeldata[modidx].graphtype == GRAPHTYPE_STR);
     // Allocate space for states
     std::vector<real_t> rngstate;
     std::vector<tick_t> rngstick;
@@ -762,7 +762,7 @@ std::vector<real_t> Netdata::BuildEdgState(idx_t modidx, real_t dist, idx_t sour
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
   --modidx;
-  CkAssert(modeldata[modidx].type == GRAPHTYPE_EDG);
+  CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
   // Allocate space for states
   std::vector<real_t> rngstate;
   rngstate.resize(modeldata[modidx].statetype.size());
@@ -815,7 +815,7 @@ std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
   --modidx;
-  CkAssert(modeldata[modidx].type == GRAPHTYPE_EDG);
+  CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
   // Allocate space for sticks
   std::vector<tick_t> rngstick;
   rngstick.resize(modeldata[modidx].sticktype.size());

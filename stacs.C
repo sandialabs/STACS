@@ -78,12 +78,6 @@ Main::Main(CkArgMsg *msg) {
     CkExit();
   }
   
-  // Read model information
-  if (ReadModelData()) {
-    CkPrintf("Error reading model information...\n");
-    CkExit();
-  }
-  
   // Charm information
   mainProxy = thisProxy;
   mCastGrpId = CProxy_CkMulticastMgr::ckNew();
@@ -106,7 +100,7 @@ Main::Main(CkArgMsg *msg) {
   CProxy_RRMap rrMap = CProxy_RRMap::ckNew();
   netdataopts.setMap(rrMap);
   // Create chare array with model information
-  mModelData *mmodel = BuildModelData();
+  mModel *mmodel = BuildModel();
   netdata = CProxy_Netdata::ckNew(mmodel, netdataopts);
   // Set callback to return control to main
   CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);

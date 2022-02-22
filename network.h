@@ -36,7 +36,7 @@
 //
 struct dist_t;
 
-struct modeldata_t;
+struct model_t;
 struct vertex_t;
 struct edge_t;
 
@@ -184,35 +184,15 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 12
+#define MSG_Model 21
 class mModel : public CMessage_mModel {
   public:
-    idx_t *modtype;
-    idx_t *xmodname;
-    char *modname;
-    idx_t *nstate;
-    idx_t *nstick;
-    idx_t *xparam;
-    real_t *param;
-    idx_t *xport;
-    char *port;
-    bool *grpactive;
-    bool *grpmother;
-    bool *grpanchor;
-    idx_t nmodel;
-    bool plastic;
-    bool episodic;
-};
-
-// Model Information
-//
-#define MSG_ModelData 12
-class mModelData : public CMessage_mModelData {
-  public:
-    idx_t *type;        // type of model (vertex/edge)
     idx_t *modtype;     // model index identifier
+    idx_t *graphtype;   // type of model (vertex/edge)
     idx_t *xmodname;    // model name prefix
     char *modname;      // model name
+    idx_t *nstate;      // number of states  per model (TODO:to be used for state specification)
+    idx_t *nstick;      // number of sticks per model (add information such as xstatename, statename)
     idx_t *xstatetype;    // state generation prefix
     idx_t *xsticktype;    // stick generation prefix
     idx_t *statetype;     // state generation type
@@ -221,13 +201,23 @@ class mModelData : public CMessage_mModelData {
     real_t *stickparam;   // stick generation parameters
     idx_t *xdatafiles;  // prefix sum for filenames
     char *datafiles;    // filenames (concatenated)
-    idx_t nmodel;
-    idx_t nstateparam;
-    idx_t nstickparam;
-    idx_t ndatafiles;
+    idx_t *xparam;      // network model prefix
+    real_t *param;      // network model parameters
+    idx_t *xport;       // network port prefix
+    char *port;        // network port name
+    bool *grpactive;   // polychronization (active)
+    bool *grpmother;   // polychronization (mother)
+    bool *grpanchor;   // polychronization (anchor)
+    idx_t nmodel;      // number of models
+    idx_t nstateparam;   // number of state generation parameters (for prefix)
+    idx_t nstickparam;   // number of stick generation parameters (for prefix)
+    idx_t ndatafiles;    // number of datafiles (for prefix)
+    bool plastic;      // toggle for plasticity
+    bool episodic;     // toggle for episodic simulation
 };
 
-
+// Network graph information
+//
 #define MSG_Graph 17
 class mGraph : public CMessage_mGraph {
   public:
@@ -523,7 +513,7 @@ class NoneModel : public ModelTmpl < 0, NoneModel > {
 class Netdata : public CBase_Netdata {
   public:
     /* Constructors and Destructors */
-    Netdata(mModelData *msg);
+    Netdata(mModel *msg);
     Netdata(CkMigrateMessage *msg);
     ~Netdata();
 
@@ -688,7 +678,7 @@ class Netdata : public CBase_Netdata {
     CkCallback maindist;
     /* Network Model */
     std::vector<NetModel*> model;      // collection of model objects (empty)
-    std::vector<modeldata_t> modeldata;
+    std::vector<model_t> modeldata;
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     /* Build Data */

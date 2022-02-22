@@ -65,24 +65,18 @@ struct dist_t {
 struct model_t {
   std::string modname;
   idx_t modtype;
+  idx_t graphtype;
   idx_t nstate;
   idx_t nstick;
+  std::vector<idx_t> statetype;
+  std::vector<std::vector<real_t>> stateparam;
+  std::vector<idx_t> sticktype;
+  std::vector<std::vector<real_t>> stickparam;
   std::vector<real_t> param;
   std::vector<std::string> port;
   bool grpactive;
   bool grpmother;
   bool grpanchor;
-};
-
-// Model data
-//
-struct modeldata_t {
-  idx_t type;
-  std::string modname;
-  std::vector<idx_t> statetype;
-  std::vector<std::vector<real_t>> stateparam;
-  std::vector<idx_t> sticktype;
-  std::vector<std::vector<real_t>> stickparam;
 };
 
 // Vertices
@@ -138,13 +132,11 @@ class Main : public CBase_Main {
     int ReadConfig(std::string configfile);
     int ReadDist();
     int ReadModel();
-    int ReadModelData();
     int ReadGraph();
 
     /* Chare Messages */
     mDist* BuildDist();
     mModel* BuildModel();
-    mModelData* BuildModelData();
     mGraph* BuildGraph();
 #ifdef STACS_WITH_YARP
     mVtxs* BuildVtxs();
@@ -169,14 +161,13 @@ class Main : public CBase_Main {
     CkCallback netcycle;
     /* Network */
     std::vector<dist_t> netdist;
+    /* Model Information */
     std::vector<model_t> models;
-    std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
-    std::vector<modeldata_t> modeldata;
+    std::unordered_map<std::string, std::size_t> modmap; // maps model name to object index
     std::vector<std::string> datafiles;
     /* Graph information */
     std::vector<vertex_t> vertices;
     std::vector<edge_t> edges;
-    std::vector<std::string> graphtype;
     /* Configuration */
     std::string runmode;
     bool plastic;

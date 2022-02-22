@@ -15,27 +15,11 @@ module network {
   
   message mModel {
     idx_t modtype[];
+    idx_t graphtype[];
     idx_t xmodname[];
     char modname[];
     idx_t nstate[];
     idx_t nstick[];
-    idx_t xparam[];
-    real_t param[];
-    idx_t xport[];
-    char port[];
-    bool grpactive[];
-    bool grpmother[];
-    bool grpanchor[];
-    idx_t nmodel;
-    bool plastic;
-    bool episodic;
-  };
-  
-  message mModelData {
-    idx_t type[];
-    idx_t modtype[];
-    idx_t xmodname[];
-    char modname[];
     idx_t xstatetype[];
     idx_t xsticktype[];
     idx_t statetype[];
@@ -44,12 +28,20 @@ module network {
     real_t stickparam[];
     idx_t xdatafiles[];
     char datafiles[];
+    idx_t xparam[];
+    real_t param[];
+    idx_t xport[];
+    char port[];
+    bool grpactive[];
+    bool grpmother[];
+    bool grpanchor[];
     idx_t nmodel;
     idx_t nstateparam;
     idx_t nstickparam;
     idx_t ndatafiles;
+    bool plastic;
+    bool episodic;
   };
-  
   
   message mGraph {
     idx_t vtxmodidx[];
@@ -149,7 +141,7 @@ module network {
   };
   
   array [1D] Netdata {
-    entry Netdata(mModelData *msg);
+    entry Netdata(mModel *msg);
     
     entry void Build(mGraph *msg);
     entry void SaveBuild();
