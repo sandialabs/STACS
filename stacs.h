@@ -66,12 +66,15 @@ struct model_t {
   std::string modname;
   idx_t modtype;
   idx_t graphtype;
-  idx_t nstate;
+  idx_t nstate; // TODO: these are probably redundant
   idx_t nstick;
+  std::vector<std::string> statename;
+  std::vector<std::string> stickname;
   std::vector<idx_t> statetype;
-  std::vector<std::vector<real_t>> stateparam;
   std::vector<idx_t> sticktype;
+  std::vector<std::vector<real_t>> stateparam;
   std::vector<std::vector<real_t>> stickparam;
+  std::vector<std::string> paramname;
   std::vector<real_t> param;
   std::vector<std::string> port;
   bool grpactive;
@@ -162,6 +165,7 @@ class Main : public CBase_Main {
     /* Network */
     std::vector<dist_t> netdist;
     /* Model Information */
+    // TODO: rename to modelconfig and combine edges/vertices into a graphconfig variable
     std::vector<model_t> models;
     std::unordered_map<std::string, std::size_t> modmap; // maps model name to object index
     std::vector<std::string> datafiles;

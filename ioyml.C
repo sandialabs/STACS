@@ -440,12 +440,19 @@ int Main::ReadModel() {
 
       // Params are their own 'node'
       YAML::Node param = modfile[i]["param"];
+      models[i].paramname.resize(param.size());
       models[i].param.resize(param.size());
       for (std::size_t j = 0; j < param.size(); ++j) {
         try {
+          models[i].paramname[j] = param[j]["name"].as<std::string>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  param name: %s\n", e.what());
+          return 1;
+        }
+        try {
           models[i].param[j] = param[j]["value"].as<real_t>();
         } catch (YAML::RepresentationException& e) {
-          CkPrintf("  param: %s\n", e.what());
+          CkPrintf("  param value: %s\n", e.what());
           return 1;
         }
       }
@@ -472,8 +479,10 @@ int Main::ReadModel() {
       }
     
       // preallocate space for non-default parameters
+      models[i].statename.resize(models[i].nstate);
       models[i].statetype.resize(models[i].nstate);
       models[i].stateparam.resize(models[i].nstate);
+      models[i].stickname.resize(models[i].nstick);
       models[i].sticktype.resize(models[i].nstick);
       models[i].stickparam.resize(models[i].nstick);
       idx_t jstate = 0;
@@ -491,6 +500,7 @@ int Main::ReadModel() {
           return 1;
         }
 
+        // Representation type defaults to real unless specifically set as "tick"
         try {
           // reptype
           reptype = state[j]["rep"].as<std::string>();
@@ -499,6 +509,24 @@ int Main::ReadModel() {
         }
         if (reptype != "tick") {
           reptype = std::string("real");
+        }
+
+        // state names (for underspecified models, relying on model defaults)
+        if (reptype == "tick") {
+          try {
+            models[i].stickname[jstick] = state[j]["name"].as<std::string>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state name: %s\n", e.what());
+            return 1;
+          }
+        }
+        else {
+          try {
+            models[i].statename[jstate] = state[j]["name"].as<std::string>();
+          } catch (YAML::RepresentationException& e) {
+            CkPrintf("  state name: %s\n", e.what());
+            return 1;
+          }
         }
 
         // based on rng type, get params

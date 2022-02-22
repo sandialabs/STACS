@@ -56,20 +56,25 @@ mModel* Main::BuildModel() {
   /* Bookkeeping */
   // TODO: probably better to make these ints instead of idx_t
   idx_t nmodname;
+  idx_t nstatename;
   idx_t nstatetype;
   idx_t nstateparam;
   idx_t jstateparam;
+  idx_t nstickname;
   idx_t nsticktype;
   idx_t nstickparam;
   idx_t jstickparam;
+  idx_t nparamname;
   idx_t ndatafile;
   int nparam;
   int nport;
 
   // Get total name sizes
   nmodname = 0;
+  nstatename = 0;
   nstatetype = 0;
   nstateparam = 0;
+  nstickname = 0;
   nsticktype = 0;
   nstickparam = 0;
   for (std::size_t i = 0; i < models.size(); ++i) {
@@ -89,6 +94,7 @@ mModel* Main::BuildModel() {
   }
 
   // Get total size of param
+  nparamname = 0;
   nparam = 0;
   nport = 0;
   for (std::size_t i = 0; i < models.size(); ++i) {
@@ -106,26 +112,33 @@ mModel* Main::BuildModel() {
   msgSize[3] = nmodname;          // modname
   msgSize[4] = models.size();     // state
   msgSize[5] = models.size();     // stick
-  msgSize[6] = models.size()+1;   // xstatetype
-  msgSize[7] = models.size()+1;   // xsticktype
-  msgSize[8] = nstatetype;        // statetype
-  msgSize[9] = nsticktype;        // sticktype
-  msgSize[10] = nstateparam;       // stateparam
-  msgSize[11] = nstickparam;       // stickparam
-  msgSize[12] = datafiles.size()+1;  // xdatafiles
-  msgSize[13] = ndatafile;           // datafiles
-  msgSize[14] = models.size()+1;   // xparam
-  msgSize[15] = nparam;            // param
-  msgSize[16] = models.size()+1;   // xport
-  msgSize[17] = nport;             // port
-  msgSize[18] = models.size();     // grpactive
-  msgSize[19] = models.size();     // grpmother
-  msgSize[20] = models.size();     // grpanchor
+  msgSize[6] = models.size()+1;   // xstatename
+  msgSize[7] = models.size()+1;   // xstickname
+  msgSize[8] = nstatename;        // statename
+  msgSize[9] = nstickname;        // stickname
+  msgSize[10] = models.size()+1;   // xstatetype
+  msgSize[11] = models.size()+1;   // xsticktype
+  msgSize[12] = nstatetype;        // statetype
+  msgSize[13] = nsticktype;        // sticktype
+  msgSize[14] = nstateparam;       // stateparam
+  msgSize[15] = nstickparam;       // stickparam
+  msgSize[16] = models.size()+1;   // xparamname
+  msgSize[17] = nparamname;        // paramname
+  msgSize[18] = models.size()+1;   // xparam
+  msgSize[19] = nparam;            // param
+  msgSize[20] = models.size()+1;   // xport
+  msgSize[21] = nport;             // port
+  msgSize[22] = datafiles.size()+1;  // xdatafiles
+  msgSize[23] = ndatafile;           // datafiles
+  msgSize[24] = models.size();     // grpactive
+  msgSize[25] = models.size();     // grpmother
+  msgSize[26] = models.size();     // grpanchor
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = models.size();
   mmodel->nstateparam = nstateparam;
   mmodel->nstickparam = nstickparam;
+  mmodel->nparam = nparam;
   mmodel->ndatafiles = datafiles.size();
   // Configuration
   mmodel->plastic = plastic;
@@ -133,11 +146,14 @@ mModel* Main::BuildModel() {
 
   // Prefixes starts with zero
   mmodel->xmodname[0] = 0;
+  mmodel->xstatename[0] = 0;
+  mmodel->xstatename[0] = 0;
   mmodel->xstatetype[0] = 0;
   mmodel->xsticktype[0] = 0;
-  mmodel->xdatafiles[0] = 0;
+  mmodel->xparamname[0] = 0;
   mmodel->xparam[0] = 0;
   mmodel->xport[0] = 0;
+  mmodel->xdatafiles[0] = 0;
 
   // Set up counters
   jstateparam = 0;
