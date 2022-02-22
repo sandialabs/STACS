@@ -59,18 +59,23 @@ int Main::ReadConfig(std::string configfile) {
   // Process configuration information
   // Simulation
   // Run mode
-  //try {
-  //  runmode = config["runmode"].as<std::string>();
-  //} catch (YAML::RepresentationException& e) {
-  //  runmode = std::string(RUNMODE_DEFAULT);
-  //  CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
-  //}
-  //if (runmode != std::string(RUNMODE_SIMULATE) && 
-  //    runmode != std::string(RUNMODE_FINDGROUP) && 
-  //    runmode != std::string(RUNMODE_ESTIMATE)) {
-  //  runmode = std::string(RUNMODE_DEFAULT);
-  //  CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
-  //}
+  // Only read runmode from config if it wasn't passed in as a command line argument
+  if (runmode == std::string(RUNMODE_EMPTY)) {
+    try {
+      runmode = config["runmode"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      runmode = std::string(RUNMODE_DEFAULT);
+      CkPrintf("  runmode not defined, defaulting to: %s\n", runmode.c_str());
+    }
+  }
+  // Make sure it's a valid runmode
+  if (runmode != std::string(RUNMODE_SIMULATE) && 
+      runmode != std::string(RUNMODE_BUILD) &&
+      runmode != std::string(RUNMODE_FINDGROUP) && 
+      runmode != std::string(RUNMODE_ESTIMATE)) {
+    runmode = std::string(RUNMODE_DEFAULT);
+    CkPrintf("  runmode is invalid, defaulting to: %s\n", runmode.c_str());
+  }
   // Random number seed
   try {
      randseed = config["randseed"].as<unsigned>();

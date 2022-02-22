@@ -50,21 +50,15 @@ Main::Main(CkArgMsg *msg) {
   std::string configfile;
   if (msg->argc < 2) {
     configfile = std::string(CONFIG_DEFAULT);
-    runmode = std::string(RUNMODE_DEFAULT);
+    runmode = std::string(RUNMODE_EMPTY);
   }
   else if (msg->argc == 2) {
     configfile = std::string(msg->argv[1]);
-    runmode = std::string(RUNMODE_DEFAULT);
+    runmode = std::string(RUNMODE_EMPTY);
   }
   else if (msg->argc == 3) {
     configfile = msg->argv[1];
     runmode = msg->argv[2];
-    // TODO: better checking here
-    if (runmode != "simulate" && runmode != "build") {
-      CkPrintf("Error: run mode %s not valid\n"
-               "       valid modes: build, simulate\n", runmode.c_str());
-      CkExit();
-    }
   }
   else {
     CkPrintf("Usage: [config file] [run mode]\n");
@@ -141,7 +135,7 @@ void Main::Control() {
   // TODO: consolidate build and simulate into a single runmode (i.e. for smaller networks)
 
   // Network needs to be built
-  if (runmode == "build") {
+  if (runmode == std::string(RUNMODE_BUILD)) {
     if (buildflag) {
       CkPrintf("Building network\n");
       buildflag = false;
@@ -175,7 +169,9 @@ void Main::Control() {
   }
 
   // Simulate an already built network
-  else if (runmode == "simulate") {
+  else if (runmode == std::string(RUNMODE_SIMULATE) ||
+           runmode == std::string(RUNMODE_FINDGROUP) ||
+           runmode == std::string(RUNMODE_ESTIMATE)) {
     // Read graph distribution files
     if (ReadDist()) {
       CkPrintf("Error reading graph distribution...\n");

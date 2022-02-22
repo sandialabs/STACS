@@ -22,8 +22,10 @@
 #define CONFIG_DEFAULT "configs/config.yml"
 
 #define RUNMODE_SIMULATE  "simulate"
+#define RUNMODE_BUILD     "build"
 #define RUNMODE_FINDGROUP "findgroup"
 #define RUNMODE_ESTIMATE  "estimate"
+#define RUNMODE_EMPTY     ""
 #define RUNMODE_DEFAULT   "simulate"
 
 #define PLASTIC_DEFAULT  true // Plasticity on
