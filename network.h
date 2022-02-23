@@ -379,6 +379,10 @@ class NetModel {
     std::vector<real_t> getParam() const { return param; }
     std::vector<std::string> getAuxState() const { return auxstate; }
     std::vector<std::string> getAuxStick() const { return auxstick; }
+    idx_t getParamIdx(const std::string& name) const {
+      idx_t index = std::find(paramlist.begin(), paramlist.end(), name) - paramlist.begin();
+      return (index < paramlist.size() ? index : -1);
+    }
     idx_t getStateIdx(const std::string& name) const {
       idx_t index = std::find(statelist.begin(), statelist.end(), name) - statelist.begin();
       return (index < statelist.size() ? index : -1);

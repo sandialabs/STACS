@@ -85,6 +85,8 @@ Network::Network(mModel *msg) {
   model[0]->setMother(false);
   model[0]->setAnchor(false);
   model[0]->setPlastic(false);
+
+  idx_t jparamname = 0;
   // User defined models
   for (idx_t i = 1; i < msg->nmodel+1; ++i) {
     // Create model object
@@ -93,13 +95,35 @@ Network::Network(mModel *msg) {
     CkAssert(model[i]->getNState() == msg->nstate[i-1]);
     CkAssert(model[i]->getNStick() == msg->nstick[i-1]);
     CkAssert(model[i]->getNParam() == msg->xparam[i] - msg->xparam[i-1]);
-    model[i]->setParam(msg->param + msg->xparam[i-1]);
+    //model[i]->setParam(msg->param + msg->xparam[i-1]);
     model[i]->setPort(msg->port + msg->xport[i-1]);
     model[i]->setRandom(unifdist, &rngine);
     model[i]->setActive(msg->grpactive[i-1]);
     model[i]->setMother(msg->grpmother[i-1]);
     model[i]->setAnchor(msg->grpanchor[i-1]);
     model[i]->setPlastic(msg->plastic);
+    // names (may be in a different order than implemented model)
+    // Find the mapping from user-provided param names to the implemented param names
+    // Find which paramss were not specified (and will need model-supplied defaults)
+    std::vector<idx_t> parammap;
+    parammap.resize(msg->nparam[i-1]);
+    std::vector<real_t> paramvalues;
+    paramvalues.resize(model[i]->getNParam());
+    std::vector<bool> paramconfig;
+    paramconfig.resize(model[i]->getNParam(),false);
+    for (std::size_t j = 0; j < msg->nparam[i-1]; ++j) {
+      std::string paramname = std::string(msg->paramname + msg->xparamname[jparamname], msg->paramname + msg->xparamname[jparamname+1]);
+      parammap[j] = model[i]->getParamIdx(paramname.c_str());
+      // some basic error checking
+      if (parammap[j] == -1) {
+        CkPrintf("  param name: %s is invalid for model: %" PRIidx "\n", paramname.c_str(), model[i]->getModType());
+        CkExit();
+      }
+      paramvalues[parammap[j]] = msg->param[msg->xparam[i-1] + j];
+      paramconfig[parammap[j]] = true;
+      ++jparamname;
+    }
+    model[i]->setParam(paramvalues.data());
 
     // Print out model information
     /*
