@@ -440,6 +440,7 @@ int Main::ReadModel() {
 
       // Params are their own 'node'
       YAML::Node param = modfile[i]["param"];
+      models[i].nparam = param.size();
       models[i].paramname.resize(param.size());
       models[i].param.resize(param.size());
       for (std::size_t j = 0; j < param.size(); ++j) {

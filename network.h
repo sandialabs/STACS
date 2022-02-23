@@ -184,15 +184,16 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 27
+#define MSG_Model 28
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;     // model index identifier
     idx_t *graphtype;   // type of model (vertex/edge)
     idx_t *xmodname;    // model name prefix
     char *modname;      // model name
-    idx_t *nstate;      // number of states  per model (TODO:to be used for state specification)
-    idx_t *nstick;      // number of sticks per model (add information such as xstatename, statename)
+    idx_t *nstate;      // number of states  per model
+    idx_t *nstick;      // number of sticks per model
+    idx_t *nparam;      // number of params per model
     idx_t *xstatename;    // state names prefix
     idx_t *xstickname;    // stick names prefix
     char *statename;    // state specification names
@@ -217,7 +218,6 @@ class mModel : public CMessage_mModel {
     idx_t nmodel;      // number of models
     idx_t nstateparam;   // number of state generation parameters (for prefix)
     idx_t nstickparam;   // number of stick generation parameters (for prefix)
-    idx_t nparam;        // number of parameters (for prefix)
     idx_t ndatafiles;    // number of datafiles (for prefix)
     bool plastic;      // toggle for plasticity
     bool episodic;     // toggle for episodic simulation

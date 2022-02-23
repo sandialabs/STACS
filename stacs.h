@@ -66,8 +66,9 @@ struct model_t {
   std::string modname;
   idx_t modtype;
   idx_t graphtype;
-  idx_t nstate; // TODO: these are probably redundant
+  idx_t nstate;
   idx_t nstick;
+  idx_t nparam;
   std::vector<std::string> statename;
   std::vector<std::string> stickname;
   std::vector<idx_t> statetype;

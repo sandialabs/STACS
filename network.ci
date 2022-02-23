@@ -20,6 +20,7 @@ module network {
     char modname[];
     idx_t nstate[];
     idx_t nstick[];
+    idx_t nparam[];
     idx_t xstatename[];
     idx_t xstickname[];
     char statename[];
@@ -44,7 +45,6 @@ module network {
     idx_t nmodel;
     idx_t nstateparam;
     idx_t nstickparam;
-    idx_t nparam;
     idx_t ndatafiles;
     bool plastic;
     bool episodic;
