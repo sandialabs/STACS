@@ -55,9 +55,32 @@ Netdata::Netdata(mModel *msg) {
   xpart = fileidx*ndiv + (fileidx < nrem ? fileidx : nrem);
   
   // Bookkeeping 2
+  // TODO: consolidate these...
   datidx = thisIndex;
   nprt = ndiv + (datidx < nrem);
   xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
+
+  // Models (implemented)
+  // TODO: set up models the same way as network?
+  for (std::size_t i = 0; i < model.size(); ++i) {
+    delete model[i];
+  }
+  // Set up containers
+  model.clear();
+  modname.resize(msg->nmodel+1);
+  modmap.clear();
+  // "none" model
+  model.push_back(ModelFactory::newModel()->Create(0));
+  modname[0] = std::string("none");
+  modmap[modname[0]] = 0;
+  // User defined models
+  for (idx_t i = 1; i < msg->nmodel+1; ++i) {
+    model.push_back(ModelFactory::newModel()->Create(msg->modtype[i-1]));
+    modname[i] = std::string(msg->modname + msg->xmodname[i-1], msg->modname + msg->xmodname[i]);
+    modmap[modname[i]] = i;
+  }
+
+  // Models (user configured information)
 
   // Set up random number generator
   rngine.seed(randseed+datidx);
@@ -81,107 +104,154 @@ Netdata::Netdata(mModel *msg) {
   // Set up counters
   idx_t jstateparam = 0;
   idx_t jstickparam = 0;
+  idx_t jstatename = 0;
+  idx_t jstickname = 0;
 
-  // Set up maps
-  modmap.clear();
-  modname.resize(msg->nmodel+1);
-  modname[0] = std::string("none");
-  modmap[modname[0]] = 0;
   // Read in models
   modeldata.resize(msg->nmodel);
   for (std::size_t i = 0; i < modeldata.size(); ++i) {
     // modname
     modeldata[i].modname = std::string(msg->modname + msg->xmodname[i], msg->modname + msg->xmodname[i+1]);
-    modname[i+1] = modeldata[i].modname;
-    modmap[modeldata[i].modname] = i+1;
-    // type
+    // graph type
     modeldata[i].graphtype = msg->graphtype[i];
-    // prepare containers
-    modeldata[i].statetype.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
-    modeldata[i].stateparam.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
-    for (std::size_t j = 0; j < modeldata[i].statetype.size(); ++j) {
+    // states and param sizes (user specified)
+    modeldata[i].nstate = model[modmap[modeldata[i].modname]]->getNState();
+    modeldata[i].nstick = model[modmap[modeldata[i].modname]]->getNStick();
+    modeldata[i].nparam = model[modmap[modeldata[i].modname]]->getNParam();
+    // names (may be in a different order than implemented model)
+    // Find the mapping from user-provided state names to the implemented state names
+    // Find which states were not specified (and will need model-supplied defaults)
+    std::vector<idx_t> statemap;
+    statemap.resize(msg->nstate[i]);
+    std::vector<bool> stateconfig;
+    stateconfig.resize(modeldata[i].nstate, false);
+    modeldata[i].statename.resize(modeldata[i].nstate);
+    modeldata[i].statename = model[modmap[modeldata[i].modname]]->getStateList();
+    for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
+      std::string statename = std::string(msg->statename + msg->xstatename[jstatename], msg->statename + msg->xstatename[jstatename+1]);
+      statemap[j] = model[modmap[modeldata[i].modname]]->getStateIdx(statename.c_str());
+      // some basic error checking
+      if (statemap[j] == -1) {
+        CkPrintf("  state name: %s is invalid for model: %s\n", statename.c_str(), modeldata[i].modname.c_str());
+        CkExit();
+      }
+      modeldata[i].statename[statemap[j]] = statename;
+      stateconfig[statemap[j]] = true;
+      ++jstatename;
+    }
+    std::vector<idx_t> stickmap;
+    stickmap.resize(msg->nstick[i]);
+    std::vector<bool> stickconfig;
+    stickconfig.resize(modeldata[i].nstick, false);
+    modeldata[i].stickname.resize(modeldata[i].nstick);
+    modeldata[i].stickname = model[modmap[modeldata[i].modname]]->getStickList();
+    for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
+      std::string stickname = std::string(msg->stickname + msg->xstickname[jstickname], msg->stickname + msg->xstickname[jstickname+1]);
+      stickmap[j] = model[modmap[modeldata[i].modname]]->getStickIdx(stickname.c_str());
+      // some basic error checking
+      if (stickmap[j] == -1) {
+        CkPrintf("  state name: %s is invalid for model: %s\n", stickname.c_str(), modeldata[i].modname.c_str());
+        CkExit();
+      }
+      modeldata[i].stickname[stickmap[j]] = stickname;
+      stickconfig[stickmap[j]] = true;
+      ++jstickname;
+    }
+    // prepare containers for parameters
+    //modeldata[i].statetype.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
+    //modeldata[i].stateparam.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
+    CkAssert(modeldata[i].nstate == msg->xstatetype[i+1] - msg->xstatetype[i]);
+    modeldata[i].statetype.resize(modeldata[i].nstate);
+    modeldata[i].stateparam.resize(modeldata[i].nstate);
+    for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
       // statetype
-      modeldata[i].statetype[j] = msg->statetype[msg->xstatetype[i] + j];
-      switch (modeldata[i].statetype[j]) {
+      modeldata[i].statetype[statemap[j]] = msg->statetype[msg->xstatetype[i] + j];
+      switch (modeldata[i].statetype[statemap[j]]) {
         case RNGTYPE_CONST:
-          modeldata[i].stateparam[j].resize(RNGPARAM_CONST);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_CONST);
           break;
         case RNGTYPE_UNIF:
-          modeldata[i].stateparam[j].resize(RNGPARAM_UNIF);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_UNIF);
           break;
         case RNGTYPE_UNINT:
-          modeldata[i].stateparam[j].resize(RNGPARAM_UNINT);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_UNINT);
           break;
         case RNGTYPE_NORM:
-          modeldata[i].stateparam[j].resize(RNGPARAM_NORM);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_NORM);
           break;
         case RNGTYPE_BNORM:
-          modeldata[i].stateparam[j].resize(RNGPARAM_BNORM);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_BNORM);
           break;
         case RNGTYPE_LBNORM:
-          modeldata[i].stateparam[j].resize(RNGPARAM_LBNORM);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_LBNORM);
           break;
         case RNGTYPE_LIN:
-          modeldata[i].stateparam[j].resize(RNGPARAM_LIN);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_LIN);
           break;
         case RNGTYPE_BLIN:
-          modeldata[i].stateparam[j].resize(RNGPARAM_BLIN);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_BLIN);
           break;
         case RNGTYPE_FILE:
-          modeldata[i].stateparam[j].resize(RNGPARAM_FILE);
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_FILE);
           break;
         default:
           CkPrintf("Error: unknown statetype\n");
           break;
       }
-      for (std::size_t s = 0; s < modeldata[i].stateparam[j].size(); ++s) {
-        modeldata[i].stateparam[j][s] = msg->stateparam[jstateparam++];
+      for (std::size_t s = 0; s < modeldata[i].stateparam[statemap[j]].size(); ++s) {
+        modeldata[i].stateparam[statemap[j]][s] = msg->stateparam[jstateparam++];
       }
     }
     // prepare containers
-    modeldata[i].sticktype.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
-    modeldata[i].stickparam.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
-    for (std::size_t j = 0; j < modeldata[i].sticktype.size(); ++j) {
+    //modeldata[i].sticktype.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
+    //modeldata[i].stickparam.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
+    CkAssert(modeldata[i].nstick == msg->xsticktype[i+1] - msg->xsticktype[i]);
+    modeldata[i].sticktype.resize(modeldata[i].nstick);
+    modeldata[i].stickparam.resize(modeldata[i].nstick);
+    for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
       // sticktype
-      modeldata[i].sticktype[j] = msg->sticktype[msg->xsticktype[i] + j];
-      switch (modeldata[i].sticktype[j]) {
+      modeldata[i].sticktype[stickmap[j]] = msg->sticktype[msg->xsticktype[i] + j];
+      switch (modeldata[i].sticktype[stickmap[j]]) {
         case RNGTYPE_CONST:
-          modeldata[i].stickparam[j].resize(RNGPARAM_CONST);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_CONST);
           break;
         case RNGTYPE_UNIF:
-          modeldata[i].stickparam[j].resize(RNGPARAM_UNIF);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_UNIF);
           break;
         case RNGTYPE_UNINT:
-          modeldata[i].stickparam[j].resize(RNGPARAM_UNINT);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_UNINT);
           break;
         case RNGTYPE_NORM:
-          modeldata[i].stickparam[j].resize(RNGPARAM_NORM);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_NORM);
           break;
         case RNGTYPE_BNORM:
-          modeldata[i].stickparam[j].resize(RNGPARAM_BNORM);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_BNORM);
           break;
         case RNGTYPE_LBNORM:
-          modeldata[i].stickparam[j].resize(RNGPARAM_LBNORM);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_LBNORM);
           break;
         case RNGTYPE_LIN:
-          modeldata[i].stickparam[j].resize(RNGPARAM_LIN);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_LIN);
           break;
         case RNGTYPE_BLIN:
-          modeldata[i].stickparam[j].resize(RNGPARAM_BLIN);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_BLIN);
           break;
         case RNGTYPE_FILE:
-          modeldata[i].stickparam[j].resize(RNGPARAM_FILE);
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_FILE);
           break;
         default:
           CkPrintf("Error: unknown statetype\n");
           break;
       }
-      for (std::size_t s = 0; s < modeldata[i].stickparam[j].size(); ++s) {
-        modeldata[i].stickparam[j][s] = msg->stickparam[jstickparam++];
+      for (std::size_t s = 0; s < modeldata[i].stickparam[stickmap[j]].size(); ++s) {
+        modeldata[i].stickparam[stickmap[j]][s] = msg->stickparam[jstickparam++];
       }
     }
   }
   // Sanity check
+  // TODO: potentially provide these numbers in the msg as well
+  //CkAssert(jstatename == msg->nstatename);
+  //CkAssert(jstickname == msg->nstickname);
   CkAssert(jstateparam == msg->nstateparam);
   CkAssert(jstickparam == msg->nstickparam);
 
@@ -196,36 +266,15 @@ Netdata::Netdata(mModel *msg) {
       CkExit();
     }
   }
-
-  // Models
-  // TODO: set up models the same way as network
-  for (std::size_t i = 0; i < model.size(); ++i) {
-    delete model[i];
-  }
-  // Set up containers
-  model.clear();
-  modname.resize(msg->nmodel+1);
-  // "none" model
-  model.push_back(ModelFactory::newModel()->Create(0));
-  modname[0] = std::string("none");
-  modmap[modname[0]] = 0;
-  // User defined models
-  for (idx_t i = 1; i < msg->nmodel+1; ++i) {
-    model.push_back(ModelFactory::newModel()->Create(msg->modtype[i-1]));
-    modname[i] = std::string(msg->modname + msg->xmodname[i-1], msg->modname + msg->xmodname[i]);
-    modmap[modname[i]] = i;
-    /*
-    if (fileidx == 0) {
-      CkPrintf("  Netdata model: %" PRIidx "   NStates: %" PRIidx "   Name: %s\n", i, model[i]->getNState(), modname[i].c_str());
-    }
-    */
-  }
+  
   delete msg;
 
 #ifdef STACS_WITH_YARP
   // Open yarp
   yarp.init();
 #endif
+
+  // Printing model configuration information
 
   // Return control to main
   contribute(0, NULL, CkReduction::nop);

@@ -368,6 +368,9 @@ class NetModel {
     virtual ~NetModel() { }
     /* Getters */
     idx_t getModType() const { return modtype; }
+    std::vector<std::string> getParamList() const { return paramlist; }
+    std::vector<std::string> getStateList() const { return statelist; }
+    std::vector<std::string> getStickList() const { return sticklist; }
     idx_t getNParam() const { return paramlist.size(); }
     idx_t getNState() const { return statelist.size(); }
     idx_t getNStick() const { return sticklist.size(); }
@@ -685,7 +688,7 @@ class Netdata : public CBase_Netdata {
     CkCallback maindist;
     /* Network Model */
     std::vector<NetModel*> model;      // collection of model objects (empty)
-    std::vector<model_t> modeldata;
+    std::vector<model_t> modeldata;    // model information from config and implementation defaults
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     /* Build Data */
