@@ -92,9 +92,9 @@ Network::Network(mModel *msg) {
     // Create model object
     model.push_back(ModelFactory::newModel()->Create(msg->modtype[i-1]));
     // TODO: these asserts will no longer work when models are underspecified
-    CkAssert(model[i]->getNState() == msg->nstate[i-1]);
-    CkAssert(model[i]->getNStick() == msg->nstick[i-1]);
-    CkAssert(model[i]->getNParam() == msg->xparam[i] - msg->xparam[i-1]);
+    //CkAssert(model[i]->getNState() == msg->nstate[i-1]);
+    //CkAssert(model[i]->getNStick() == msg->nstick[i-1]);
+    //CkAssert(model[i]->getNParam() == msg->xparam[i] - msg->xparam[i-1]);
     //model[i]->setParam(msg->param + msg->xparam[i-1]);
     model[i]->setPort(msg->port + msg->xport[i-1]);
     model[i]->setRandom(unifdist, &rngine);
@@ -123,6 +123,15 @@ Network::Network(mModel *msg) {
       paramconfig[parammap[j]] = true;
       ++jparamname;
     }
+    // Now go through the parameters that weren't defined by the model config
+    // These are the false entries in paramconfig
+    for (std::size_t j = 0; j < model[i]->getNParam(); ++j) {
+      if (paramconfig[j]) { continue; }
+      else {
+        paramvalues[j] = model[i]->getDefaultParam(j);
+      }
+    }
+    // Set the parameter values after config and defaults populated
     model[i]->setParam(paramvalues.data());
 
     // Print out model information

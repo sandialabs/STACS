@@ -135,6 +135,7 @@ Netdata::Netdata(mModel *msg) {
         CkPrintf("  state name: %s is invalid for model: %s\n", statename.c_str(), modeldata[i].modname.c_str());
         CkExit();
       }
+      // TODO: We had set the statename earlier, so change this to error checking instead
       modeldata[i].statename[statemap[j]] = statename;
       stateconfig[statemap[j]] = true;
       ++jstatename;
@@ -160,7 +161,7 @@ Netdata::Netdata(mModel *msg) {
     // prepare containers for parameters
     //modeldata[i].statetype.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
     //modeldata[i].stateparam.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
-    CkAssert(modeldata[i].nstate == msg->xstatetype[i+1] - msg->xstatetype[i]);
+    //CkAssert(modeldata[i].nstate == msg->xstatetype[i+1] - msg->xstatetype[i]);
     modeldata[i].statetype.resize(modeldata[i].nstate);
     modeldata[i].stateparam.resize(modeldata[i].nstate);
     for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
@@ -205,7 +206,7 @@ Netdata::Netdata(mModel *msg) {
     // prepare containers
     //modeldata[i].sticktype.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
     //modeldata[i].stickparam.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
-    CkAssert(modeldata[i].nstick == msg->xsticktype[i+1] - msg->xsticktype[i]);
+    //CkAssert(modeldata[i].nstick == msg->xsticktype[i+1] - msg->xsticktype[i]);
     modeldata[i].sticktype.resize(modeldata[i].nstick);
     modeldata[i].stickparam.resize(modeldata[i].nstick);
     for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
@@ -245,6 +246,22 @@ Netdata::Netdata(mModel *msg) {
       }
       for (std::size_t s = 0; s < modeldata[i].stickparam[stickmap[j]].size(); ++s) {
         modeldata[i].stickparam[stickmap[j]][s] = msg->stickparam[jstickparam++];
+      }
+    }
+    // Now go through the states that weren't defined by the model config
+    // These are the false entries in stateconfig
+    for (std::size_t j = 0; j < modeldata[i].nstate; ++j) {
+      if (stateconfig[j]) { continue; }
+      else {
+        modeldata[i].statetype[j] = model[modmap[modeldata[i].modname]]->getDefaultStateType(j);
+        modeldata[i].stateparam[j] = model[modmap[modeldata[i].modname]]->getDefaultStateParam(j);
+      }
+    }
+    for (std::size_t j = 0; j < modeldata[i].nstick; ++j) {
+      if (stickconfig[j]) { continue; }
+      else {
+        modeldata[i].sticktype[j] = model[modmap[modeldata[i].modname]]->getDefaultStickType(j);
+        modeldata[i].stickparam[j] = model[modmap[modeldata[i].modname]]->getDefaultStickParam(j);
       }
     }
   }

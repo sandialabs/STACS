@@ -427,6 +427,12 @@ class NetModel {
     /* Control Flow */
     virtual void Renew(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
     virtual void Reset(std::vector<real_t>& state, std::vector<tick_t>& stick) { }
+    /* Default Parameters */
+    virtual idx_t getDefaultStateType(idx_t paramidx) { return RNGTYPE_CONST; }
+    virtual std::vector<real_t> getDefaultStateParam(idx_t paramidx) { std::vector<real_t> zero (1,0.0); return zero; }
+    virtual idx_t getDefaultStickType(idx_t paramidx) { return RNGTYPE_CONST; }
+    virtual std::vector<real_t> getDefaultStickParam(idx_t paramidx) { std::vector<real_t> zero (1,0.0); return zero; }
+    virtual real_t getDefaultParam(idx_t paramidx) { return 0.0; }
   protected:
     /* Random Number Generation */
     std::mt19937 *rngine;
