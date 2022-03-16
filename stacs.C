@@ -164,6 +164,7 @@ void Main::Control() {
 
   // Simulate an already built network
   else if (runmode == std::string(RUNMODE_SIMULATE) ||
+           runmode == std::string(RUNMODE_SIMGPU) ||
            runmode == std::string(RUNMODE_FINDGROUP) ||
            runmode == std::string(RUNMODE_ESTIMATE)) {
     // Read graph distribution files
@@ -238,6 +239,35 @@ void Main::Init() {
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleSim(), network);
       network.InitSim(netdata);
+    }
+    else if (runmode == RUNMODE_SIMGPU) {
+      if (episodic) {
+        CkPrintf("  Random Number Seed  (randseed): %u\n"
+                 "  Network Plasticity   (plastic): %s\n"
+                 "  Simulation Time Step   (tstep): %" PRIrealms "ms\n"
+                 "  Event Queue Length   (teventq): %" PRIrealms "ms\n"
+                 "  Time per Episode    (tepisode): %" PRIrealms "ms\n"
+                 "  Number of Episodes  (episodes): %" PRIidx "\n",
+                 randseed, (plastic ? "yes" : "no"),
+                 ((real_t)(tstep/TICKS_PER_MS)), teventq,
+                 ((real_t)(tepisode/TICKS_PER_MS)), episodes);
+      }
+      else {
+        CkPrintf("  Random Number Seed  (randseed): %u\n"
+                 "  Network Plasticity   (plastic): %s\n"
+                 "  Simulation Time Step   (tstep): %" PRIrealms "ms\n"
+                 "  Event Queue Length   (teventq): %" PRIrealms "ms\n"
+                 "  Display Interval    (tdisplay): %" PRIrealms "ms\n"
+                 "  Recording Interval   (trecord): %" PRIrealms "ms\n"
+                 "  Save State Interval    (tsave): %" PRIrealms "ms\n"
+                 "  Max Simulation Time     (tmax): %" PRIrealms "ms\n",
+                 randseed, (plastic ? "yes" : "no"),
+                 ((real_t)(tstep/TICKS_PER_MS)), teventq, tdisplay,
+                 trecord, tsave, ((real_t)(tmax/TICKS_PER_MS)));
+      }
+      // Set compute cycle
+      netcycle = CkCallback(CkIndex_Network::CycleSimGPU(), network);
+      network.InitSimGPU(netdata);
     }
     else if (runmode == RUNMODE_FINDGROUP) {
       // collect active models
@@ -370,7 +400,8 @@ void Main::Stop() {
   netdata.ckSetReductionClient(&cbhalt);
 
   // Save data from network parts to output files
-  if (runmode == RUNMODE_SIMULATE) {
+  if (runmode == RUNMODE_SIMULATE ||
+      runmode == RUNMODE_SIMGPU) {
     network.SaveFinalRecord();
     ++nhalt;
     if (plastic) {

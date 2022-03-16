@@ -175,6 +175,9 @@ module network {
     entry void InitSim(CProxy_Netdata cpdata);
     entry void CycleSim();
     
+    entry void InitSimGPU(CProxy_Netdata cpdata);
+    entry void CycleSimGPU();
+    
     entry void InitEst(CProxy_Netdata cpdata);
     entry void CycleEst();
     

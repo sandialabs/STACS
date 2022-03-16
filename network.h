@@ -763,6 +763,9 @@ class Network : public CBase_Network {
     /* Simulation */
     void InitSim(CProxy_Netdata cpdata);
     void CycleSim();
+
+    void InitSimGPU(CProxy_Netdata cpdata);
+    void CycleSimGPU();
     
     /* Estimation */
     void InitEst(CProxy_Netdata cpdata);

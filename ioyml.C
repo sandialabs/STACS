@@ -70,6 +70,7 @@ int Main::ReadConfig(std::string configfile) {
   }
   // Make sure it's a valid runmode
   if (runmode != std::string(RUNMODE_SIMULATE) && 
+      runmode != std::string(RUNMODE_SIMGPU) &&
       runmode != std::string(RUNMODE_BUILD) &&
       runmode != std::string(RUNMODE_FINDGROUP) && 
       runmode != std::string(RUNMODE_ESTIMATE)) {

@@ -22,6 +22,7 @@
 #define CONFIG_DEFAULT "configs/config.yml"
 
 #define RUNMODE_SIMULATE  "simulate"
+#define RUNMODE_SIMGPU    "simgpu"
 #define RUNMODE_BUILD     "build"
 #define RUNMODE_FINDGROUP "findgroup"
 #define RUNMODE_ESTIMATE  "estimate"
