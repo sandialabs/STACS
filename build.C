@@ -10,6 +10,7 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
+extern /*readonly*/ unsigned randseed;
 extern /*readonly*/ int netparts;
 extern /*readonly*/ int netfiles;
 
@@ -59,6 +60,7 @@ void Netdata::Build(mGraph *msg) {
 
   // Edges
   edges.resize(msg->nedg);
+  samplecache.resize(msg->nedg);
   for (std::size_t i = 0; i < edges.size(); ++i) {
     edges[i].source = msg->edgsource[i];
     edges[i].modidx = msg->edgmodidx[i];
@@ -711,6 +713,29 @@ idx_t Netdata::MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t
             }
             else if (edges[i].conntype[k] == CONNTYPE_IDX) {
               mask += (((sourceidx * edges[i].maskparam[k][2]) + edges[i].maskparam[k][3]) == targetidx);
+            }
+            // TODO: this is currently set to sample from source order
+            // TODO: we want to enable a weighting of the indices w.r.t. distance
+            else if (edges[i].conntype[k] == CONNTYPE_SMPL) {
+              // Sample sourceidx from the source vertex population order
+              if (samplecache[i].find(targetidx) == samplecache[i].end()) {
+                // generate the sample cache (once per target vertex per connection type)
+                std::vector<idx_t> sourceorder(edges[i].maskparam[k][0]);
+                std::iota(sourceorder.begin(), sourceorder.end(), 0);
+                // pick the seed based on the targetidx so it is consistent across cores
+                std::shuffle(sourceorder.begin(), sourceorder.end(), std::mt19937{randseed + targetidx});
+                // want to make sure sample number is less than source order
+                CkAssert(edges[i].maskparam[k][0] >= edges[i].maskparam[k][1]);
+                // copy over the shuffled indices for the sampling
+                samplecache[i][targetidx].resize(edges[i].maskparam[k][1]);
+                std::copy(sourceorder.begin(), sourceorder.begin() + edges[i].maskparam[k][1], samplecache[i][targetidx].begin());
+                //CkPrintf("%" PRIidx ", %" PRIidx" \n",targetidx, samplecache[i][targetidx][0]);
+              }
+              // Check if the sourceidx is within the sampled sources
+              // TODO: make this into a binary search?
+              if (std::find(samplecache[i][targetidx].begin(), samplecache[i][targetidx].end(), sourceidx) != samplecache[i][targetidx].end()) {
+                mask = 1;
+              }
             }
             else if (edges[i].conntype[k] == CONNTYPE_FILE) {
               // Check to see if it's in the file list

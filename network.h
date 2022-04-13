@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <numeric>
 #include <random>
 #include <set>
 #include <string>
@@ -714,6 +715,7 @@ class Netdata : public CBase_Netdata {
     std::vector<idx_t> vtxordidx; // vertex index within model order
     std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
     std::vector<datafile_t> datafiles;
+    std::vector<std::unordered_map<idx_t, std::vector<idx_t>>> samplecache; // local connectivity storage
     /* Connection information */
     std::vector<std::vector<std::vector<idx_t>>> adjcyconn;
         // first level is the data parts, second level are per vertex, third level is edges

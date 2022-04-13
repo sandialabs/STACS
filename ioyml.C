@@ -1372,6 +1372,30 @@ int Main::ReadGraph() {
           return 1;
         }
       }
+      else if (conntype == "sample") {
+        // Connect by sampling index from source population
+        edges[i].conntype[j] = CONNTYPE_SMPL;
+        edges[i].probparam[j].resize(PROBPARAM_SMPL);
+        edges[i].maskparam[j].resize(MASKPARAM_SMPL);
+        // By index requires single source and target
+        if (edges[i].target.size() > 1) {
+          CkPrintf("  connect sample is single target only\n");
+          return 1;
+        }
+        // source order
+        for (std::size_t v = 0; v < vertices.size(); ++v) {
+          if (edges[i].source == vertices[v].modidx) {
+            edges[i].maskparam[j][0] = vertices[v].order;
+          }
+        }
+        try {
+          // connection source sample number
+          edges[i].maskparam[j][1] = conn[j]["order"].as<idx_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sample order: %s\n", e.what());
+          return 1;
+        }
+      }
       else if (conntype == "file") {
         // Connect by whatever is in a datafile
         edges[i].conntype[j] = CONNTYPE_FILE;
