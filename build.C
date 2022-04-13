@@ -60,7 +60,6 @@ void Netdata::Build(mGraph *msg) {
 
   // Edges
   edges.resize(msg->nedg);
-  samplecache.resize(msg->nedg);
   for (std::size_t i = 0; i < edges.size(); ++i) {
     edges[i].source = msg->edgsource[i];
     edges[i].modidx = msg->edgmodidx[i];
@@ -361,6 +360,9 @@ void Netdata::Connect(mConn *msg) {
   adjcyconn[msg->datidx].resize(norderdat);
   edgmodidxconn[msg->datidx].resize(norderdat);
 
+  // Sample-based cache
+  samplecache.resize(edges.size());
+  
   // Prev
   //
   if (msg->datidx < datidx) {
@@ -535,6 +537,7 @@ void Netdata::Connect(mConn *msg) {
 
   // cleanup
   delete msg;
+  samplecache.clear();
 
   // send any outstanding requests of built adjcy
   for (std::list<idx_t>::iterator ireqidx = adjcyreq.begin(); ireqidx != adjcyreq.end(); ++ireqidx) {
@@ -735,7 +738,7 @@ idx_t Netdata::MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t
                 std::vector<idx_t> sourceorder(edges[i].maskparam[k][0]);
                 std::iota(sourceorder.begin(), sourceorder.end(), 0);
                 // pick the seed based on the targetidx so it is consistent across cores
-                std::shuffle(sourceorder.begin(), sourceorder.end(), std::mt19937{randseed + targetidx});
+                std::shuffle(sourceorder.begin(), sourceorder.end(), std::mt19937{randseed + targetidx + i*4096});
                 // want to make sure sample number is less than source order
                 CkAssert(edges[i].maskparam[k][0] >= edges[i].maskparam[k][1]);
                 // copy over the shuffled indices for the sampling
