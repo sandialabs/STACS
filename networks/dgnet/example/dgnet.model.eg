@@ -1,0 +1,389 @@
+---
+type: vertex
+modname: iec
+modtype: 60
+param:
+  - name: vt
+    value: -35.0
+  - name: vr
+    value: -70.0
+  - name: C
+    value: 100
+  - name: a
+    value: 0.04
+  - name: b
+    value: -0.2
+  - name: c
+    value: -65
+  - name: d
+    value: 100
+state:
+  - name: v
+    type: constant
+    value: -70.0
+  - name: u
+    type: constant
+    value: -14.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: mec
+modtype: 60
+param:
+  - name: vt
+    value: -35.0
+  - name: vr
+    value: -70.0
+  - name: C
+    value: 100
+  - name: a
+    value: 0.04
+  - name: b
+    value: -0.2
+  - name: c
+    value: -65
+  - name: d
+    value: 100
+state:
+  - name: v
+    type: constant
+    value: -70.0
+  - name: u
+    type: constant
+    value: -14.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: mopp
+modtype: 60
+param:
+  - name: vt
+    value: -35.0
+  - name: vr
+    value: -50.0
+  - name: C
+    value: 100
+  - name: a
+    value: 0.03
+  - name: b
+    value: -0.2
+  - name: c
+    value: -52
+  - name: d
+    value: 40
+state:
+  - name: v
+    type: constant
+    value: -50.0
+  - name: u
+    type: constant
+    value: -10.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: gc
+modtype: 60
+param:
+  - name: vt
+    value: -35.0
+  - name: vr
+    value: -75.0
+  - name: C
+    value: 120
+  - name: a
+    value: 0.001
+  - name: b
+    value: 1.0
+  - name: c
+    value: -55
+  - name: d
+    value: 25
+state:
+  - name: v
+    type: constant
+    value: -75.0
+  - name: u
+    type: constant
+    value: -15.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: pbc
+modtype: 60
+param:
+  - name: vt
+    value: -35.0
+  - name: vr
+    value: -62.0
+  - name: C
+    value: 100
+  - name: a
+    value: 0.1
+  - name: b
+    value: 0.3
+  - name: c
+    value: -55
+  - name: d
+    value: 20
+state:
+  - name: v
+    type: constant
+    value: -62.0
+  - name: u
+    type: constant
+    value: -12.4
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: cbc
+modtype: 60
+param:
+  - name: vt
+    value: -35.0
+  - name: vr
+    value: -62.0
+  - name: C
+    value: 100
+  - name: a
+    value: 0.1
+  - name: b
+    value: 0.3
+  - name: c
+    value: -55
+  - name: d
+    value: 20
+state:
+  - name: v
+    type: constant
+    value: -62.0
+  - name: u
+    type: constant
+    value: -12.4
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: mc
+modtype: 60
+param:
+  - name: vt
+    value: -45.0
+  - name: vr
+    value: -65.0
+  - name: C
+    value: 60
+  - name: a
+    value: 0.025
+  - name: b
+    value: 2.0
+  - name: c
+    value: -55
+  - name: d
+    value: 250
+state:
+  - name: v
+    type: constant
+    value: -65.0
+  - name: u
+    type: constant
+    value: -13.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: hipp
+modtype: 60
+param:
+  - name: vt
+    value: -35.0
+  - name: vr
+    value: -65.0
+  - name: C
+    value: 27.646
+  - name: a
+    value: 0.004
+  - name: b
+    value: -0.1
+  - name: c
+    value: -60
+  - name: d
+    value: 40
+state:
+  - name: v
+    type: constant
+    value: -65.0
+  - name: u
+    type: constant
+    value: -13.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: hicap
+modtype: 60
+param:
+  - name: vt
+    value: -30.0
+  - name: vr
+    value: -65.0
+  - name: C
+    value: 27.646
+  - name: a
+    value: 0.02
+  - name: b
+    value: 2.0
+  - name: c
+    value: -30
+  - name: d
+    value: 75
+state:
+  - name: v
+    type: constant
+    value: -65.0
+  - name: u
+    type: constant
+    value: -13.0
+  - name: I_syn
+    type: constant
+    value: 0.0
+  - name: I_comp
+    type: constant
+    value: 0.0
+...
+
+#---
+#type: edge
+#modname: syn_glu_stdp
+#modtype: 53
+#param:
+#  - name: wmax
+#    value: 10
+#  - name: tau
+#    value: 20
+#  - name: update
+#    value: 1000
+#state:
+#  - name: delay
+#    type: constant
+#    rep: tick
+#    value: 1.0
+#  - name: weight
+#    type: constant
+#    value: 6.0
+#  - name: wdelta
+#    type: constant
+#    value: 0.0
+#  - name: ptrace
+#    type: constant
+#    value: 0.0
+#  - name: ntrace
+#    type: constant
+#    value: 0.0
+#  - name: ptlast
+#    type: constant
+#    rep: tick
+#    value: 0.0
+#  - name: ntlast
+#    type: constant
+#    rep: tick
+#    value: 0.0
+#...
+
+---
+type: edge
+modname: syn_glu
+modtype: 62
+param:
+state:
+  - name: delay
+    type: constant
+    rep: tick
+    value: 1.0
+  - name: weight
+    type: constant
+    value: 6.0
+...
+
+---
+type: edge
+modname: syn_glu_stdp
+modtype: 63
+param:
+state:
+  - name: delay
+    type: constant
+    rep: tick
+    value: 1.0
+  - name: weight
+    type: constant
+    value: 6.0
+...
+
+---
+type: edge
+modname: syn_gaba
+modtype: 64
+param:
+state:
+  - name: delay
+    type: constant
+    rep: tick
+    value: 1.0
+  - name: weight
+    type: constant
+    value: -5.0
+...
+

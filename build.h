@@ -45,11 +45,13 @@
 #define VTXSHAPE_POINT  0
 #define VTXSHAPE_CIRCLE 1
 #define VTXSHAPE_SPHERE 2
-#define VTXSHAPE_RECT   3
+#define VTXSHAPE_LINE   3
+#define VTXSHAPE_RECT   4
 
 #define VTXPARAM_POINT  0
 #define VTXPARAM_CIRCLE 1
 #define VTXPARAM_SPHERE 1
+#define VTXPARAM_LINE   1
 #define VTXPARAM_RECT   2
 
 #define CONNTYPE_UNIF   0

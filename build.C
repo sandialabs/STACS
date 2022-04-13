@@ -212,8 +212,20 @@ void Netdata::Build(mGraph *msg) {
           xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*y;
           xyz[jvtxidx*3+2] = vertices[i].coord[2] + r*z;
         }
-        else if (vertices[i].shape == VTXSHAPE_SPHERE) {
+        else if (vertices[i].shape == VTXSHAPE_LINE) {
+          // uniformly along a line
+          real_t l = vertices[i].param[0]*((*unifdist)(rngine));
+          xyz[jvtxidx*3+0] = vertices[i].coord[0] + l;
+          xyz[jvtxidx*3+1] = vertices[i].coord[1];
+          xyz[jvtxidx*3+2] = vertices[i].coord[2];
+        }
+        else if (vertices[i].shape == VTXSHAPE_RECT) {
           // uniformly inside rectangle
+          real_t w = vertices[i].param[0]*((*unifdist)(rngine));
+          real_t h = vertices[i].param[1]*((*unifdist)(rngine));
+          xyz[jvtxidx*3+0] = vertices[i].coord[0] + w;
+          xyz[jvtxidx*3+1] = vertices[i].coord[1] + h;
+          xyz[jvtxidx*3+2] = vertices[i].coord[2];
         }
         // Increment for the next vertex
         ++jvtxidx;

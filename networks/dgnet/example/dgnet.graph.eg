@@ -1,0 +1,258 @@
+vertex:
+  - modname: iec
+    order: 55000
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: mec
+    order: 55000
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: mopp
+    order: 5000
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: gc
+    order: 1000000
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: pbc
+    order: 12500
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: cbc
+    order: 7500
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: mc
+    order: 30000
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: hipp
+    order: 15000
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+  - modname: hicap
+    order: 5000
+    shape: line
+    length: 1.0
+    coord: [0.0, 0.0, 0.0]
+
+edge:
+  - source: iec
+    target: [mopp]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 2000
+  - source: iec
+    target: [gc]
+    modname: syn_glu_stdp
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 2000
+  - source: iec
+    target: [pbc]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 2000
+  - source: iec
+    target: [cbc]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 2000
+  - source: mec
+    target: [mopp]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 2000
+  - source: mec
+    target: [gc]
+    modname: syn_glu_stdp
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 2000
+  - source: mec
+    target: [pbc]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 2000
+  - source: mec
+    target: [cbc]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 2000
+  - source: mopp
+    target: [gc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 100
+  - source: gc
+    target: [pbc]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 12000
+  - source: gc
+    target: [cbc]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 3000
+#  - source: gc
+#    target: [mc]
+#    modname: syn_glu
+#    cutoff: 0.0
+#    connect:
+#      - type: sample
+#        order: 100
+  - source: gc
+    target: [mc]
+    modname: syn_glu_stdp
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 1000
+  - source: gc
+    target: [hipp]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 3500
+  - source: gc
+    target: [hicap]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 3500
+  - source: pbc
+    target: [gc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 300
+  - source: pbc
+    target: [pbc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 150
+  - source: cbc
+    target: [gc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 300
+  - source: cbc
+    target: [cbc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 150
+  - source: mc
+    target: [gc]
+    modname: syn_glu_stdp
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 1000
+  - source: mc
+    target: [pbc]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 1500
+  - source: mc
+    target: [cbc]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 1500
+  - source: hipp
+    target: [gc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 500
+  - source: hicap
+    target: [gc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 500
+  - source: pbc
+    target: [mc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 300
+  - source: cbc
+    target: [mc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 300
+  - source: hipp
+    target: [mc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 500
+  - source: hicap
+    target: [mc]
+    modname: syn_gaba
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 500
+  - source: mc
+    target: [hipp]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 1500
+  - source: mc
+    target: [hicap]
+    modname: syn_glu
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 1500

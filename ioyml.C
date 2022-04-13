@@ -1171,6 +1171,17 @@ int Main::ReadGraph() {
         return 1;
       }
     }
+    else if (name == "line") {
+      vertices[jvtx].shape = VTXSHAPE_LINE;
+      vertices[jvtx].param.resize(VTXPARAM_LINE);
+      try {
+        // length
+        vertices[jvtx].param[0] = vertex[i]["length"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  vertex line length: %s\n", e.what());
+        return 1;
+      }
+    }
     else if (name == "rectangle") {
       vertices[jvtx].shape = VTXSHAPE_RECT;
       vertices[jvtx].param.resize(VTXPARAM_RECT);
