@@ -535,10 +535,6 @@ void Netdata::Connect(mConn *msg) {
     }
   }
 
-  // cleanup
-  delete msg;
-  samplecache.clear();
-
   // send any outstanding requests of built adjcy
   for (std::list<idx_t>::iterator ireqidx = adjcyreq.begin(); ireqidx != adjcyreq.end(); ++ireqidx) {
     if (*ireqidx == cpdat) {
@@ -567,6 +563,12 @@ void Netdata::Connect(mConn *msg) {
   else if (cpdat > datidx) {
     thisProxy(cpdat).ConnRequest(datidx);
   }
+
+  // cleanup
+  adjcyconn[msg->datidx].clear();
+  edgmodidxconn[msg->datidx].clear();
+  samplecache.clear();
+  delete msg;
 }
 
 // Connect Network Finished
@@ -738,7 +740,8 @@ idx_t Netdata::MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t
                 std::vector<idx_t> sourceorder(edges[i].maskparam[k][0]);
                 std::iota(sourceorder.begin(), sourceorder.end(), 0);
                 // pick the seed based on the targetidx so it is consistent across cores
-                std::shuffle(sourceorder.begin(), sourceorder.end(), std::mt19937{randseed + targetidx + i*4096});
+                unsigned sampleseed = (randseed + (unsigned)(targetidx)) ^ ((unsigned)(i*32768));
+                std::shuffle(sourceorder.begin(), sourceorder.end(), std::mt19937{sampleseed});
                 // want to make sure sample number is less than source order
                 CkAssert(edges[i].maskparam[k][0] >= edges[i].maskparam[k][1]);
                 // copy over the shuffled indices for the sampling
