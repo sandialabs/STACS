@@ -140,6 +140,9 @@ void Main::Control() {
         CkExit();
       }
       mGraph *mgraph = BuildGraph();
+  
+      // Start timer
+      wcstart = std::chrono::system_clock::now();
 
       // Build Network
       CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
@@ -149,6 +152,12 @@ void Main::Control() {
     else if (writeflag) {
       CkPrintf("Writing network\n");
       writeflag = false;
+      
+      // Stop timer
+      wcstop = std::chrono::system_clock::now();
+      // Print timing
+      std::chrono::duration<real_t> wctime = std::chrono::duration_cast<std::chrono::milliseconds>(wcstop - wcstart);
+      CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", wctime.count());
 
       // Halting coordination
       chalt = 0;

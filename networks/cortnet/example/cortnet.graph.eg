@@ -1,9 +1,9 @@
+# Parameters for cortical microcircuit taken from:
+# The Cell-Type Specific Cortical Microcircuit: Relating Structure and Activity in a Full-Scale Spiking Network Model
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3920768/
+
 vertex:
   - modname: lif23e
-    order: 20683
-    shape: point
-    coord: [0.0, 0.0, 0.0]
-  - modname: psn23e
     order: 20683
     shape: point
     coord: [0.0, 0.0, 0.0]
@@ -11,15 +11,7 @@ vertex:
     order: 5834
     shape: point
     coord: [0.0, 0.0, 0.0]
-  - modname: psn23i
-    order: 5834
-    shape: point
-    coord: [0.0, 0.0, 0.0]
   - modname: lif4e
-    order: 21915
-    shape: point
-    coord: [0.0, 0.0, 0.0]
-  - modname: psn4e
     order: 21915
     shape: point
     coord: [0.0, 0.0, 0.0]
@@ -27,15 +19,7 @@ vertex:
     order: 5479
     shape: point
     coord: [0.0, 0.0, 0.0]
-  - modname: psn4i
-    order: 5479
-    shape: point
-    coord: [0.0, 0.0, 0.0]
   - modname: lif5e
-    order: 4850
-    shape: point
-    coord: [0.0, 0.0, 0.0]
-  - modname: psn5e
     order: 4850
     shape: point
     coord: [0.0, 0.0, 0.0]
@@ -43,15 +27,7 @@ vertex:
     order: 1065
     shape: point
     coord: [0.0, 0.0, 0.0]
-  - modname: psn5i
-    order: 1065
-    shape: point
-    coord: [0.0, 0.0, 0.0]
   - modname: lif6e
-    order: 14395
-    shape: point
-    coord: [0.0, 0.0, 0.0]
-  - modname: psn6e
     order: 14395
     shape: point
     coord: [0.0, 0.0, 0.0]
@@ -59,76 +35,8 @@ vertex:
     order: 2948
     shape: point
     coord: [0.0, 0.0, 0.0]
-  - modname: psn6i
-    order: 2948
-    shape: point
-    coord: [0.0, 0.0, 0.0]
 
 edge:
-  - source: psn23e
-    target: [lif23e]
-    modname: synp
-    cutoff: 0.0
-    connect:
-      - type: index
-        srcmul: 1
-        srcoff: 0
-  - source: psn23i
-    target: [lif23i]
-    modname: synp
-    cutoff: 0.0
-    connect:
-      - type: index
-        srcmul: 1
-        srcoff: 0
-  - source: psn4e
-    target: [lif4e]
-    modname: synp
-    cutoff: 0.0
-    connect:
-      - type: index
-        srcmul: 1
-        srcoff: 0
-  - source: psn4i
-    target: [lif4i]
-    modname: synp
-    cutoff: 0.0
-    connect:
-      - type: index
-        srcmul: 1
-        srcoff: 0
-  - source: psn5e
-    target: [lif5e]
-    modname: synp
-    cutoff: 0.0
-    connect:
-      - type: index
-        srcmul: 1
-        srcoff: 0
-  - source: psn5i
-    target: [lif5i]
-    modname: synp
-    cutoff: 0.0
-    connect:
-      - type: index
-        srcmul: 1
-        srcoff: 0
-  - source: psn6e
-    target: [lif6e]
-    modname: synp
-    cutoff: 0.0
-    connect:
-      - type: index
-        srcmul: 1
-        srcoff: 0
-  - source: psn6i
-    target: [lif6i]
-    modname: synp
-    cutoff: 0.0
-    connect:
-      - type: index
-        srcmul: 1
-        srcoff: 0
   - source: lif23e
     target: [lif23e]
     modname: syne
@@ -136,7 +44,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.10636101
-        #prob: 0.101
   - source: lif23e
     target: [lif23i]
     modname: syne
@@ -144,7 +51,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.14456345
-        #prob: 0.135
   - source: lif23e
     target: [lif4e]
     modname: syne
@@ -152,7 +58,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.0077298
-        #prob: 0.008
   - source: lif23e
     target: [lif4i]
     modname: syne
@@ -160,7 +65,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.07160342
-        #prob: 0.069
   - source: lif23e
     target: [lif5e]
     modname: syne
@@ -168,7 +72,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.10580506
-        #prob: 0.100
   - source: lif23e
     target: [lif5i]
     modname: syne
@@ -176,7 +79,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.05635873
-        #prob: 0.055
   - source: lif23e
     target: [lif6e]
     modname: syne
@@ -184,7 +86,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.01572296
-        #prob: 0.016
   - source: lif23e
     target: [lif6i]
     modname: syne
@@ -192,7 +93,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.03707901
-        #prob: 0.036
   - source: lif23i
     target: [lif23e]
     modname: syni
@@ -200,7 +100,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.18500515
-        #prob: 0.169
   - source: lif23i
     target: [lif23i]
     modname: syni
@@ -208,7 +107,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.14745647
-        #prob: 0.137
   - source: lif23i
     target: [lif4e]
     modname: syni
@@ -216,7 +114,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00591747
-        #prob: 0.006
   - source: lif23i
     target: [lif4i]
     modname: syni
@@ -224,7 +121,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00290421
-        #prob: 0.003
   - source: lif23i
     target: [lif5e]
     modname: syni
@@ -232,7 +128,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.06421857
-        #prob: 0.062
   - source: lif23i
     target: [lif5i]
     modname: syni
@@ -240,7 +135,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.02726842
-        #prob: 0.027
   - source: lif23i
     target: [lif6e]
     modname: syni
@@ -248,7 +142,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00662188
-        #prob: 0.007
   - source: lif23i
     target: [lif6i]
     modname: syni
@@ -256,15 +149,13 @@ edge:
     connect:
       - type: uniform
         prob: 0.0010005
-        #prob: 0.001
   - source: lif4e
     target: [lif23e]
-    modname: syne2
+    modname: syne_high
     cutoff: 0.0
     connect:
       - type: uniform
         prob: 0.04468361
-        #prob: 0.044
   - source: lif4e
     target: [lif23i]
     modname: syne
@@ -272,7 +163,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.03211005
-        #prob: 0.032
   - source: lif4e
     target: [lif4e]
     modname: syne
@@ -280,7 +170,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.05097756
-        #prob: 0.050
   - source: lif4e
     target: [lif4i]
     modname: syne
@@ -288,7 +177,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.08272965
-        #prob: 0.079
   - source: lif4e
     target: [lif5e]
     modname: syne
@@ -296,7 +184,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.05181975
-        #prob: 0.051
   - source: lif4e
     target: [lif5i]
     modname: syne
@@ -304,7 +191,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.02603601
-        #prob: 0.026
   - source: lif4e
     target: [lif6e]
     modname: syne
@@ -312,7 +198,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.02132579
-        #prob: 0.021
   - source: lif4e
     target: [lif6i]
     modname: syne
@@ -320,7 +205,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00340579
-        #prob: 0.003
   - source: lif4i
     target: [lif23e]
     modname: syni
@@ -328,7 +212,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.08534005
-        #prob: 0.082
   - source: lif4i
     target: [lif23i]
     modname: syni
@@ -336,7 +219,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.05287349
-        #prob: 0.052
   - source: lif4i
     target: [lif4e]
     modname: syni
@@ -344,7 +226,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.14502577
-        #prob: 0.135
   - source: lif4i
     target: [lif4i]
     modname: syni
@@ -352,7 +233,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.1739963
-        #prob: 0.160
   - source: lif4i
     target: [lif5e]
     modname: syni
@@ -360,7 +240,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00571631
-        #prob: 0.006
   - source: lif4i
     target: [lif5i]
     modname: syni
@@ -368,7 +247,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00220242
-        #prob: 0.002
   - source: lif4i
     target: [lif6e]
     modname: syni
@@ -376,7 +254,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.01673932
-        #prob: 0.017
   - source: lif4i
     target: [lif6i]
     modname: syni
@@ -384,7 +261,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00050013
-        #prob: 0.001
   - source: lif5e
     target: [lif23e]
     modname: syne
@@ -392,7 +268,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.03283316
-        #prob: 0.032
   - source: lif5e
     target: [lif23i]
     modname: syne
@@ -400,7 +275,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.07850223
-        #prob: 0.075
   - source: lif5e
     target: [lif4e]
     modname: syne
@@ -408,7 +282,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00672255
-        #prob: 0.007
   - source: lif5e
     target: [lif4i]
     modname: syne
@@ -416,7 +289,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00330546
-        #prob: 0.003
   - source: lif5e
     target: [lif5e]
     modname: syne
@@ -424,7 +296,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.08675686
-        #prob: 0.083
   - source: lif5e
     target: [lif5i]
     modname: syne
@@ -432,7 +303,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.0618754
-        #prob: 0.060
   - source: lif5e
     target: [lif6e]
     modname: syne
@@ -440,7 +310,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.05890111
-        #prob: 0.057
   - source: lif5e
     target: [lif6i]
     modname: syne
@@ -448,7 +317,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.02809088
-        #prob: 0.028
   - source: lif5i
     target: [lif4e]
     modname: syni
@@ -456,7 +324,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.0003
-        #prob: 0.0003
   - source: lif5i
     target: [lif5e]
     modname: syni
@@ -464,7 +331,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.46617094
-        #prob: 0.373
   - source: lif5i
     target: [lif5i]
     modname: syni
@@ -472,7 +338,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.37950484
-        #prob: 0.316
   - source: lif5i
     target: [lif6e]
     modname: syni
@@ -480,7 +345,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.01989663
-        #prob: 0.020
   - source: lif5i
     target: [lif6i]
     modname: syni
@@ -488,7 +352,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00803217
-        #prob: 0.008
   - source: lif6e
     target: [lif23e]
     modname: syne
@@ -496,7 +359,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00762903
-        #prob: 0.008
   - source: lif6e
     target: [lif23i]
     modname: syne
@@ -504,7 +366,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00420884
-        #prob: 0.004
   - source: lif6e
     target: [lif4e]
     modname: syne
@@ -512,7 +373,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.04635812
-        #prob: 0.045
   - source: lif6e
     target: [lif4i]
     modname: syne
@@ -520,7 +380,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.11171399
-        #prob: 0.106
   - source: lif6e
     target: [lif5e]
     modname: syne
@@ -528,7 +387,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.02061095
-        #prob: 0.020
   - source: lif6e
     target: [lif5i]
     modname: syne
@@ -536,7 +394,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.00863719
-        #prob: 0.009
   - source: lif6e
     target: [lif6e]
     modname: syne
@@ -544,7 +401,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.04040541
-        #prob: 0.040
   - source: lif6e
     target: [lif6i]
     modname: syne
@@ -552,7 +408,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.06806473
-        #prob: 0.066
   - source: lif6i
     target: [lif6e]
     modname: syni
@@ -560,7 +415,6 @@ edge:
     connect:
       - type: uniform
         prob: 0.25515035
-        #prob: 0.225
   - source: lif6i
     target: [lif6i]
     modname: syni
@@ -568,4 +422,3 @@ edge:
     connect:
       - type: uniform
         prob: 0.15583542
-        #prob: 0.144

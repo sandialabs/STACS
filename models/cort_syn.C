@@ -42,7 +42,6 @@ class CortSyn : public ModelTmpl < 51, CortSyn > {
 // Simulation step
 //
 tick_t CortSyn::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
-  // This model has no step processes
   return tdiff;
 }
 
