@@ -324,6 +324,9 @@ void Netdata::Build(mGraph *msg) {
   edgmodidxconn.clear();
   edgmodidxconn.resize(netfiles);
 
+  // Any index-based sample connectivity occurs first
+
+
   // Request data from prev part
   if (cpdat < datidx) {
     thisProxy(cpdat).ConnRequest(datidx);
@@ -344,6 +347,28 @@ void Netdata::Build(mGraph *msg) {
 /**************************************************************************
 * Connect
 **************************************************************************/
+
+// Some notes on Prev, Curr, and Next:
+// The convention describes the sending partition with respect to the recieving partition
+// Connecting to Prev means that the sending partition is at a lower index
+// Connecting to Curr means that the sending partition is the same index
+// Connecting to Next means that the sending partition is at a higher index
+// Connections are built in a pipeline, in order, partition by partition which allows for
+//   the indices to be written into the adjcy list in order (no need to sort)
+//   however, this may be a bit slow when dealing with much larger networks
+//   as it effectively has to evaluate the pair-wise connection probability between
+//   each vertex (in order), but this also allows it to use proximity/distance information
+//   there is an early cutoff where you may specify a maximum range to evaluate, and also
+//   evaluating if there is a edge model that goes between the two vertex populations,
+//   but these evaluations still need to happen for connections requiring local information
+//   this is because the local vertex information is stored on a per-partition level and
+//   thus needs to be communicated to the connecting partition when needed
+// The work on this new branch for sample-based connections only works for networks that
+//   connect based on ordinal (index-based) connectivity, where the assumption is that
+//   we no longer need proximity information to perform connection existence, but we may
+//   need it to determine the instantiation of the connection parameters (e.g. delay)
+//   as a result, this modification will go through and create the adjcy lists first
+//   then go through and instantiate the connection parameters via the pipeline
 
 // Connect Network
 //
