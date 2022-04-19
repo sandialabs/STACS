@@ -325,8 +325,65 @@ void Netdata::Build(mGraph *msg) {
   edgmodidxconn.resize(netfiles);
 
   // Any index-based sample connectivity occurs first
+  // for each vertex
+  for (idx_t i = 0; i < norderdat; ++i) {
+    // for each edge population
+    for (std::size_t e = 0; e < edges.size(); ++e) {
+      // Sample types should only have one target at the moment
+      if (vtxmodidx[i] == edges[e].target[0]) {
+        // But they're still structured to have multiple connection types
+        for (std::size_t k = 0; k < edges[e].conntype.size(); ++k) {
+          if (edges[e].conntype[k] == CONNTYPE_SMPL) {
+            // Sample sourceidx from the source vertex population order
+            // generate the sample cache (once per target vertex per connection type)
+            std::vector<idx_t> sourceorder(edges[e].maskparam[k][0]);
+            std::iota(sourceorder.begin(), sourceorder.end(), 0);
+            // pick the seed based on the targetidx so it is consistent across cores
+            // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
+            unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(e*32768));
+            std::shuffle(sourceorder.begin(), sourceorder.end(), std::mt19937{sampleseed});
+            // want to make sure sample number is less than source order
+            CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
+            // copy over the shuffled indices for the sampling
+            for (std::size_t j = 0; j < edges[e].maskparam[k][1]; ++j) {
+              // TODO: convert from population index to global index
+              // this is just to check on memory usage
+              adjcy[i].push_back(ptogidx(edges[e].source, sourceorder[j]));
+              edgmodidx[i].push_back(edges[e].modidx);
+              state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
+              stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Reorder edges vertex-by-vertex
+  for (idx_t i = 0; i < norderdat; ++i) {
+    edgorder.clear();
+    for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
+      edgorder.push_back(edgorder_t());
+      edgorder.back().edgidx = adjcy[i][j];
+      edgorder.back().modidx = edgmodidx[i][j];
+      edgorder.back().state = state[i][j+1];
+      edgorder.back().stick = stick[i][j+1];
+    }
+    // sort edge indices by global ordering
+    std::sort(edgorder.begin(), edgorder.end());
+    // add indices to data structures
+    for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
+      adjcy[i][j] = edgorder[j].edgidx;
+      edgmodidx[i][j] = edgorder[j].modidx;
+      state[i][j+1] = edgorder[j].state;
+      stick[i][j+1] = edgorder[j].stick;
+    }
+  }
 
+  // Contribute for now
+  contribute(0, NULL, CkReduction::nop);
 
+  /*
   // Request data from prev part
   if (cpdat < datidx) {
     thisProxy(cpdat).ConnRequest(datidx);
@@ -341,6 +398,7 @@ void Netdata::Build(mGraph *msg) {
     // this shouldn't happen
     thisProxy(cpdat).ConnRequest(datidx);
   }
+  */
 }
 
 
@@ -573,6 +631,20 @@ void Netdata::Connect(mConn *msg) {
   ++cpdat;
   // return control to main when done
   if (cpdat == netfiles) {
+    // Print memory allocated
+    int adjcysize = 0;
+    int adjcycap = 0;
+    int edgmodsize = 0;
+    int edgmodcap = 0;
+    for (size_t i = 0; i < adjcy.size(); ++i) {
+      adjcy[i].shrink_to_fit();
+      edgmodidx[i].shrink_to_fit();
+      adjcysize += adjcy[i].size();
+      adjcycap += adjcy[i].capacity();
+      edgmodsize += edgmodidx[i].size();
+      edgmodcap += edgmodidx[i].capacity();
+    }
+    CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     contribute(0, NULL, CkReduction::nop);
   }
   // Request data from next part

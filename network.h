@@ -49,6 +49,18 @@ struct datafile_t {
   std::vector<std::unordered_map<idx_t, real_t>> matrix;
 };
 
+// Edge ordering
+//
+struct edgorder_t {
+  idx_t edgidx;
+  idx_t modidx;
+  std::vector<real_t> state;
+  std::vector<tick_t> stick;
+  bool operator < (const edgorder_t& edg) const {
+    return (edgidx < edg.edgidx);
+  }
+};
+
 // Auxiliary indices
 //
 struct auxidx_t {
@@ -683,6 +695,10 @@ class Netdata : public CBase_Netdata {
       }
       return state;
     }
+    // Helper function to go from population index to global index
+    idx_t ptogidx(idx_t popidx, idx_t vtxpopidx) {
+      return vtxpopidx;
+    }
 
   private:
     /* Network Data */
@@ -716,6 +732,7 @@ class Netdata : public CBase_Netdata {
     std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
     std::vector<datafile_t> datafiles;
     std::vector<std::unordered_map<idx_t, std::vector<idx_t>>> samplecache; // local connectivity storage
+    std::vector<edgorder_t> edgorder; // edgidx and states for sorting
     /* Connection information */
     std::vector<std::vector<std::vector<idx_t>>> adjcyconn;
         // first level is the data parts, second level are per vertex, third level is edges
