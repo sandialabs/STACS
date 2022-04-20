@@ -695,10 +695,6 @@ class Netdata : public CBase_Netdata {
       }
       return state;
     }
-    // Helper function to go from population index to global index
-    idx_t ptogidx(idx_t popidx, idx_t vtxpopidx) {
-      return vtxpopidx;
-    }
 
   private:
     /* Network Data */
@@ -760,6 +756,8 @@ class Netdata : public CBase_Netdata {
     std::vector<idx_t> norderprt;  // order of vertices per network part
     std::vector<std::vector<idx_t>> nordervtx;  // order of vertex models 
     std::vector<std::vector<idx_t>> xordervtx;  // prefix of vertex models
+    std::vector<std::vector<idx_t>> xpopidxprt;  // prefix of populations over partitions
+    std::vector<std::vector<idx_t>> xvtxidxprt;  // prefix of vertex over partitions (population global)
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;

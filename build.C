@@ -140,6 +140,45 @@ void Netdata::Build(mGraph *msg) {
     xremvtx = (xremvtx+nremvtx)%netparts;
   }
   
+  // Bookkeeping across all populations
+  xpopidxprt.resize(vertices.size());
+  xvtxidxprt.resize(vertices.size());
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    xvtxidxprt[i].resize(netparts);
+    xpopidxprt[i].resize(netparts+1);
+  }
+  xremvtx = 0;
+  // Population vertex index
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    idx_t ndivvtx = (vertices[i].order)/netparts;
+    idx_t nremvtx = (vertices[i].order)%netparts;
+    for (int k = 0; k < netparts; ++k) {
+      // looping integer magic
+      xpopidxprt[i][k] = ndivvtx * k;
+      // TODO: see if you can get rid of the loop
+      for (int j = 0; j < k; ++j) {
+        xpopidxprt[i][k] += ((j >= xremvtx && j < nremvtx+xremvtx) ||
+            (nremvtx+xremvtx >= netparts && j < xremvtx && j < (nremvtx+xremvtx)%netparts));
+      }
+    }
+    // Add order to final set
+    xpopidxprt[i][netparts] = vertices[i].order;
+    // update remainder
+    xremvtx = (xremvtx+nremvtx)%netparts;
+  }
+  // Global population vertex index
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    for (int k = 0; k < netparts; ++k) {
+      xvtxidxprt[i][k] = 0;
+      for (std::size_t j = 0; j < i; ++j) {
+        xvtxidxprt[i][k] += xpopidxprt[j][k+1];
+      }
+      for (std::size_t j = i; j < vertices.size(); ++j) {
+        xvtxidxprt[i][k] += xpopidxprt[j][k];
+      }
+    }
+  }
+  
   // counting
   norderdat = 0;
   norderprt.resize(nprt);
@@ -161,7 +200,7 @@ void Netdata::Build(mGraph *msg) {
     orderprts.append(" [");
     for (std::size_t i = 0; i < vertices.size(); ++i) {
       std::ostringstream ordervtx;
-      ordervtx << " " << nordervtx[k][i] << "(" << xordervtx[k][i] << ")";
+      ordervtx << " " << nordervtx[k][i] << "(" << xordervtx[k][i] << ", " << xvtxidxprt[i][xprt+k] << ")";
       orderprts.append(ordervtx.str());
     }
     orderprts.append(" ]");
@@ -326,7 +365,16 @@ void Netdata::Build(mGraph *msg) {
 
   // Any index-based sample connectivity occurs first
   // for each vertex
+  // TODO: this is only for incoming connections, also need outgoing connections (none models)
   for (idx_t i = 0; i < norderdat; ++i) {
+    idx_t globalthisidx = 0;
+    // TODO: this is highly innefficient...
+    for (int prt = 0; prt < netparts; ++prt) {
+      if (vtxordidx[i] > xpopidxprt[vtxmodidx[i]-1][prt]) {
+        globalthisidx = xvtxidxprt[vtxmodidx[i]-1][prt] + vtxordidx[i] - xpopidxprt[vtxmodidx[i]-1][prt];
+        break;
+      }
+    }
     // for each edge population
     for (std::size_t e = 0; e < edges.size(); ++e) {
       // Sample types should only have one target at the moment
@@ -345,13 +393,72 @@ void Netdata::Build(mGraph *msg) {
             // want to make sure sample number is less than source order
             CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
             // copy over the shuffled indices for the sampling
-            for (std::size_t j = 0; j < edges[e].maskparam[k][1]; ++j) {
-              // TODO: convert from population index to global index
+            for (idx_t j = 0; j < edges[e].maskparam[k][1]; ++j) {
+              // Convert from population index to global index
+              idx_t globalsourceidx = 0;
+              // TODO: this is highly innefficient...
+              for (int prt = 0; prt < netparts; ++prt) {
+                if (sourceorder[j] > xpopidxprt[edges[e].source-1][prt]) {
+                  globalsourceidx = xvtxidxprt[edges[e].source-1][prt] + sourceorder[j] - xpopidxprt[edges[e].source-1][prt];
+                  break;
+                }
+              }
+              // TODO: put in a check to not insert self-connections
+              if (globalsourceidx == globalthisidx) {
+                continue;
+              }
               // this is just to check on memory usage
-              adjcy[i].push_back(ptogidx(edges[e].source, sourceorder[j]));
+              adjcy[i].push_back(globalsourceidx);
               edgmodidx[i].push_back(edges[e].modidx);
               state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
               stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
+            }
+          }
+        }
+      }
+    }
+    std::vector<idx_t> adjcycache(adjcy[i].begin(), adjcy[i].end());
+    // Now do outgoing connections (making sure to check for already existing models (2-way))
+    for (std::size_t e = 0; e < edges.size(); ++e) {
+      if (vtxmodidx[i] == edges[e].source) {
+        for (std::size_t k = 0; k < edges[e].conntype.size(); ++k) {
+          if (edges[e].conntype[k] == CONNTYPE_SMPL) {
+            // loop over target order...
+            for (idx_t j = 0; j < vertices[edges[e].target[0]-1].order; ++j) {
+              // Sample sourceidx from the source vertex population order
+              // generate the sample cache (once per target vertex per connection type)
+              std::vector<idx_t> sourceorder(edges[e].maskparam[k][0]); // this should be the same as that in this current population
+              std::iota(sourceorder.begin(), sourceorder.end(), 0);
+              // pick the seed based on the targetidx so it is consistent across cores
+              // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
+              unsigned sampleseed = (randseed + (unsigned)(j)) ^ ((unsigned)(e*32768));
+              std::shuffle(sourceorder.begin(), sourceorder.end(), std::mt19937{sampleseed});
+              // want to make sure sample number is less than source order
+              CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
+              for (idx_t ij = 0; ij < edges[e].maskparam[k][1]; ++ij) {
+                if (sourceorder[ij] == vtxordidx[i]) {
+                  // Convert from population index to global index
+                  idx_t globaltargetidx = 0;
+                  // TODO: this is highly innefficient...
+                  for (int prt = 0; prt < netparts; ++prt) {
+                    if (j > xpopidxprt[edges[e].target[0]-1][prt]) {
+                      globaltargetidx = xvtxidxprt[edges[e].target[0]-1][prt] + j - xpopidxprt[edges[e].target[0]-1][prt];
+                      break;
+                    }
+                  }
+                  if (globaltargetidx == globalthisidx) {
+                    continue;
+                  }
+                  // Check to see if the index is already in adjcy
+                  if (std::find(adjcycache.begin(), adjcycache.end(), globaltargetidx) == adjcycache.end()) {
+                    adjcy[i].push_back(globaltargetidx);
+                    edgmodidx[i].push_back(0);
+                    // build empty state
+                    state[i].push_back(std::vector<real_t>());
+                    stick[i].push_back(std::vector<tick_t>());
+                  }
+                }
+              }
             }
           }
         }
