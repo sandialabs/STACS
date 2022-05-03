@@ -363,12 +363,14 @@ void Netdata::Build(mGraph *msg) {
   adjcyconn.resize(netfiles);
   edgmodidxconn.clear();
   edgmodidxconn.resize(netfiles);
+  adjcyset.resize(norderdat);
 
   // Any index-based sample connectivity occurs first
   // for each vertex
   // TODO: this is only for incoming connections, also need outgoing connections (none models)
   for (idx_t i = 0; i < norderdat; ++i) {
     idx_t globalthisidx = 0;
+    adjcyset[i].clear();
     // TODO: this is highly innefficient...
     for (int prt = 0; prt < netparts; ++prt) {
       if (vtxordidx[i] > xpopidxprt[vtxmodidx[i]-1][prt]) {
@@ -399,8 +401,8 @@ void Netdata::Build(mGraph *msg) {
               idx_t globalsourceidx = 0;
               // TODO: this is highly innefficient...
               for (int prt = 0; prt < netparts; ++prt) {
-                if (sourceorder[j] > xpopidxprt[edges[e].source-1][prt]) {
-                  globalsourceidx = xvtxidxprt[edges[e].source-1][prt] + sourceorder[j] - xpopidxprt[edges[e].source-1][prt];
+                if (sourceorder[j] >= xpopidxprt[edges[e].source-1][prt] && sourceorder[j] < xpopidxprt[edges[e].source-1][prt+1]) {
+                  globalsourceidx = xvtxidxprt[edges[e].source-1][prt] + (sourceorder[j] - xpopidxprt[edges[e].source-1][prt]);
                   break;
                 }
               }
@@ -410,6 +412,7 @@ void Netdata::Build(mGraph *msg) {
               }
               // this is just to check on memory usage
               adjcy[i].push_back(globalsourceidx);
+              adjcyset[i].insert(globalsourceidx);
               edgmodidx[i].push_back(edges[e].modidx);
               state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
               stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
@@ -1173,11 +1176,13 @@ void Netdata::ConnectNone(mConnNone *msg) {
       idx_t sourceidx = msg->adjcy[i];
       //CkPrintf("    i: %" PRIidx ", j: %" PRIidx "\n", sourceidx, targetidx);
       // Make sure the index isn't already in adjcy (both outgoing and incoming edges)
-      adjcy[sourceidx].push_back(targetidx);
-      edgmodidx[sourceidx].push_back(0); // These are all 'none' models
-                                         // build empty state
-      state[sourceidx].push_back(std::vector<real_t>());
-      stick[sourceidx].push_back(std::vector<tick_t>());
+      if (adjcyset[sourceidx].find(targetidx) == adjcyset[sourceidx].end()) {
+        adjcy[sourceidx].push_back(targetidx);
+        edgmodidx[sourceidx].push_back(0); // These are all 'none' models
+        // build empty state
+        state[sourceidx].push_back(std::vector<real_t>());
+        stick[sourceidx].push_back(std::vector<tick_t>());
+      }
     }
   }
 
@@ -1217,7 +1222,7 @@ void Netdata::ConnectNone(mConnNone *msg) {
         stick[i][j+1] = edgorder[j].stick;
       }
     }
-
+    /*
     // Print memory allocated
     int adjcysize = 0;
     int adjcycap = 0;
@@ -1232,6 +1237,7 @@ void Netdata::ConnectNone(mConnNone *msg) {
       edgmodcap += edgmodidx[i].capacity();
     }
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
+    */
     contribute(0, NULL, CkReduction::nop);
   }
   // Request data from next part
@@ -1296,7 +1302,6 @@ mConnNone* Netdata::BuildConnNone(idx_t reqidx) {
   } else {
     globalsource_max = xvtxidxprt[0][reqidx+1];
   }
-  CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx "\n", reqidx, globalsource_min, globalsource_max);
 
   // Count the sizes
   nsizedat = 0;
@@ -1312,6 +1317,7 @@ mConnNone* Netdata::BuildConnNone(idx_t reqidx) {
     // Add none connections to size
     nsizedat += adjcyconnnone[i].size();
   }
+  CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx ", adj: %" PRIidx "\n", reqidx, globalsource_min, globalsource_max, nsizedat);
 
   // Initialize connection message
   int msgSize[MSG_ConnNone];

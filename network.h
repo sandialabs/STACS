@@ -744,6 +744,7 @@ class Netdata : public CBase_Netdata {
     std::vector<std::unordered_map<idx_t, std::vector<idx_t>>> samplecache; // local connectivity storage
     std::vector<edgorder_t> edgorder; // edgidx and states for sorting
     std::vector<std::size_t> adjcylocalcount;
+    std::vector<std::set<idx_t>> adjcyset;
     /* Connection information */
     std::vector<std::vector<std::vector<idx_t>>> adjcyconn;
         // first level is the data parts, second level are per vertex, third level is edges
