@@ -280,6 +280,16 @@ class mConn : public CMessage_mConn {
     idx_t nvtx;
 };
 
+#define MSG_ConnNone 3
+class mConnNone : public CMessage_mConnNone {
+  public:
+    idx_t *vtxidx;      // vertex global idx
+    idx_t *xadj;        // prefix for adjacency
+    idx_t *adjcy;       // relevant adjacent vertices
+    idx_t datidx;
+    idx_t nvtx;
+};
+
 
 // Network partition data
 //
@@ -565,6 +575,10 @@ class Netdata : public CBase_Netdata {
     mConn* BuildCurrConn();
     mConn* BuildNextConn();
     idx_t MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t targetidx, real_t dist);
+    /* Connecting Sample */
+    void ConnectNone(mConnNone *msg);
+    void ConnNoneRequest(idx_t reqidx);
+    mConnNone* BuildConnNone(idx_t reqidx);
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
@@ -729,6 +743,7 @@ class Netdata : public CBase_Netdata {
     std::vector<datafile_t> datafiles;
     std::vector<std::unordered_map<idx_t, std::vector<idx_t>>> samplecache; // local connectivity storage
     std::vector<edgorder_t> edgorder; // edgidx and states for sorting
+    std::vector<std::size_t> adjcylocalcount;
     /* Connection information */
     std::vector<std::vector<std::vector<idx_t>>> adjcyconn;
         // first level is the data parts, second level are per vertex, third level is edges

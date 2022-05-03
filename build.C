@@ -357,6 +357,7 @@ void Netdata::Build(mGraph *msg) {
   edgmodidx.clear();
   adjcy.resize(norderdat);
   edgmodidx.resize(norderdat);
+  adjcylocalcount.resize(norderdat);
   // Only need to worry about future edges
   adjcyconn.clear();
   adjcyconn.resize(netfiles);
@@ -417,6 +418,10 @@ void Netdata::Build(mGraph *msg) {
         }
       }
     }
+    // This is just the size of the adjcy before adding the none models
+    adjcylocalcount[i] = adjcy[i].size();
+    /*
+    //This section to be replaced by communicating the none edges
     std::vector<idx_t> adjcycache(adjcy[i].begin(), adjcy[i].end());
     // Now do outgoing connections (making sure to check for already existing models (2-way))
     for (std::size_t e = 0; e < edges.size(); ++e) {
@@ -464,6 +469,7 @@ void Netdata::Build(mGraph *msg) {
         }
       }
     }
+    */
   }
   
   // Reorder edges vertex-by-vertex
@@ -487,9 +493,27 @@ void Netdata::Build(mGraph *msg) {
     }
   }
 
-  // Contribute for now
-  contribute(0, NULL, CkReduction::nop);
+  //Build up the vtxdist from knowledge of how vertices will be distributed
 
+  // Contribute for now
+  //contribute(0, NULL, CkReduction::nop);
+
+  // At this point, the partition should have all incoming connnections, but no knowledge of its outgoing connections
+  // Request data from prev part
+  if (cpdat < datidx) {
+    thisProxy(cpdat).ConnNoneRequest(datidx);
+  }
+  // Connect to curr part
+  else if (cpdat == datidx) {
+    mConnNone *mconn = BuildConnNone(datidx);
+    thisProxy(cpdat).ConnectNone(mconn);
+  }
+  // Request data from next part
+  else if (cpdat > datidx) {
+    // this shouldn't happen
+    thisProxy(cpdat).ConnNoneRequest(datidx);
+  }
+  
   /*
   // Request data from prev part
   if (cpdat < datidx) {
@@ -738,6 +762,28 @@ void Netdata::Connect(mConn *msg) {
   ++cpdat;
   // return control to main when done
   if (cpdat == netfiles) {
+    // We can reorder all the edges by global ordering now
+    // Reorder edges vertex-by-vertex
+    for (idx_t i = 0; i < norderdat; ++i) {
+      edgorder.clear();
+      for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
+        edgorder.push_back(edgorder_t());
+        edgorder.back().edgidx = adjcy[i][j];
+        edgorder.back().modidx = edgmodidx[i][j];
+        edgorder.back().state = state[i][j+1];
+        edgorder.back().stick = stick[i][j+1];
+      }
+      // sort edge indices by global ordering
+      std::sort(edgorder.begin(), edgorder.end());
+      // add indices to data structures
+      for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
+        adjcy[i][j] = edgorder[j].edgidx;
+        edgmodidx[i][j] = edgorder[j].modidx;
+        state[i][j+1] = edgorder[j].state;
+        stick[i][j+1] = edgorder[j].stick;
+      }
+    }
+
     // Print memory allocated
     int adjcysize = 0;
     int adjcycap = 0;
@@ -1107,3 +1153,193 @@ std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
   // return generated stick
   return rngstick;
 }
+
+
+// The following is W.I.P for sending none edges between fully build directed graph
+// This enables the source partition to know where to send
+
+// Connect Network
+//
+void Netdata::ConnectNone(mConnNone *msg) {
+  // Sanity check
+  CkAssert(msg->datidx == cpdat);
+  // Some basic information on what's being connected
+  CkPrintf("  Connecting %d to %d\n", datidx, msg->datidx);
+  
+  // Go through the vertices
+  for (idx_t j = 0; j < msg->nvtx; ++j) {
+    idx_t targetidx = msg->vtxidx[j];
+    for (idx_t i = msg->xadj[j]; i < msg->xadj[j+1]; ++i) {
+      idx_t sourceidx = msg->adjcy[i];
+      //CkPrintf("    i: %" PRIidx ", j: %" PRIidx "\n", sourceidx, targetidx);
+      // Make sure the index isn't already in adjcy (both outgoing and incoming edges)
+      adjcy[sourceidx].push_back(targetidx);
+      edgmodidx[sourceidx].push_back(0); // These are all 'none' models
+                                         // build empty state
+      state[sourceidx].push_back(std::vector<real_t>());
+      stick[sourceidx].push_back(std::vector<tick_t>());
+    }
+  }
+
+  // send any outstanding requests of built adjcy
+  for (std::list<idx_t>::iterator ireqidx = adjcyreq.begin(); ireqidx != adjcyreq.end(); ++ireqidx) {
+    if (*ireqidx == cpdat) {
+      mConnNone *mconn = BuildConnNone(*ireqidx);
+      thisProxy(*ireqidx).ConnectNone(mconn);
+      ireqidx = adjcyreq.erase(ireqidx);
+    }
+  }
+
+  delete msg;
+
+  // Move to next part
+  ++cpdat;
+  // return control to main when done
+  if (cpdat == netfiles) {
+    // We can reorder all the edges by global ordering now
+    // Reorder edges vertex-by-vertex
+    for (idx_t i = 0; i < norderdat; ++i) {
+      edgorder.clear();
+      for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
+        edgorder.push_back(edgorder_t());
+        edgorder.back().edgidx = adjcy[i][j];
+        edgorder.back().modidx = edgmodidx[i][j];
+        edgorder.back().state = state[i][j+1];
+        edgorder.back().stick = stick[i][j+1];
+      }
+      // sort edge indices by global ordering
+      std::sort(edgorder.begin(), edgorder.end());
+      // add indices to data structures
+      for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
+        adjcy[i][j] = edgorder[j].edgidx;
+        edgmodidx[i][j] = edgorder[j].modidx;
+        state[i][j+1] = edgorder[j].state;
+        stick[i][j+1] = edgorder[j].stick;
+      }
+    }
+
+    // Print memory allocated
+    int adjcysize = 0;
+    int adjcycap = 0;
+    int edgmodsize = 0;
+    int edgmodcap = 0;
+    for (size_t i = 0; i < adjcy.size(); ++i) {
+      adjcy[i].shrink_to_fit();
+      edgmodidx[i].shrink_to_fit();
+      adjcysize += adjcy[i].size();
+      adjcycap += adjcy[i].capacity();
+      edgmodsize += edgmodidx[i].size();
+      edgmodcap += edgmodidx[i].capacity();
+    }
+    CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
+    contribute(0, NULL, CkReduction::nop);
+  }
+  // Request data from next part
+  else if (cpdat < datidx) {
+    thisProxy(cpdat).ConnNoneRequest(datidx);
+  }
+  // Connect to curr part
+  else if (cpdat == datidx) {
+    mConnNone *mconn = BuildConnNone(datidx);
+    thisProxy(cpdat).ConnectNone(mconn);
+  }
+  // Request data from next part
+  else if (cpdat > datidx) {
+    thisProxy(cpdat).ConnNoneRequest(datidx);
+  }
+}
+
+// Connect Network Finished
+//
+void Netdata::ConnNoneRequest(idx_t reqidx) {
+  // send data adjacency and vertex info to requesting part
+  if (reqidx > datidx) {
+    // check if vertex is built
+    if (vtxmodidx.size()) {
+      mConnNone *mconn = BuildConnNone(reqidx);
+      thisProxy(reqidx).ConnectNone(mconn);
+    }
+    else {
+      // record request for when adjcy is built
+      adjcyreq.push_back(reqidx);
+    }
+  }
+  // send data (vertex info) to requesting part
+  else if (reqidx < datidx) {
+    mConnNone *mconn = BuildConnNone(reqidx);
+    thisProxy(reqidx).ConnectNone(mconn);
+  }
+}
+
+
+/**************************************************************************
+* Connection messages
+**************************************************************************/
+
+// Build Previous (includes vertices and adjacency)
+//
+mConnNone* Netdata::BuildConnNone(idx_t reqidx) {
+  /* Bookkeeping */
+  idx_t nsizedat;
+  idx_t jadjcyidx;
+
+  std::vector<std::vector<idx_t>> adjcyconnnone;
+  adjcyconnnone.resize(norderdat);
+
+  // Figure out the min and max global indices on partition reqidx
+  idx_t globalsource_min = xvtxidxprt[0][reqidx];
+  idx_t globalsource_max = 0;
+  if (reqidx+1 == netparts) {
+    for (std::size_t i = 0; i < vertices.size(); ++i) {
+      globalsource_max += vertices[i].order;
+    }
+  } else {
+    globalsource_max = xvtxidxprt[0][reqidx+1];
+  }
+  CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx "\n", reqidx, globalsource_min, globalsource_max);
+
+  // Count the sizes
+  nsizedat = 0;
+  for (idx_t i = 0; i < norderdat; ++i) {
+    adjcyconnnone[i].clear();
+    for (std::size_t j = 0; j < adjcylocalcount[i]; ++j) {
+      if (globalsource_min <= adjcy[i][j] && adjcy[i][j] < globalsource_max) {
+        // global source idx to local
+        // should really have an xvtxidxdat
+        adjcyconnnone[i].push_back(adjcy[i][j] - xvtxidxprt[0][reqidx]);
+      }
+    }
+    // Add none connections to size
+    nsizedat += adjcyconnnone[i].size();
+  }
+
+  // Initialize connection message
+  int msgSize[MSG_ConnNone];
+  msgSize[0] = norderdat;   // vtxordidx
+  msgSize[1] = norderdat+1; // xadj
+  msgSize[2] = nsizedat;    // adjcy
+  mConnNone *mconn = new(msgSize, 0) mConnNone;
+  // Sizes
+  mconn->datidx = datidx;
+  mconn->nvtx = norderdat;
+
+  // Prefix zero is zero
+  mconn->xadj[0] = 0;
+  // Initialize counter
+  jadjcyidx = 0;
+  
+  // Build message
+  for (idx_t i = 0; i < norderdat; ++i) {
+    mconn->vtxidx[i] = xvtxidxprt[0][datidx]+i; // need to convert from local to global
+    // xadj
+    mconn->xadj[i+1] = mconn->xadj[i] + adjcyconnnone[i].size();
+    for (std::size_t j = 0; j < adjcyconnnone[i].size(); ++j) {
+      // adjcy (of next parts)
+      mconn->adjcy[jadjcyidx++] = adjcyconnnone[i][j];
+    }
+  }
+  CkAssert(jadjcyidx == nsizedat);
+
+  return mconn;
+}
+
