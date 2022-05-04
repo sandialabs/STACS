@@ -71,8 +71,12 @@
 #define MASKPARAM_FILE  2
 
 #define CONNTYPE_SMPL   4
-#define PROBPARAM_SMPL  1
+#define PROBPARAM_SMPL  0
 #define MASKPARAM_SMPL  2
+
+#define CONNTYPE_SMPL_NORM   5
+#define PROBPARAM_SMPL_NORM  1
+#define MASKPARAM_SMPL_NORM  2
 
 #endif //__STACS_BUILD_H__
 

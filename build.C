@@ -420,6 +420,47 @@ void Netdata::Build(mGraph *msg) {
               stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
             }
           }
+          else if (edges[e].conntype[k] == CONNTYPE_SMPL_NORM) {
+            // Sample sourceidx from the source vertex population order
+            // generate the sample cache (once per target vertex per connection type)
+            std::vector<real_t> sourceweights(edges[e].maskparam[k][0]);
+            for (idx_t j = 0; j < edges[e].maskparam[k][0]; ++j) {
+              // (x_i - x_j)^2 / var(x_ij)
+              real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
+              sourceweights[j] = exp(-(x_ij*x_ij)/edges[e].probparam[k][0]); // Don't worry about normalizing
+            }
+            // pick the seed based on the targetidx so it is consistent across cores
+            // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
+            unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(e*32768));
+            std::mt19937 rngsample(sampleseed);
+            // want to make sure sample number is less than source order
+            CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
+            adjcyset[i].clear();
+            while (adjcyset[i].size() < edges[e].maskparam[k][1]) {
+              std::discrete_distribution<idx_t> sampledist(sourceweights.begin(), sourceweights.end()); 
+              idx_t sourceorder = sampledist(rngsample);
+              // Convert from population index to global index
+              idx_t globalsourceidx = 0;
+              // TODO: this is highly innefficient...
+              for (int prt = 0; prt < netparts; ++prt) {
+                if (sourceorder >= xpopidxprt[edges[e].source-1][prt] && sourceorder < xpopidxprt[edges[e].source-1][prt+1]) {
+                  globalsourceidx = xvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopidxprt[edges[e].source-1][prt]);
+                  break;
+                }
+              }
+              if (globalsourceidx == globalthisidx) {// || adjcyset[i].find(globalsourceidx) == adjcyset[i].end()) {
+                continue;
+              } else {
+                sourceweights[sourceorder] = 0.0;
+                adjcy[i].push_back(globalsourceidx);
+                adjcyset[i].insert(globalsourceidx); // The set is useful for faster searching of edge existence
+                edgmodidx[i].push_back(edges[e].modidx);
+                // The state/stick will need to be reparameterized with correct distance information later
+                state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceorder, vtxordidx[i]));
+                stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceorder, vtxordidx[i]));
+              }
+            }
+          }
         }
       }
     }
