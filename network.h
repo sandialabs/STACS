@@ -280,10 +280,11 @@ class mConn : public CMessage_mConn {
     idx_t nvtx;
 };
 
-#define MSG_ConnNone 3
+#define MSG_ConnNone 4
 class mConnNone : public CMessage_mConnNone {
   public:
     idx_t *vtxidx;      // vertex global idx
+    real_t *xyz;         // vertex coordinate
     idx_t *xadj;        // prefix for adjacency
     idx_t *adjcy;       // relevant adjacent vertices
     idx_t datidx;
@@ -579,6 +580,8 @@ class Netdata : public CBase_Netdata {
     void ConnectNone(mConnNone *msg);
     void ConnNoneRequest(idx_t reqidx);
     mConnNone* BuildConnNone(idx_t reqidx);
+    void ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rngstate);
+    void ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick);
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);

@@ -90,6 +90,7 @@ module network {
 
   message mConnNone {
     idx_t vtxidx[];
+    real_t xyz[];
     idx_t xadj[];
     idx_t adjcy[];
     int datidx;

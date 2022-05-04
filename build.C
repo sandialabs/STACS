@@ -412,8 +412,10 @@ void Netdata::Build(mGraph *msg) {
               }
               // this is just to check on memory usage
               adjcy[i].push_back(globalsourceidx);
-              adjcyset[i].insert(globalsourceidx);
+              adjcyset[i].insert(globalsourceidx); // The set is useful for faster searching of edge existence
               edgmodidx[i].push_back(edges[e].modidx);
+              // The state/stick will need to be reparameterized with correct distance information later
+              // TODO: make a version that doesn't use dist, idxs, depending on the edge model
               state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
               stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceorder[j], vtxordidx[i]));
             }
@@ -423,56 +425,6 @@ void Netdata::Build(mGraph *msg) {
     }
     // This is just the size of the adjcy before adding the none models
     adjcylocalcount[i] = adjcy[i].size();
-    /*
-    //This section to be replaced by communicating the none edges
-    std::vector<idx_t> adjcycache(adjcy[i].begin(), adjcy[i].end());
-    // Now do outgoing connections (making sure to check for already existing models (2-way))
-    for (std::size_t e = 0; e < edges.size(); ++e) {
-      if (vtxmodidx[i] == edges[e].source) {
-        for (std::size_t k = 0; k < edges[e].conntype.size(); ++k) {
-          if (edges[e].conntype[k] == CONNTYPE_SMPL) {
-            // loop over target order...
-            for (idx_t j = 0; j < vertices[edges[e].target[0]-1].order; ++j) {
-              // Sample sourceidx from the source vertex population order
-              // generate the sample cache (once per target vertex per connection type)
-              std::vector<idx_t> sourceorder(edges[e].maskparam[k][0]); // this should be the same as that in this current population
-              std::iota(sourceorder.begin(), sourceorder.end(), 0);
-              // pick the seed based on the targetidx so it is consistent across cores
-              // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
-              unsigned sampleseed = (randseed + (unsigned)(j)) ^ ((unsigned)(e*32768));
-              std::shuffle(sourceorder.begin(), sourceorder.end(), std::mt19937{sampleseed});
-              // want to make sure sample number is less than source order
-              CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
-              for (idx_t ij = 0; ij < edges[e].maskparam[k][1]; ++ij) {
-                if (sourceorder[ij] == vtxordidx[i]) {
-                  // Convert from population index to global index
-                  idx_t globaltargetidx = 0;
-                  // TODO: this is highly innefficient...
-                  for (int prt = 0; prt < netparts; ++prt) {
-                    if (j > xpopidxprt[edges[e].target[0]-1][prt]) {
-                      globaltargetidx = xvtxidxprt[edges[e].target[0]-1][prt] + j - xpopidxprt[edges[e].target[0]-1][prt];
-                      break;
-                    }
-                  }
-                  if (globaltargetidx == globalthisidx) {
-                    continue;
-                  }
-                  // Check to see if the index is already in adjcy
-                  if (std::find(adjcycache.begin(), adjcycache.end(), globaltargetidx) == adjcycache.end()) {
-                    adjcy[i].push_back(globaltargetidx);
-                    edgmodidx[i].push_back(0);
-                    // build empty state
-                    state[i].push_back(std::vector<real_t>());
-                    stick[i].push_back(std::vector<tick_t>());
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    */
   }
   
   // Reorder edges vertex-by-vertex
@@ -518,6 +470,8 @@ void Netdata::Build(mGraph *msg) {
   }
   
   /*
+  //TODO: Figure out a way to perform both sampling as above
+  //      and the per-connection evaluation as below (hopefully faster)
   // Request data from prev part
   if (cpdat < datidx) {
     thisProxy(cpdat).ConnRequest(datidx);
@@ -1185,6 +1139,22 @@ void Netdata::ConnectNone(mConnNone *msg) {
       }
     }
   }
+  // Go through the incoming state and reparameterize the state/sticks if needed
+  idx_t globalsourceidx_min = msg->vtxidx[0];
+  idx_t globalsourceidx_max = msg->vtxidx[msg->nvtx-1];
+  for (idx_t i = 0; i < norderdat; ++i) {
+    for (std::size_t j = 0; j < adjcylocalcount[i]; ++j) {
+      if (adjcy[i][j] >= globalsourceidx_min && adjcy[i][j] <= globalsourceidx_max) {
+        // Reparameterize with information
+        idx_t localsourceidx = adjcy[i][j] - globalsourceidx_min;
+        real_t distance = sqrt((xyz[i*3]-msg->xyz[localsourceidx*3])*(xyz[i*3]-msg->xyz[localsourceidx*3])+
+                          (xyz[i*3+1]-msg->xyz[localsourceidx*3+1])*(xyz[i*3+1]-msg->xyz[localsourceidx*3+1])+
+                          (xyz[i*3+2]-msg->xyz[localsourceidx*3+2])*(xyz[i*3+2]-msg->xyz[localsourceidx*3+2]));              
+        ReBuildEdgState(edgmodidx[i][j], distance, state[i][j+1]);
+        ReBuildEdgStick(edgmodidx[i][j], distance, stick[i][j+1]);
+      }
+    }
+  }
 
   // send any outstanding requests of built adjcy
   for (std::list<idx_t>::iterator ireqidx = adjcyreq.begin(); ireqidx != adjcyreq.end(); ++ireqidx) {
@@ -1321,9 +1291,10 @@ mConnNone* Netdata::BuildConnNone(idx_t reqidx) {
 
   // Initialize connection message
   int msgSize[MSG_ConnNone];
-  msgSize[0] = norderdat;   // vtxordidx
-  msgSize[1] = norderdat+1; // xadj
-  msgSize[2] = nsizedat;    // adjcy
+  msgSize[0] = norderdat;   // vtxidx
+  msgSize[1] = norderdat*3; // xyz
+  msgSize[2] = norderdat+1; // xadj
+  msgSize[3] = nsizedat;    // adjcy
   mConnNone *mconn = new(msgSize, 0) mConnNone;
   // Sizes
   mconn->datidx = datidx;
@@ -1337,6 +1308,9 @@ mConnNone* Netdata::BuildConnNone(idx_t reqidx) {
   // Build message
   for (idx_t i = 0; i < norderdat; ++i) {
     mconn->vtxidx[i] = xvtxidxprt[0][datidx]+i; // need to convert from local to global
+    mconn->xyz[i*3+0] = xyz[i*3+0];
+    mconn->xyz[i*3+1] = xyz[i*3+1];
+    mconn->xyz[i*3+2] = xyz[i*3+2];
     // xadj
     mconn->xadj[i+1] = mconn->xadj[i] + adjcyconnnone[i].size();
     for (std::size_t j = 0; j < adjcyconnnone[i].size(); ++j) {
@@ -1347,5 +1321,53 @@ mConnNone* Netdata::BuildConnNone(idx_t reqidx) {
   CkAssert(jadjcyidx == nsizedat);
 
   return mconn;
+}
+
+/**************************************************************************
+* Edge State Building (reparameterize)
+**************************************************************************/
+
+// States
+//
+void Netdata::ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rngstate) {
+  // Sanity check
+  // 0 is reserved for 'none' edge type
+  CkAssert(modidx > 0);
+  --modidx;
+  CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
+  // Randomly generate state
+  for (std::size_t j = 0; j < rngstate.size(); ++j) {
+    if (modeldata[modidx].statetype[j] == RNGTYPE_LIN) {
+      rngstate[j] = rnglin(modeldata[modidx].stateparam[j].data(), dist);
+    }
+    else if (modeldata[modidx].statetype[j] == RNGTYPE_LBLIN) {
+      rngstate[j] = rnglblin(modeldata[modidx].stateparam[j].data(), dist);
+    }
+    else if (modeldata[modidx].statetype[j] == RNGTYPE_BLIN) {
+      rngstate[j] = rngblin(modeldata[modidx].stateparam[j].data(), dist);
+    }
+  }
+}
+
+// Sticks
+//
+void Netdata::ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick) {
+  // Sanity check
+  // 0 is reserved for 'none' edge type
+  CkAssert(modidx > 0);
+  --modidx;
+  CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
+  // Randomly generate stick
+  for (std::size_t j = 0; j < rngstick.size(); ++j) {
+    if (modeldata[modidx].sticktype[j] == RNGTYPE_LIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglin(modeldata[modidx].stickparam[j].data(), dist));
+    }
+    else if (modeldata[modidx].sticktype[j] == RNGTYPE_LBLIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblin(modeldata[modidx].stickparam[j].data(), dist));
+    }
+    else if (modeldata[modidx].sticktype[j] == RNGTYPE_BLIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngblin(modeldata[modidx].stickparam[j].data(), dist));
+    }
+  }
 }
 
