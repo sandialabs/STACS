@@ -838,6 +838,13 @@ int Main::ReadModel() {
               CkPrintf("  state lower bounded lognorm bound: %s\n", e.what());
               return 1;
             }
+            try {
+              // scale
+              models[i].stickparam[jstick][3] = state[j]["scale"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm scale: %s\n", e.what());
+              return 1;
+            }
             ++jstick;
           }
           else {
@@ -863,6 +870,13 @@ int Main::ReadModel() {
               models[i].stateparam[jstate][2] = state[j]["bound"].as<real_t>();
             } catch (YAML::RepresentationException& e) {
               CkPrintf("  state lower bounded lognorm bound: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // scale
+              models[i].stateparam[jstate][3] = state[j]["scale"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm scale: %s\n", e.what());
               return 1;
             }
             ++jstate;

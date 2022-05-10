@@ -19,13 +19,13 @@ class DGIzhiSynGaba : public ModelTmpl < 64, DGIzhiSynGaba > {
       paramlist[1] = "p_rel";
       // states
       statelist.resize(1);
-      statelist[0] = "weight";
+      statelist[0] = "g_act";
       // sticks
       sticklist.resize(1);
       sticklist[0] = "delay";
       // auxiliary states
       auxstate.resize(1);
-      auxstate[0] = "I_syn";
+      auxstate[0] = "g_act_gaba";
       // auxiliary sticks
       auxstick.resize(0);
       // ports
@@ -54,10 +54,12 @@ void DGIzhiSynGaba::Jump(const event_t& event, std::vector<std::vector<real_t>>&
   // External spike event
   if (event.type == EVENT_SPIKE && event.source >= 0) {
     // Apply effect to neuron (vertex)
-    state[0][auxidx[0].stateidx[0]] += state[event.index][0];
-  }
-  else if (event.type == EVENT_COUNT && event.source >= 0) {
-    // Apply effect to neuron (vertex) multiple times
-    state[0][auxidx[0].stateidx[0]] += state[event.index][0] * event.data;
+    real_t g_act = 0.0;
+    for (int i = 0; i < int(std::floor(param[0])); ++i) {
+      if ((*unifdist)(*rngine) < param[1]) {
+        g_act += state[event.index][0];
+      }
+    }
+    state[0][auxidx[0].stateidx[0]] += g_act;
   }
 }
