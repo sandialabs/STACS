@@ -55,7 +55,7 @@ void DGIzhiSynGlu::Jump(const event_t& event, std::vector<std::vector<real_t>>& 
   if (event.type == EVENT_SPIKE && event.source >= 0) {
     // Apply effect to neuron (vertex)
     real_t g_act = 0.0;
-    for (int i = 0; i < int(std::floor(n_sites)); ++i) {
+    for (int i = 0; i < int(std::floor(param[0])); ++i) {
       if ((*unifdist)(*rngine) < param[1]) {
         g_act += state[event.index][0];
       }

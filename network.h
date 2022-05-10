@@ -674,7 +674,7 @@ class Netdata : public CBase_Netdata {
       return state;
     }
     // RNG State lower bounded lognorm
-    real_t rnglbnorm(real_t *param) {
+    real_t rnglblognorm(real_t *param) {
       real_t state = (*normdist)(rngine);
       // TODO Modify this
       state = param[0] + (std::abs(param[1]))*state;
