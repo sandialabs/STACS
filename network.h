@@ -673,6 +673,14 @@ class Netdata : public CBase_Netdata {
       if (state < param[2]) { state = param[2]; }
       return state;
     }
+    // RNG State lower bounded lognorm
+    real_t rnglbnorm(real_t *param) {
+      real_t state = (*normdist)(rngine);
+      // TODO Modify this
+      state = param[0] + (std::abs(param[1]))*state;
+      if (state < param[2]) { state = param[2]; }
+      return state;
+    }
     // RNG State linear
     real_t rnglin(real_t *param, real_t dist) {
       return dist*param[0] + param[1];

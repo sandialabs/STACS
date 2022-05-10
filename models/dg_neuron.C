@@ -14,7 +14,7 @@ class DGIzhiNeuron : public ModelTmpl < 60, DGIzhiNeuron > {
     /* Constructor */
     DGIzhiNeuron() {
       // parameters
-      paramlist.resize(7);
+      paramlist.resize(12);
       paramlist[0] = "vt";
       paramlist[1] = "vr";
       paramlist[2] = "C";
@@ -22,12 +22,17 @@ class DGIzhiNeuron : public ModelTmpl < 60, DGIzhiNeuron > {
       paramlist[4] = "b";
       paramlist[5] = "c";
       paramlist[6] = "d";
+      paramlist[7] = "k1";
+      paramlist[8] = "k2";
+      paramlist[9] = "tau_glu";
+      paramlist[10] = "tau_gaba";
+      paramlist[11] = "E_gaba";
       // states
       statelist.resize(4);
       statelist[0] = "v";
       statelist[1] = "u";
-      statelist[2] = "I_syn";
-      statelist[3] = "I_comp";
+      statelist[2] = "I_syn_glu";
+      statelist[3] = "I_syn_gaba";
       // sticks
       sticklist.resize(0);
       // auxiliary states
@@ -67,19 +72,25 @@ tick_t DGIzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
   tick_t tickstep = (tdiff > TICKS_PER_MS ? TICKS_PER_MS : tdiff);
   real_t tstep = ((real_t) tickstep)/TICKS_PER_MS;
   // update state
-  // TODO: this needs to be updated before simulating
-  state[0] = state[0] + (tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2] + state[3]);
-  state[0] = state[0] + (tstep-tstep/2)*((0.04*state[0]+5)*state[0] + 140 - state[1] + state[2] + state[3]);
-  state[1] = state[1] + tstep*param[0]*(0.2*state[0] - state[1]);
+  real_t k = param[7] + param[8]*std::tanh(state[0] - param[0]);
+  state[0] = state[0] + (tstep/2)*(k*(state[0] - param[1])*(state[0] - param[0]) - state[1] + state[2] + state[3])/param[2];
+  state[0] = state[0] + (tstep-tstep/2)*(k*(state[0] - param[1])*(state[0] - param[0]) - state[1] + state[2] + state[3])/param[2];
+  state[1] = state[1] + tstep*param[3]*(param[4]*(state[0] - param[1]) - state[1]);
 
-  // Clear transient current for next time
-  state[2] = 0;
+  // Update applied current
+  state[2] = state[2]*exp(-(tstep/param[9]));
+  state[3] = state[3]*exp(-(tstep/param[10]));
+
+  // Make sure voltage > E_gaba
+  if (state[0] < param[11]) {
+    state[0] = param[11];
+  }
   
   // if spike occured, generate event
-  if (state[0] >= 30) {
+  if (state[0] >= param[0]) {
     // reset
-    state[0] = param[2];
-    state[1] = state[1] + param[3];
+    state[0] = param[5];
+    state[1] = state[1] + param[6];
 
     // generate events
     event_t event;
@@ -99,6 +110,6 @@ tick_t DGIzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
 void DGIzhiNeuron::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   if (event.type == EVENT_STIM) {
     // Add stim to applied current
-    state[0][3] += event.data;
+    //state[0][4] += event.data;
   }
 }

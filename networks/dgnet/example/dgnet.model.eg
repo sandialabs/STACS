@@ -1,6 +1,6 @@
 ---
 type: vertex
-modname: iec
+modname: lec
 modtype: 60
 param:
   - name: vt

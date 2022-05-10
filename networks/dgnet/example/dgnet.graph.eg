@@ -1,5 +1,5 @@
 vertex:
-  - modname: iec
+  - modname: lec
     order: 55000
     shape: line
     length: 1.0
@@ -46,28 +46,28 @@ vertex:
     coord: [0.0, 0.0, 0.0]
 
 edge:
-  - source: iec
+  - source: lec
     target: [mopp]
     modname: syn_glu
     cutoff: 0.0
     connect:
       - type: sample
         order: 2000
-  - source: iec
+  - source: lec
     target: [gc]
     modname: syn_glu_stdp
     cutoff: 0.0
     connect:
       - type: sample
         order: 2000
-  - source: iec
+  - source: lec
     target: [pbc]
     modname: syn_glu
     cutoff: 0.0
     connect:
       - type: sample
         order: 2000
-  - source: iec
+  - source: lec
     target: [cbc]
     modname: syn_glu
     cutoff: 0.0

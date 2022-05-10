@@ -14,7 +14,9 @@ class DGIzhiSynGaba : public ModelTmpl < 64, DGIzhiSynGaba > {
     /* Constructor */
     DGIzhiSynGaba() {
       // parameters
-      paramlist.resize(0);
+      paramlist.resize(2);
+      paramlist[0] = "n_sites";
+      paramlist[1] = "p_rel";
       // states
       statelist.resize(1);
       statelist[0] = "weight";

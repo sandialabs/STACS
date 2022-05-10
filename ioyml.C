@@ -812,6 +812,62 @@ int Main::ReadModel() {
             ++jstate;
           }
         }
+        else if (rngtype == "lower bounded lognorm") {
+          if (reptype == "tick") {
+            // Normal distribution
+            models[i].sticktype[jstick] = RNGTYPE_LBLOGNORM;
+            models[i].stickparam[jstick].resize(RNGPARAM_LBLOGNORM);
+            try {
+              // mean
+              models[i].stickparam[jstick][0] = state[j]["mean"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm mean: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // standard deviation
+              models[i].stickparam[jstick][1] = state[j]["std"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm std: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // bounds
+              models[i].stickparam[jstick][2] = state[j]["bound"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm bound: %s\n", e.what());
+              return 1;
+            }
+            ++jstick;
+          }
+          else {
+            // Normal distribution
+            models[i].statetype[jstate] = RNGTYPE_LBLOGNORM;
+            models[i].stateparam[jstate].resize(RNGPARAM_LBLOGNORM);
+            try {
+              // mean
+              models[i].stateparam[jstate][0] = state[j]["mean"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm mean: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // standard deviation
+              models[i].stateparam[jstate][1] = state[j]["std"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm std: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // bounds
+              models[i].stateparam[jstate][2] = state[j]["bound"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm bound: %s\n", e.what());
+              return 1;
+            }
+            ++jstate;
+          }
+        }
         else if (rngtype == "linear") {
           if (reptype == "tick") {
             // Proportional to distance

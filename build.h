@@ -17,7 +17,7 @@
 #define REPTYPE_TICK    1
 
 // TODO: reorder these numbers sometime
-#define RNGTYPE_NRNG    11
+#define RNGTYPE_NRNG    12
 #define RNGTYPE_CONST   0
 #define RNGTYPE_UNIF    1
 #define RNGTYPE_UNINT   2
@@ -28,7 +28,8 @@
 #define RNGTYPE_LBLIN   7
 #define RNGTYPE_UBLIN   8
 #define RNGTYPE_BLIN    9
-#define RNGTYPE_FILE    10
+#define RNGTYPE_LBLOGNORM  10
+#define RNGTYPE_FILE    11
 
 #define RNGPARAM_CONST  1
 #define RNGPARAM_UNIF   2
@@ -36,6 +37,7 @@
 #define RNGPARAM_NORM   2
 #define RNGPARAM_BNORM  3
 #define RNGPARAM_LBNORM 3
+#define RNGPARAM_LBLOGNORM 3
 #define RNGPARAM_LIN    2
 #define RNGPARAM_LBLIN  3
 #define RNGPARAM_UBLIN  3

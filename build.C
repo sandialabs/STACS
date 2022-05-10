@@ -1134,6 +1134,9 @@ std::vector<real_t> Netdata::BuildEdgState(idx_t modidx, real_t dist, idx_t sour
     else if (modeldata[modidx].statetype[j] == RNGTYPE_LBNORM) {
       rngstate[j] = rnglbnorm(modeldata[modidx].stateparam[j].data());
     }
+    else if (modeldata[modidx].statetype[j] == RNGTYPE_LBLOGNORM) {
+      rngstate[j] = rnglblognorm(modeldata[modidx].stateparam[j].data());
+    }
     else if (modeldata[modidx].statetype[j] == RNGTYPE_LIN) {
       rngstate[j] = rnglin(modeldata[modidx].stateparam[j].data(), dist);
     }
@@ -1186,6 +1189,9 @@ std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
     }
     else if (modeldata[modidx].sticktype[j] == RNGTYPE_LBNORM) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglbnorm(modeldata[modidx].stickparam[j].data()));
+    }
+    else if (modeldata[modidx].statetype[j] == RNGTYPE_LBLOGNORM) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblognorm(modeldata[modidx].stickparam[j].data()));
     }
     else if (modeldata[modidx].sticktype[j] == RNGTYPE_LIN) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglin(modeldata[modidx].stickparam[j].data(), dist));
