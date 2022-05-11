@@ -433,6 +433,49 @@ void Netdata::Build(mGraph *msg) {
             // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
             unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(e*32768));
             std::mt19937 rngsample(sampleseed);
+            std::uniform_real_distribution<real_t> sampleunifdist;
+            // want to make sure sample number is less than source order
+            CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
+            adjcyset[i].clear();
+            // From: https://stackoverflow.com/questions/53632441/c-sampling-from-discrete-distribution-without-replacement
+            std::vector<real_t> sourcevals;
+            for (auto iter : sourceweights) {
+              sourcevals.push_back(std::pow(sampleunifdist(rngsample), 1. / iter));
+            }
+            // Sorting vals, but retain the indices. 
+            // There is unfortunately no easy way to do this with STL.
+            std::vector<std::pair<idx_t, real_t>> valswithindices;
+            for (std::size_t iter = 0; iter < sourcevals.size(); iter++) {
+              valswithindices.emplace_back(iter, sourcevals[iter]);
+            }
+            std::sort(valswithindices.begin(), valswithindices.end(), [](std::pair<idx_t,real_t> x, std::pair<idx_t,real_t> y) {return x.second > y.second; });
+            for (idx_t iter = 0; iter < edges[e].maskparam[k][1]; iter++) {
+              idx_t sourceorder = valswithindices[iter].first;
+              // Convert from population index to global index
+              idx_t globalsourceidx = 0;
+              // TODO: this is highly innefficient...
+              for (int prt = 0; prt < netparts; ++prt) {
+                if (sourceorder >= xpopidxprt[edges[e].source-1][prt] && sourceorder < xpopidxprt[edges[e].source-1][prt+1]) {
+                  globalsourceidx = xvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopidxprt[edges[e].source-1][prt]);
+                  break;
+                }
+              }
+              if (globalsourceidx == globalthisidx) {// || adjcyset[i].find(globalsourceidx) == adjcyset[i].end()) {
+                continue;
+              } else {
+                adjcy[i].push_back(globalsourceidx);
+                adjcyset[i].insert(globalsourceidx); // The set is useful for faster searching of edge existence
+                edgmodidx[i].push_back(edges[e].modidx);
+                // The state/stick will need to be reparameterized with correct distance information later
+                state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceorder, vtxordidx[i]));
+                stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceorder, vtxordidx[i]));
+              }
+            }
+            /*
+            // pick the seed based on the targetidx so it is consistent across cores
+            // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
+            unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(e*32768));
+            std::mt19937 rngsample(sampleseed);
             // want to make sure sample number is less than source order
             CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
             adjcyset[i].clear();
@@ -460,6 +503,7 @@ void Netdata::Build(mGraph *msg) {
                 stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceorder, vtxordidx[i]));
               }
             }
+            */
           }
           else if (edges[e].conntype[k] == CONNTYPE_SMPL_ANORM) {
             // Sample sourceidx from the source vertex population order
