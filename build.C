@@ -426,7 +426,9 @@ void Netdata::Build(mGraph *msg) {
             std::vector<real_t> sourceweights(edges[e].maskparam[k][0]);
             for (idx_t j = 0; j < edges[e].maskparam[k][0]; ++j) {
               // (x_i - x_j)^2 / var(x_ij)
-              real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
+              //real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
+              real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxmodidx[i]-1].param[0]/vertices[vtxmodidx[i]-1].order)
+                  - (((real_t) j)*vertices[edges[e].target[0]-1].param[0]/vertices[edges[e].target[0]-1].order));
               sourceweights[j] = std::exp(-(x_ij*x_ij)/(2*edges[e].probparam[k][0])); // Don't worry about normalizing
             }
             // pick the seed based on the targetidx so it is consistent across cores
@@ -512,7 +514,9 @@ void Netdata::Build(mGraph *msg) {
             for (idx_t j = 0; j < edges[e].maskparam[k][0]; ++j) {
               // ((x_i - x_j)^2 / var(x_ij)) - ((x_i - x_j)^2 / var(x_ij)/2)
               // Not using variance-y for this for now (needs additional information)
-              real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
+              //real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
+              real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxmodidx[i]-1].param[0]/vertices[vtxmodidx[i]-1].order)
+                  - (((real_t) j)*vertices[edges[e].target[0]-1].param[0]/vertices[edges[e].target[0]-1].order));
               real_t var = edges[e].probparam[k][0];
               // Normalizing a bit more important here
               real_t wgt = std::exp(-(x_ij*x_ij)/(2*var))/std::sqrt(var) *
