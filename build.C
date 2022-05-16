@@ -427,8 +427,9 @@ void Netdata::Build(mGraph *msg) {
             for (idx_t j = 0; j < edges[e].maskparam[k][0]; ++j) {
               // (x_i - x_j)^2 / var(x_ij)
               //real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
+              CkAssert(vertices[edges[e].source-1].order == edges[e].maskparam[k][0]);
               real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxmodidx[i]-1].param[0]/vertices[vtxmodidx[i]-1].order)
-                  - (((real_t) j)*vertices[edges[e].target[0]-1].param[0]/vertices[edges[e].target[0]-1].order));
+                  - (((real_t) j)*vertices[edges[e].source-1].param[0]/vertices[edges[e].source-1].order));
               sourceweights[j] = std::exp(-(x_ij*x_ij)/(2*edges[e].probparam[k][0])); // Don't worry about normalizing
             }
             // pick the seed based on the targetidx so it is consistent across cores
@@ -515,8 +516,9 @@ void Netdata::Build(mGraph *msg) {
               // ((x_i - x_j)^2 / var(x_ij)) - ((x_i - x_j)^2 / var(x_ij)/2)
               // Not using variance-y for this for now (needs additional information)
               //real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
+              CkAssert(vertices[edges[e].source-1].order == edges[e].maskparam[k][0]);
               real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxmodidx[i]-1].param[0]/vertices[vtxmodidx[i]-1].order)
-                  - (((real_t) j)*vertices[edges[e].target[0]-1].param[0]/vertices[edges[e].target[0]-1].order));
+                  - (((real_t) j)*vertices[edges[e].source-1].param[0]/vertices[edges[e].source-1].order));
               real_t var = edges[e].probparam[k][0];
               // Normalizing a bit more important here
               real_t wgt = std::exp(-(x_ij*x_ij)/(2*var))/std::sqrt(var) *
@@ -668,7 +670,7 @@ void Netdata::Connect(mConn *msg) {
   // Sanity check
   CkAssert(msg->datidx == cpdat);
   // Some basic information on what's being connected
-  CkPrintf("  Connecting %d to %d\n", datidx, msg->datidx);
+  //CkPrintf("  Connecting %d to %d\n", datidx, msg->datidx);
 
   // Add to vtxdist
   vtxdist[cpdat+1] = vtxdist[cpdat] + msg->nvtx;
@@ -1273,7 +1275,7 @@ void Netdata::ConnectNone(mConnNone *msg) {
   // Sanity check
   CkAssert(msg->datidx == cpdat);
   // Some basic information on what's being connected
-  CkPrintf("  Connecting %d to %d\n", datidx, msg->datidx);
+  //CkPrintf("  Connecting %d to %d\n", datidx, msg->datidx);
   
   // Go through the vertices
   for (idx_t j = 0; j < msg->nvtx; ++j) {
@@ -1344,22 +1346,20 @@ void Netdata::ConnectNone(mConnNone *msg) {
         stick[i][j+1] = edgorder[j].stick;
       }
     }
-    /*
     // Print memory allocated
     int adjcysize = 0;
     int adjcycap = 0;
     int edgmodsize = 0;
     int edgmodcap = 0;
     for (size_t i = 0; i < adjcy.size(); ++i) {
-      adjcy[i].shrink_to_fit();
-      edgmodidx[i].shrink_to_fit();
+      //adjcy[i].shrink_to_fit();
+      //edgmodidx[i].shrink_to_fit();
       adjcysize += adjcy[i].size();
       adjcycap += adjcy[i].capacity();
       edgmodsize += edgmodidx[i].size();
       edgmodcap += edgmodidx[i].capacity();
     }
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
-    */
     contribute(0, NULL, CkReduction::nop);
   }
   // Request data from next part
@@ -1439,7 +1439,7 @@ mConnNone* Netdata::BuildConnNone(idx_t reqidx) {
     // Add none connections to size
     nsizedat += adjcyconnnone[i].size();
   }
-  CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx ", adj: %" PRIidx "\n", reqidx, globalsource_min, globalsource_max, nsizedat);
+  //CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx ", adj: %" PRIidx "\n", reqidx, globalsource_min, globalsource_max, nsizedat);
 
   // Initialize connection message
   int msgSize[MSG_ConnNone];
