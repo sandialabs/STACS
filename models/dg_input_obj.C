@@ -10,6 +10,11 @@
 #include "yaml-cpp/yaml.h"
 
 /**************************************************************************
+* Charm++ Read-Only Variables
+**************************************************************************/
+extern /*readonly*/ std::string netwkdir;
+
+/**************************************************************************
 * Class declaration
 **************************************************************************/
 class DGInputObject : public ModelTmpl < 66, DGInputObject > {
@@ -41,6 +46,9 @@ class DGInputObject : public ModelTmpl < 66, DGInputObject > {
   
   private:
     YAML::Node input;
+    int traj_index;
+    tick_t tinterval;
+    tick_t tupdate;
 };
 
 
@@ -76,15 +84,27 @@ tick_t DGInputObject::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
 // Open ports
 //
 void DGInputObject::OpenPorts() {
+  char ymlfile[100];
+  sprintf(ymlfile, "%s/%s", netwkdir.c_str(), portname[0].c_str());
   // Load input file
-  CkPrintf("Reading input from %s\n", portname[0].c_str());
+  CkPrintf("Reading input from %s\n", ymlfile);
   try {
-    input = YAML::LoadFile(portname[0].c_str());
+    input = YAML::LoadFile(ymlfile);
   } catch (YAML::BadFile& e) {
     CkPrintf("  %s\n", e.what());
   }
   // Print some information to display
   // Error checking for file formatting
+  real_t tupdate_r;
+  try {
+    tupdate_r = input["update"].as<real_t>();
+  } catch (YAML::RepresentationException& e) {
+    tupdate_r = 100.0; // default of 100ms
+  }
+  CkPrintf("  object update set at: %.2g ms\n", tupdate_r);
+  tinterval = (tick_t)(tupdate_r*TICKS_PER_MS);
+  tupdate = 0;
+  traj_index = 0;
 }
 
 // Close ports
