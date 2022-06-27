@@ -69,31 +69,39 @@ tick_t DGIzhiPoisson::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
   // for numerical stability, use timestep (at most) = 1ms
   tick_t tickstep = (tdiff > TICKS_PER_MS ? TICKS_PER_MS : tdiff);
   real_t tstep = ((real_t) tickstep)/TICKS_PER_MS;
+  
   // update state
-  if ((tstep*state[3]/1000.0) > (*unifdist)(*rngine)) {
-    state[2] += param[10];
-  }
   real_t k = param[7] + param[8]*std::tanh(state[0] - param[0]);
   state[0] = state[0] + (tstep/2)*(k*(state[0] - param[1])*(state[0] - param[0]) - state[1] + state[2])/param[2];
   state[0] = state[0] + (tstep-tstep/2)*(k*(state[0] - param[1])*(state[0] - param[0]) - state[1] + state[2])/param[2];
   state[1] = state[1] + tstep*param[3]*(param[4]*(state[0] - param[1]) - state[1]);
 
-  // Update applied current
-  state[2] = state[2]*exp(-(tstep/param[9]));
+  // Update applied current (applied current is constant)
+  //state[2] = state[2]*exp(-(tstep/param[9]));
 
   // if spike occured, generate event
   if (state[0] >= param[0]) {
     // reset
     state[0] = param[5];
     state[1] = state[1] + param[6];
-  }
-  
-  if ((tstep*state[3]/1000.0) > (*unifdist)(*rngine)) {
+    
     // generate events
     event_t event;
     event.diffuse = tdrift + tickstep;
     event.type = EVENT_SPIKE;
-    event.source = REMOTE_EDGES | LOCAL_EDGES;
+    event.source = REMOTE_EDGES;
+    event.index = 0;
+    event.data = 0.0;
+    events.push_back(event);
+  }
+  
+  // Poisson spiking (set rate to 0 if going through I_app)
+  if (state[3] > 0.0 && (tstep*state[3]/1000.0) > (*unifdist)(*rngine)) {
+    // generate events
+    event_t event;
+    event.diffuse = tdrift + tickstep;
+    event.type = EVENT_SPIKE;
+    event.source = REMOTE_EDGES;
     event.index = 0;
     event.data = 0.0;
     events.push_back(event);
@@ -105,8 +113,4 @@ tick_t DGIzhiPoisson::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
 // Simulation jump
 //
 void DGIzhiPoisson::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
-  if (event.type == EVENT_STIM) {
-    // Add stim to applied current
-    //state[0][4] += event.data;
-  }
 }

@@ -22,7 +22,9 @@ class DGInputLocation : public ModelTmpl < 65, DGInputLocation > {
     /* Constructor */
     DGInputLocation() {
       // parameters
-      paramlist.resize(0);
+      paramlist.resize(2);
+      paramlist[0] = "I_rheo";
+      paramlist[1] = "loc_mult";
       // states
       statelist.resize(0);
       // sticks
@@ -52,6 +54,11 @@ class DGInputLocation : public ModelTmpl < 65, DGInputLocation > {
     tick_t tinterval;
     tick_t tupdate;
     // Grid cell variables
+    std::vector<real_t> loc_act;
+    std::vector<real_t> lambda;
+    std::vector<real_t> theta;
+    std::vector<real_t> psi_x;
+    std::vector<real_t> psi_y;
 };
 
 
@@ -69,26 +76,33 @@ tick_t DGInputLocation::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& s
     real_t x = trajectory[traj_index][0];
     real_t y = trajectory[traj_index][1];
     //CkPrintf("  updated location: %" PRIreal ", %" PRIreal "\n", x, y);
+    event_t event;
+    event.diffuse = tdrift + tdiff;
+    event.type = EVENT_STIM;
+    event.source = REMOTE_EDGES;
 
-    /*
-    for (idx_t i = 0; i < targets.size(); ++i) {
+    // Compute grid cell activation
+    for (std::size_t i = 0; i < loc_act.size(); ++i) {
+      k1 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI/12) + std::sin(theta[i]+M_PI/12))*(x - psi_x[i]) +
+                                            (std::cos(theta[i]+M_PI/12) - std::sin(theta[i]+M_PI/12))*(y - psi_y[i]));
+      k2 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI*5/12) + std::sin(theta[i]+M_PI*5/12))*(x - psi_x[i]) +
+                                            (std::cos(theta[i]+M_PI*5/12) - std::sin(theta[i]+M_PI*5/12))*(y - psi_y[i]));
+      k3 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI*3/4) + std::sin(theta[i]+M_PI*3/4))*(x - psi_x[i]) +
+                                            (std::cos(theta[i]+M_PI*3/4) - std::sin(theta[i]+M_PI*3/4))*(y - psi_y[i]));
+      grid_act = 2/3*((std::cos(k1) + std::cos(k2) + std::cos(k3))/3+0.5);
+
+      I_loc = param[0]*param[1]*loc_act[i]*grid_act;
+      
       // generate events
-      event_t event;
-      event.diffuse = tdrift + tdiff;
-      event.type = EVENT_CHGRATE;
-      event.source = REMOTE_EDGES;
       event.index = i;
-      if (rates[i] != old_rates[i]) {
-        old_rates[i] = rates[i];
-        event.data = rates[i];
-        events.push_back(event);
-      }
+      event.data = I_loc;
+      events.push_back(event);
     }
-    */
 
     // Update time for next eval
     tupdate = tdrift + tinterval;
     ++traj_index;
+    if (traj_index >= trajectory.size()) { traj_index = 0 }
   }
 
   return tdiff;
@@ -122,9 +136,35 @@ void DGInputLocation::OpenPorts() {
     trajectory = input["trajectory"].as<std::vector<std::vector<real_t>>>();
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  warning: trajectory not defined\n");
-    trajectory = {{0.0,0.0}};
+    trajectory = {{0.0,0.0,0.0}};
   }
   CkPrintf("  trajectory length: %d\n", trajectory.size());
+  try {
+    loc_act = input["loc_act"].as<std::vector<real_t>>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  warning: grid cell activity distribution not defined\n");
+  }
+  try {
+    lambda = input["lambda"].as<std::vector<real_t>>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  warning: grid cell spatial scales not defined\n");
+  }
+  try {
+    theta = input["theta"].as<std::vector<real_t>>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  warning: grid cell orientation not defined\n");
+  }
+  try {
+    psi_x = input["psi_x"].as<std::vector<real_t>>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  warning: grid cell offset x not defined\n");
+  }
+  try {
+    psi_y = input["psi_y"].as<std::vector<real_t>>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  warning: grid cell offset y not defined\n");
+  }
+  CkPrintf("  grid neurons: %d\n", loc_act.size());
 }
 
 // Close ports

@@ -22,7 +22,9 @@ class DGInputObject : public ModelTmpl < 66, DGInputObject > {
     /* Constructor */
     DGInputObject() {
       // parameters
-      paramlist.resize(0);
+      paramlist.resize(2);
+      paramlist[0] = "I_rheo";
+      paramlist[1] = "obj_mult";
       // states
       statelist.resize(0);
       // sticks
@@ -46,9 +48,15 @@ class DGInputObject : public ModelTmpl < 66, DGInputObject > {
   
   private:
     YAML::Node input;
+    // Trajectory variables
+    std::vector<std::vector<real_t>> trajectory;
     int traj_index;
     tick_t tinterval;
     tick_t tupdate;
+    // Obj cell variables
+    std::vector<std::vector<real_t>> object_location;
+    std::vector<real_t> obj_act;
+    std::vector<real_t> obj_pref;
 };
 
 
@@ -62,21 +70,37 @@ class DGInputObject : public ModelTmpl < 66, DGInputObject > {
 tick_t DGInputObject::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
   // Work with the input to compute spike rates
   // dependent on object salience
-  /*
-  for (idx_t i = 0; i < targets.size(); ++i) {
-    // generate events
+  if (tdrift >= tupdate) {
+    real_t x = trajectory[traj_index][0];
+    real_t y = trajectory[traj_index][1];
+    //CkPrintf("  updated location: %" PRIreal ", %" PRIreal "\n", x, y);
     event_t event;
     event.diffuse = tdrift + tdiff;
-    event.type = EVENT_CHGRATE;
+    event.type = EVENT_STIM;
     event.source = REMOTE_EDGES;
-    event.index = i;
-    if (rates[i] != old_rates[i]) {
-      old_rates[i] = rates[i];
-      event.data = rates[i];
+
+    // Compute salience cell activation
+    for (std::size_t i = 0; i < obj_act.size(); ++i) {
+      real_t theta = std::atan2(trajectory[traj_index][1] - object_location[obj_pref[i]][1],
+                                trajectory[traj_index][0] - object_location[obj_pref[i]][0]) - trajectory[traj_index][2];
+      real_t dist = std::sqrt((trajectory[traj_index][0] - object_location[obj_pref[i]][0]) * 
+                              (trajectory[traj_index][0] - object_location[obj_pref[i]][0]) +
+                              (trajectory[traj_index][1] - object_location[obj_pref[i]][1]) *
+                              (trajectory[traj_index][1] - object_location[obj_pref[i]][1]));
+      real_t salience_act = exp(-dist*theta*theta);
+      I_obj = param[0]*param[1]*obj_act[i]*salience_act;
+      
+      // generate events
+      event.index = i;
+      event.data = I_obj;
       events.push_back(event);
     }
+    
+    // Update time for next eval
+    tupdate = tdrift + tinterval;
+    ++traj_index;
+    if (traj_index >= trajectory.size()) { traj_index = 0 }
   }
-  */
 
   return tdiff;
 }
@@ -105,6 +129,26 @@ void DGInputObject::OpenPorts() {
   tinterval = (tick_t)(tupdate_r*TICKS_PER_MS);
   tupdate = 0;
   traj_index = 0;
+  try {
+    trajectory = input["trajectory"].as<std::vector<std::vector<real_t>>>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  warning: trajectory not defined\n");
+    trajectory = {{0.0,0.0,0.0}};
+  }
+  CkPrintf("  trajectory length: %d\n", trajectory.size());
+  try {
+    object_location = input["object_location"].as<std::vector<std::vector<real_t>>>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  warning: objects not defined\n");
+    object_location = {{0.0,0.0}};
+  }
+  CkPrintf("  number of objects: %d\n", object_location.size());
+  try {
+    obj_act = input["obj_act"].as<std::vector<real_t>>();
+  } catch (YAML::RepresentationException& e) {
+    CkPrintf("  warning: object cell activity distribution not defined\n");
+  }
+  CkPrintf("  object neurons: %d\n", obj_act.size());
 }
 
 // Close ports
