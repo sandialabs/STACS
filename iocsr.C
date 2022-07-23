@@ -852,6 +852,9 @@ int Netdata::ReadDataCSV(datafile_t &datafile) {
     idx_t i = 0;
     for (;;) {
       // check for empty element
+      // TODO: is this robust enough?
+      while (isspace(oldstr[0])) { ++oldstr; }
+      while (oldstr[0] == ',') { ++oldstr; ++i; }
       // element
       real_t element;
       element = strtoreal(oldstr, &newstr);
@@ -859,10 +862,6 @@ int Netdata::ReadDataCSV(datafile_t &datafile) {
       // Add element to row
       row.emplace(i, element);
       //CkPrintf("  %" PRIidx ", %" PRIidx ": %" PRIreal "\n", i, j, element);
-      // check for next element
-      // TODO: is this robust enough?
-      while (isspace(oldstr[0])) { ++oldstr; }
-      while (oldstr[0] == ',') { ++oldstr; ++i; }
       // check for end of line (added by fgets)
       if (oldstr[0] == '\0') { break; }
     }

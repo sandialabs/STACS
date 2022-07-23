@@ -77,6 +77,12 @@ Main::Main(CkArgMsg *msg) {
     CkPrintf("Error reading model information...\n");
     CkExit();
   }
+      
+  // Read graph information
+  if (ReadGraph()) {
+    CkPrintf("Error reading graph specification...\n");
+    CkExit();
+  }
   
   // Charm information
   mainProxy = thisProxy;
@@ -134,18 +140,12 @@ void Main::Control() {
       CkPrintf("Building network\n");
       buildflag = false;
 
-      // Read graph information
-      if (ReadGraph()) {
-        CkPrintf("Error reading graph specification...\n");
-        CkExit();
-      }
-      mGraph *mgraph = BuildGraph();
-  
       // Start timer
       wcstart = std::chrono::system_clock::now();
 
       // Build Network
       CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+      mGraph *mgraph = BuildGraph();
       netdata.Build(mgraph);
       netdata.ckSetReductionClient(&cbcontrol);
     }

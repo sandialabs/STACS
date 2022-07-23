@@ -757,14 +757,15 @@ idx_t Netdata::MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t
             }
             else if (edges[i].conntype[k] == CONNTYPE_FILE) {
               // Check to see if it's in the file list
+              // Dimensions are stored: targetdim x sourcedim
               // set mask to 1 if there is a non-zero entry
               // TODO: make sure file-based connections completely override
               //       other connection types (or make them mutually exclusive)
-              if (sourceidx >= datafiles[(idx_t) (edges[i].probparam[k][0])].matrix.size()) {
+              if (targetidx >= datafiles[(idx_t) (edges[i].probparam[k][0])].matrix.size()) {
                 CkPrintf("  error: datafile %s does not have row for %" PRIidx "\n",
-                         datafiles[(idx_t) (edges[i].probparam[k][0])].filename.c_str(), sourceidx);
-              } else if (datafiles[(idx_t) (edges[i].probparam[k][0])].matrix[sourceidx].find(targetidx) ==
-                         datafiles[(idx_t) (edges[i].probparam[k][0])].matrix[sourceidx].end()) {
+                         datafiles[(idx_t) (edges[i].probparam[k][0])].filename.c_str(), targetidx);
+              } else if (datafiles[(idx_t) (edges[i].probparam[k][0])].matrix[targetidx].find((real_t) sourceidx) ==
+                         datafiles[(idx_t) (edges[i].probparam[k][0])].matrix[targetidx].end()) {
                 prob = 0.0;
                 mask = 0;
               } else {
