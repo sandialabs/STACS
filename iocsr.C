@@ -851,7 +851,7 @@ int Netdata::ReadDataCSV(datafile_t &datafile) {
     // read in columns (comma delimited)
     idx_t i = 0;
     for (;;) {
-      // check for empty element
+      // check for empty element at beginning of file
       // TODO: is this robust enough?
       while (isspace(oldstr[0])) { ++oldstr; }
       while (oldstr[0] == ',') { ++oldstr; ++i; }
@@ -862,6 +862,9 @@ int Netdata::ReadDataCSV(datafile_t &datafile) {
       // Add element to row
       row.emplace(i, element);
       //CkPrintf("  %" PRIidx ", %" PRIidx ": %" PRIreal "\n", i, j, element);
+      // check for empty element (again)
+      while (isspace(oldstr[0])) { ++oldstr; }
+      while (oldstr[0] == ',') { ++oldstr; ++i; }
       // check for end of line (added by fgets)
       if (oldstr[0] == '\0') { break; }
     }
