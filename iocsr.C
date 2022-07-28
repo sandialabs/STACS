@@ -855,6 +855,8 @@ int Netdata::ReadDataCSV(datafile_t &datafile) {
       // TODO: is this robust enough?
       while (isspace(oldstr[0])) { ++oldstr; }
       while (oldstr[0] == ',') { ++oldstr; ++i; }
+      // check for end of line (added by fgets)
+      if (oldstr[0] == '\0') { break; }
       // element
       real_t element;
       element = strtoreal(oldstr, &newstr);
