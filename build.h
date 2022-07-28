@@ -74,5 +74,9 @@
 #define PROBPARAM_SMPL  1
 #define MASKPARAM_SMPL  2
 
+#define FT_DEFAULT      "csv-sparse"
+#define FT_CSV_SPARSE   0
+#define FT_CSV_DENSE    1
+
 #endif //__STACS_BUILD_H__
 

@@ -150,9 +150,10 @@ mModel* Main::BuildModel() {
   msgSize[22] = nport;             // port
   msgSize[23] = datafiles.size()+1;  // xdatafiles
   msgSize[24] = ndatafile;           // datafiles
-  msgSize[25] = models.size();     // grpactive
-  msgSize[26] = models.size();     // grpmother
-  msgSize[27] = models.size();     // grpanchor
+  msgSize[25] = ndatafile;           // datatypes
+  msgSize[26] = models.size();     // grpactive
+  msgSize[27] = models.size();     // grpmother
+  msgSize[28] = models.size();     // grpanchor
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = models.size();
@@ -290,6 +291,8 @@ mModel* Main::BuildModel() {
       // datafiles
       mmodel->datafiles[mmodel->xdatafiles[i] + j] = datafiles[i][j];
     }
+    // datatypes
+    mmodel->datatypes[i] = datatypes[i];
   }
 
   // Return model

@@ -39,6 +39,7 @@ module network {
     char port[];
     idx_t xdatafiles[];
     char datafiles[];
+    idx_t datatypes[];
     bool grpactive[];
     bool grpmother[];
     bool grpanchor[];

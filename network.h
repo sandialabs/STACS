@@ -45,6 +45,7 @@ struct edge_t;
 //
 struct datafile_t {
   std::string filename;
+  idx_t filetype;
   // Sparse matrix (can also be used as a vector)
   std::vector<std::unordered_map<idx_t, real_t>> matrix;
 };
@@ -185,7 +186,7 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 28
+#define MSG_Model 29
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;     // model index identifier
@@ -213,6 +214,7 @@ class mModel : public CMessage_mModel {
     char *port;        // network port name
     idx_t *xdatafiles;  // prefix sum for filenames
     char *datafiles;    // filenames (concatenated)
+    idx_t *datatypes;   // data filetypes
     bool *grpactive;   // polychronization (active)
     bool *grpmother;   // polychronization (mother)
     bool *grpanchor;   // polychronization (anchor)
@@ -556,6 +558,7 @@ class Netdata : public CBase_Netdata {
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
+    int ReadDataCSVSparse(datafile_t &datafile);
 
     /* Loading */
     void LoadData(mDist *msg);

@@ -808,7 +808,7 @@ void Netdata::WriteEstimate() {
 }
 
 /**************************************************************************
-* GeNet (network data files)
+* GeNet (network data files) (dense)
 **************************************************************************/
 
 
@@ -865,6 +865,90 @@ int Netdata::ReadDataCSV(datafile_t &datafile) {
       // check for empty element (again)
       while (isspace(oldstr[0])) { ++oldstr; }
       while (oldstr[0] == ',') { ++oldstr; ++i; }
+      // check for end of line (added by fgets)
+      if (oldstr[0] == '\0') { break; }
+    }
+    // Add to matrix
+    datafile.matrix.push_back(row);
+  }
+
+  // Cleanup
+  fclose(pData);
+  delete[] line;
+
+  return 0;
+}
+
+/**************************************************************************
+* GeNet (network data files) (sparse)
+**************************************************************************/
+
+
+// Read data file (csv)
+//
+int Netdata::ReadDataCSVSparse(datafile_t &datafile) {
+  FILE *pData;
+  char csvfile[100];
+  char *line;
+  char *oldstr, *newstr;
+
+  // Prepare buffer
+  line = new char[MAXLINE];
+
+  // Open files for reading
+  // TODO: single-node file reads instead of per-process
+  //       integrate this with MPI-IO?
+  sprintf(csvfile, "%s/%s", netwkdir.c_str(), datafile.filename.c_str());
+  pData = fopen(csvfile,"r");
+  if (pData == NULL || line == NULL) {
+    CkPrintf("Error opening file for reading\n");
+    return 1;
+  }
+
+  // Initialize matrix
+  datafile.matrix.clear();
+
+  // Read csv into matrix
+  // Dimensions are stored: targetdim x condensed sparse rows of source
+  //                        as sourceidx:datavalue (data is optional)
+  // TODO: transpose the input file when reading?
+  //       storage in csr-target-major order makes a
+  //       single-threaded read-distribute more practical
+  for (idx_t j = 0;; ++j) {
+    // read in row
+    while(fgets(line, MAXLINE, pData) && line[0] == '%');
+    if (feof(pData)) { break; }
+    oldstr = line;
+    newstr = NULL;
+    std::unordered_map<idx_t, real_t> row;
+    for (;;) {
+      // check for empty element at beginning of file
+      // TODO: is this robust enough?
+      while (isspace(oldstr[0])) { ++oldstr; }
+      while (oldstr[0] == ',') { ++oldstr; }
+      // source index
+      idx_t sourceidx;
+      sourceidx = strtoidx(oldstr, &newstr, 10);
+      oldstr = newstr;
+      // Skip the colon
+      while (isspace(oldstr[0])) { ++oldstr; }
+      while (oldstr[0] == ':') { ++oldstr; }
+      // element
+      real_t element;
+      // also handle no element case
+      if (oldstr[0] == ',' || oldstr[0] == '\0') {
+        element = 0.0;
+      }
+      else {
+        element = strtoreal(oldstr, &newstr);
+        oldstr = newstr;
+      }
+      // Add element to row
+      row.emplace(sourceidx, element);
+      //CkPrintf("  %" PRIidx ", %" PRIidx ": %" PRIreal "\n", sourceidx, j, element);
+      // check for empty element (again)
+      while (isspace(oldstr[0])) { ++oldstr; }
+      while (oldstr[0] == ',') { ++oldstr; }
       // check for end of line (added by fgets)
       if (oldstr[0] == '\0') { break; }
     }

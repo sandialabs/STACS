@@ -357,6 +357,7 @@ int Main::ReadModel() {
   modmap[std::string("none")] = 0;
   // Data file names
   datafiles.clear();
+  datatypes.clear();
 
   // Get model data
   for (std::size_t i = 0; i < modfile.size(); ++i) {
@@ -929,6 +930,25 @@ int Main::ReadModel() {
           }
         }
         else if (rngtype == "file") {
+          // File type information
+          std::string filetype;
+          try {
+            filetype = state[j]["filetype"].as<std::string>();
+          } catch (YAML::RepresentationException& e) {
+            // Default
+            filetype = FT_DEFAULT;
+          }
+          if (filetype == "csv-sparse") {
+            datatypes.push_back(FT_CSV_SPARSE);
+          }
+          else if (filetype == "csv-dense") {
+            datatypes.push_back(FT_CSV_DENSE);
+          }
+          else {
+            CkPrintf("  error: '%s' unsupported file type\n", filetype.c_str());
+            return 1;
+          }
+          // Get the filename and index into the datafile list
           if (reptype == "tick") {
             // From file
             models[i].sticktype[jstick] = RNGTYPE_FILE;
@@ -1432,6 +1452,24 @@ int Main::ReadGraph() {
           datafiles.push_back(conn[j]["filename"].as<std::string>());
         } catch (YAML::RepresentationException& e) {
           CkPrintf("  connect file name: %s\n", e.what());
+          return 1;
+        }
+        // File type information
+        std::string filetype;
+        try {
+          filetype = conn[j]["filetype"].as<std::string>();
+        } catch (YAML::RepresentationException& e) {
+          // Default
+          filetype = FT_DEFAULT;
+        }
+        if (filetype == "csv-sparse") {
+          datatypes.push_back(FT_CSV_SPARSE);
+        }
+        else if (filetype == "csv-dense") {
+          datatypes.push_back(FT_CSV_DENSE);
+        }
+        else {
+          CkPrintf("  error: '%s' unsupported file type\n", filetype.c_str());
           return 1;
         }
       }

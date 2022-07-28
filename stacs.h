@@ -171,6 +171,7 @@ class Main : public CBase_Main {
     std::vector<model_t> models;
     std::unordered_map<std::string, std::size_t> modmap; // maps model name to object index
     std::vector<std::string> datafiles;
+    std::vector<idx_t> datatypes;
     /* Graph information */
     std::vector<vertex_t> vertices;
     std::vector<edge_t> edges;

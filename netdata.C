@@ -277,10 +277,22 @@ Netdata::Netdata(mModel *msg) {
   for (std::size_t i = 0; i < datafiles.size(); ++i) {
     // filename
     datafiles[i].filename = std::string(msg->datafiles + msg->xdatafiles[i], msg->datafiles + msg->xdatafiles[i+1]);
-    // read in data (as matrix)
-    if (ReadDataCSV(datafiles[i])) {
-      CkPrintf("Error reading data file %s...\n", datafiles[i].filename.c_str());
-      CkExit();
+    // sparse flag
+    datafiles[i].filetype = msg->datatypes[i];
+    // TODO: mabye combine the two functions in ReadDataCSV?
+    if (datafiles[i].filetype == FT_CSV_SPARSE) {
+      // read in data (as csr if sparse flag set)
+      if (ReadDataCSVSparse(datafiles[i])) {
+        CkPrintf("Error reading data file %s...\n", datafiles[i].filename.c_str());
+        CkExit();
+      }
+    }
+    else if (datafiles[i].filetype == FT_CSV_DENSE) {
+      // read in data (as matrix)
+      if (ReadDataCSV(datafiles[i])) {
+        CkPrintf("Error reading data file %s...\n", datafiles[i].filename.c_str());
+        CkExit();
+      }
     }
   }
   
