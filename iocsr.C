@@ -926,6 +926,8 @@ int Netdata::ReadDataCSVSparse(datafile_t &datafile) {
       // TODO: is this robust enough?
       while (isspace(oldstr[0])) { ++oldstr; }
       while (oldstr[0] == ',') { ++oldstr; }
+      // check for end of line (added by fgets)
+      if (oldstr[0] == '\0') { break; }
       // source index
       idx_t sourceidx;
       sourceidx = strtoidx(oldstr, &newstr, 10);
@@ -933,6 +935,7 @@ int Netdata::ReadDataCSVSparse(datafile_t &datafile) {
       // Skip the colon
       while (isspace(oldstr[0])) { ++oldstr; }
       while (oldstr[0] == ':') { ++oldstr; }
+      while (isspace(oldstr[0])) { ++oldstr; }
       // element
       real_t element;
       // also handle no element case
