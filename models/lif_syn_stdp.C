@@ -14,10 +14,12 @@ class LIFSynSTDP : public ModelTmpl < 36, LIFSynSTDP > {
     /* Constructor */
     LIFSynSTDP() {
       // parameters
-      paramlist.resize(3);
+      paramlist.resize(5);
       paramlist[0] = "wmax";
       paramlist[1] = "tau";
       paramlist[2] = "update";
+      paramlist[3] = "a_p";
+      paramlist[4] = "a_n";
       // states
       statelist.resize(4);
       statelist[0] = "weight";
@@ -78,7 +80,7 @@ void LIFSynSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& st
       // Depress weight
       state[e][1] += state[e][3];
       // Reset trace to 0.1 when pre-synaptic neuron fires
-      state[e][2] = 0.1;
+      state[e][2] = param[3];
       // Update last event value for calculating trace
       stick[e][1] = event.diffuse;
     }
@@ -90,7 +92,7 @@ void LIFSynSTDP::Jump(const event_t& event, std::vector<std::vector<real_t>>& st
       // Facilitate weight
       state[e][1] += state[e][2];
       // Reset negative trace to -0.12 when post-synaptic neuron fires
-      state[e][3] = -0.12;
+      state[e][3] = -param[4];
       // Update last event value for calculating trace
       stick[e][2] = event.diffuse;
     }
