@@ -159,6 +159,7 @@ Network::Network(mModel *msg) {
   //       that combines into a multi-vertex thing
   // Record spikes
   evtloglist[EVENT_SPIKE] = true;
+  evtloglist[EVENT_CHGRATE] = true;
 
   delete msg;
 

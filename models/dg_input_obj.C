@@ -55,8 +55,7 @@ class DGInputObject : public ModelTmpl < 66, DGInputObject > {
     tick_t tupdate;
     // Obj cell variables
     std::vector<std::vector<real_t>> object_location;
-    std::vector<real_t> obj_act;
-    std::vector<real_t> obj_pref;
+    std::vector<std::vector<real_t>> obj_act;
 };
 
 
@@ -76,22 +75,35 @@ tick_t DGInputObject::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
     //CkPrintf("  updated location: %" PRIreal ", %" PRIreal "\n", x, y);
     event_t event;
     event.diffuse = tdrift + tdiff;
-    event.type = EVENT_STIM;
-    event.source = REMOTE_EDGES;
+    event.type = EVENT_CHGRATE;
+    event.source = REMOTE_EDGE;
 
+    // Figure out which object is going to be attended to (nearest object)
+    int attended_obj = 0;
+    real_t attended_dist =  std::sqrt((trajectory[traj_index][0] - object_location[0][0]) * 
+                                      (trajectory[traj_index][0] - object_location[0][0]) +
+                                      (trajectory[traj_index][1] - object_location[0][1]) *
+                                      (trajectory[traj_index][1] - object_location[0][1]));
+    for (int i = 1; i < obj_act.size(); ++i) {
+      real_t dist = std::sqrt((trajectory[traj_index][0] - object_location[i][0]) * 
+                              (trajectory[traj_index][0] - object_location[i][0]) +
+                              (trajectory[traj_index][1] - object_location[i][1]) *
+                              (trajectory[traj_index][1] - object_location[i][1]));
+      if (dist < attended_dist) {
+        attended_obj = i;
+        attended_dist = dist;
+      }
+    }
     // Compute salience cell activation
-    for (std::size_t i = 0; i < obj_act.size(); ++i) {
-      real_t theta = std::atan2(trajectory[traj_index][1] - object_location[obj_pref[i]][1],
-                                trajectory[traj_index][0] - object_location[obj_pref[i]][0]) - trajectory[traj_index][2];
-      real_t dist = std::sqrt((trajectory[traj_index][0] - object_location[obj_pref[i]][0]) * 
-                              (trajectory[traj_index][0] - object_location[obj_pref[i]][0]) +
-                              (trajectory[traj_index][1] - object_location[obj_pref[i]][1]) *
-                              (trajectory[traj_index][1] - object_location[obj_pref[i]][1]));
-      real_t salience_act = exp(-dist*theta*theta);
-      I_obj = param[0]*param[1]*obj_act[i]*salience_act;
+    for (std::size_t j = 0; j < obj_act[attended_obj].size(); ++j) {
+      // Figure out the rate without discontinuities
+      real_t theta = std::atan2(trajectory[traj_index][1] - object_location[attended_obj][1],
+                                trajectory[traj_index][0] - object_location[attended_obj][0]) - trajectory[traj_index][2];
+      real_t salience_act = exp(-attended_dist*theta*theta);
+      real_t I_obj = param[0]*param[1]*obj_act[attended_obj][j]*salience_act;
       
       // generate events
-      event.index = i;
+      event.index = j;
       event.data = I_obj;
       events.push_back(event);
     }
@@ -99,7 +111,7 @@ tick_t DGInputObject::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
     // Update time for next eval
     tupdate = tdrift + tinterval;
     ++traj_index;
-    if (traj_index >= trajectory.size()) { traj_index = 0 }
+    if (traj_index >= trajectory.size()) { traj_index = 0; }
   }
 
   return tdiff;
@@ -144,7 +156,7 @@ void DGInputObject::OpenPorts() {
   }
   CkPrintf("  number of objects: %d\n", object_location.size());
   try {
-    obj_act = input["obj_act"].as<std::vector<real_t>>();
+    obj_act = input["obj_act"].as<std::vector<std::vector<real_t>>>();
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  warning: object cell activity distribution not defined\n");
   }

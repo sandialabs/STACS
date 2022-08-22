@@ -78,20 +78,20 @@ tick_t DGInputLocation::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& s
     //CkPrintf("  updated location: %" PRIreal ", %" PRIreal "\n", x, y);
     event_t event;
     event.diffuse = tdrift + tdiff;
-    event.type = EVENT_STIM;
-    event.source = REMOTE_EDGES;
+    event.type = EVENT_CHGRATE;
+    event.source = REMOTE_EDGE;
 
     // Compute grid cell activation
     for (std::size_t i = 0; i < loc_act.size(); ++i) {
-      k1 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI/12) + std::sin(theta[i]+M_PI/12))*(x - psi_x[i]) +
+      real_t k1 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI/12) + std::sin(theta[i]+M_PI/12))*(x - psi_x[i]) +
                                             (std::cos(theta[i]+M_PI/12) - std::sin(theta[i]+M_PI/12))*(y - psi_y[i]));
-      k2 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI*5/12) + std::sin(theta[i]+M_PI*5/12))*(x - psi_x[i]) +
+      real_t k2 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI*5/12) + std::sin(theta[i]+M_PI*5/12))*(x - psi_x[i]) +
                                             (std::cos(theta[i]+M_PI*5/12) - std::sin(theta[i]+M_PI*5/12))*(y - psi_y[i]));
-      k3 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI*3/4) + std::sin(theta[i]+M_PI*3/4))*(x - psi_x[i]) +
+      real_t k3 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI*3/4) + std::sin(theta[i]+M_PI*3/4))*(x - psi_x[i]) +
                                             (std::cos(theta[i]+M_PI*3/4) - std::sin(theta[i]+M_PI*3/4))*(y - psi_y[i]));
-      grid_act = 2/3*((std::cos(k1) + std::cos(k2) + std::cos(k3))/3+0.5);
+      real_t grid_act = 2/3*((std::cos(k1) + std::cos(k2) + std::cos(k3))/3+0.5);
 
-      I_loc = param[0]*param[1]*loc_act[i]*grid_act;
+      real_t I_loc = param[0]*param[1]*loc_act[i]*grid_act;
       
       // generate events
       event.index = i;
@@ -102,7 +102,7 @@ tick_t DGInputLocation::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& s
     // Update time for next eval
     tupdate = tdrift + tinterval;
     ++traj_index;
-    if (traj_index >= trajectory.size()) { traj_index = 0 }
+    if (traj_index >= trajectory.size()) { traj_index = 0; }
   }
 
   return tdiff;
