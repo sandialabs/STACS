@@ -422,8 +422,8 @@ void Netdata::Connect(mConn *msg) {
                   else if (edges[e].distype == DISTYPE_PERIRECT) {
                     // TODO: assumes bottom right corner (x,y) starts at 0,0,0
                     // width/height subject to periodic boundary conditions
-                    real_t dx = xyz[i*3] - msg->xyz[j*3];
-                    real_t dy = xyz[i*3+1] - msg->xyz[j*3+1];
+                    real_t dx = std::abs(xyz[i*3] - msg->xyz[j*3]);
+                    real_t dy = std::abs(xyz[i*3+1] - msg->xyz[j*3+1]);
                     if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
                     if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
                     // Distance currently doesn't depend on z
@@ -495,8 +495,8 @@ void Netdata::Connect(mConn *msg) {
                       else if (edges[e].distype == DISTYPE_PERIRECT) {
                         // TODO: assumes bottom right corner (x,y) starts at 0,0,0
                         // width/height subject to periodic boundary conditions
-                        real_t dx = xyz[i*3] - xyz[j*3];
-                        real_t dy = xyz[i*3+1] - xyz[j*3+1];
+                        real_t dx = std::abs(xyz[i*3] - xyz[j*3]);
+                        real_t dy = std::abs(xyz[i*3+1] - xyz[j*3+1]);
                         if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
                         if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
                         // Distance currently doesn't depend on z
@@ -543,8 +543,8 @@ void Netdata::Connect(mConn *msg) {
                   else if (edges[e].distype == DISTYPE_PERIRECT) {
                     // TODO: assumes bottom right corner (x,y) starts at 0,0,0
                     // width/height subject to periodic boundary conditions
-                    real_t dx = xyz[i*3] - xyz[j*3];
-                    real_t dy = xyz[i*3+1] - xyz[j*3+1];
+                    real_t dx = std::abs(xyz[i*3] - xyz[j*3]);
+                    real_t dy = std::abs(xyz[i*3+1] - xyz[j*3+1]);
                     if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
                     if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
                     // Distance currently doesn't depend on z
@@ -625,8 +625,8 @@ void Netdata::Connect(mConn *msg) {
                 else if (edges[e].distype == DISTYPE_PERIRECT) {
                   // TODO: assumes bottom right corner (x,y) starts at 0,0,0
                   // width/height subject to periodic boundary conditions
-                  real_t dx = xyz[i*3] - msg->xyz[j*3];
-                  real_t dy = xyz[i*3+1] - msg->xyz[j*3+1];
+                  real_t dx = std::abs(xyz[i*3] - msg->xyz[j*3]);
+                  real_t dy = std::abs(xyz[i*3+1] - msg->xyz[j*3+1]);
                   if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
                   if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
                   // Distance currently doesn't depend on z
