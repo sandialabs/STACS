@@ -63,6 +63,9 @@ module network {
     idx_t edgtarget[];
     idx_t edgmodidx[];
     real_t edgcutoff[];
+    idx_t edgdistype[];
+    idx_t medgdistparam[];
+    real_t edgdistparam[];
     idx_t xedgconntype[];
     idx_t edgconntype[];
     idx_t medgprobparam[];
@@ -73,6 +76,7 @@ module network {
     idx_t nvtxparam;
     idx_t nedg;
     idx_t nedgtarget;
+    idx_t nedgdistparam;
     idx_t nedgconntype;
     idx_t nedgprobparam;
     idx_t nedgmaskparam;

@@ -101,6 +101,8 @@ struct edge_t {
   std::vector<idx_t> target;
   idx_t modidx;
   real_t cutoff;
+  idx_t distype;
+  std::vector<real_t> distparam;
   std::vector<idx_t> conntype;
   std::vector<std::vector<real_t>> probparam;
   std::vector<std::vector<idx_t>> maskparam;

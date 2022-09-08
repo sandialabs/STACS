@@ -228,7 +228,7 @@ class mModel : public CMessage_mModel {
 
 // Network graph information
 //
-#define MSG_Graph 17
+#define MSG_Graph 20
 class mGraph : public CMessage_mGraph {
   public:
     idx_t *vtxmodidx;     // Which vertex to build (modidx from modmap)
@@ -242,6 +242,9 @@ class mGraph : public CMessage_mGraph {
     idx_t *edgtarget;     // target modidx of edge
     idx_t *edgmodidx;     // modidx of edge
     real_t *edgcutoff;    // cutoff distance of connection
+    idx_t *edgdistype;    // distance function type
+    idx_t *medgdistparam; // distance function sizes
+    real_t *edgdistparam; // distance function parameters
     idx_t *xedgconntype;  // connection type prefix
     idx_t *edgconntype;   // connection type (computes probability threshold)
     idx_t *medgprobparam; // connection probability sizes
@@ -252,6 +255,7 @@ class mGraph : public CMessage_mGraph {
     idx_t nvtxparam;
     idx_t nedg;
     idx_t nedgtarget;
+    idx_t nedgdistparam;
     idx_t nedgconntype;
     idx_t nedgprobparam;
     idx_t nedgmaskparam;

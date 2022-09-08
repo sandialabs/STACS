@@ -25,6 +25,7 @@ void Netdata::Build(mGraph *msg) {
   /* Bookkeeping */
   idx_t jvtxparam;
   idx_t jedgtarget;
+  idx_t jedgdistparam;
   idx_t jedgconntype;
   idx_t jedgprobparam;
   idx_t jedgmaskparam;
@@ -54,6 +55,7 @@ void Netdata::Build(mGraph *msg) {
 
   // initialize counters
   jedgtarget = 0;
+  jedgdistparam = 0;
   jedgconntype = 0;
   jedgprobparam = 0;
   jedgmaskparam = 0;
@@ -64,10 +66,16 @@ void Netdata::Build(mGraph *msg) {
     edges[i].source = msg->edgsource[i];
     edges[i].modidx = msg->edgmodidx[i];
     edges[i].cutoff = msg->edgcutoff[i];
+    edges[i].distype = msg->edgdistype[i];
     
     edges[i].target.resize(msg->xedgtarget[i+1] - msg->xedgtarget[i]);
     for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
       edges[i].target[j] = msg->edgtarget[jedgtarget++];
+    }
+
+    edges[i].distparam.resize(msg->medgdistparam[i]);
+    for (std::size_t j = 0; j < edges[i].distparam.size(); ++j) {
+      edges[i].distparam[j] = msg->edgdistparam[jedgdistparam++];
     }
     
     edges[i].conntype.resize(msg->xedgconntype[i+1] - msg->xedgconntype[i]);
@@ -87,6 +95,7 @@ void Netdata::Build(mGraph *msg) {
   }
   // Sanity checks
   CkAssert(jedgtarget == msg->nedgtarget);
+  CkAssert(jedgdistparam == msg->nedgdistparam);
   CkAssert(jedgconntype == msg->nedgconntype);
   CkAssert(jedgprobparam == msg->nedgprobparam);
   CkAssert(jedgmaskparam == msg->nedgmaskparam);
@@ -383,10 +392,40 @@ void Netdata::Connect(mConn *msg) {
             edgmodidx[i].push_back(modidx);
             // check if state needs to be built from j to i
             if (modidx) {
+              // TODO: find a better mapping from modidx to edges distance function
+              //       and computing distances using helper functions
+              real_t distance = 0.0;
+              for (std::size_t e = 0; e < edges.size(); ++e) {
+                if (modidx == edges[e].modidx) {
+                  if (edges[e].distype == DISTYPE_EUCLIDEAN) {
+                    distance = sqrt((xyz[i*3]-msg->xyz[j*3])*(xyz[i*3]-msg->xyz[j*3])+
+                                    (xyz[i*3+1]-msg->xyz[j*3+1])*(xyz[i*3+1]-msg->xyz[j*3+1])+
+                                    (xyz[i*3+2]-msg->xyz[j*3+2])*(xyz[i*3+2]-msg->xyz[j*3+2]));              
+                  }
+                  else if (edges[e].distype == DISTYPE_SPHERE) {
+                    // TODO: assumes the sphere is centered at 0,0,0
+                    // dist = r*theta = r*acos(dot(a,b)/r^2)
+                    real_t theta = std::acos((xyz[i*3]*msg->xyz[j*3] + xyz[i*3+1]*msg->xyz[j*3+1] + xyz[i*3+2]*msg->xyz[j*3+2])/
+                                             (edges[e].distparam[0]*edges[e].distparam[0]));
+                    distance = edges[e].distparam[0] * theta;
+                  }
+                  else if (edges[e].distype == DISTYPE_PERIRECT) {
+                    // TODO: assumes bottom right corner (x,y) starts at 0,0,0
+                    // width/height subject to periodic boundary conditions
+                    real_t dx = xyz[i*3] - msg->xyz[j*3];
+                    real_t dy = xyz[i*3+1] - msg->xyz[j*3+1];
+                    if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
+                    if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
+                    // Distance currently doesn't depend on z
+                    distance = sqrt((dx*dx)+(dy*dy));
+                  }
+                  else {
+                    // TODO: error message for this
+                    // This shouldn't happen
+                  }
+                }
+              }
               // build state from j to i
-              real_t distance = sqrt((xyz[i*3]-msg->xyz[j*3])*(xyz[i*3]-msg->xyz[j*3])+
-                                (xyz[i*3+1]-msg->xyz[j*3+1])*(xyz[i*3+1]-msg->xyz[j*3+1])+
-                                (xyz[i*3+2]-msg->xyz[j*3+2])*(xyz[i*3+2]-msg->xyz[j*3+2]));              
               state[i].push_back(BuildEdgState(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
               stick[i].push_back(BuildEdgStick(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
             }
@@ -426,9 +465,39 @@ void Netdata::Connect(mConn *msg) {
                 edgmodidx[i].push_back(modidx);
                 // check if state needs to be built from j to i
                 if (modidx) {
-                real_t distance = sqrt((xyz[i*3]-xyz[j*3])*(xyz[i*3]-xyz[j*3])+
-                                  (xyz[i*3+1]-xyz[j*3+1])*(xyz[i*3+1]-xyz[j*3+1])+
-                                  (xyz[i*3+2]-xyz[j*3+2])*(xyz[i*3+2]-xyz[j*3+2]));
+                  // TODO: find a better mapping from modidx to edges distance function
+                  //       and computing distances using helper functions
+                  real_t distance = 0.0;
+                  for (std::size_t e = 0; e < edges.size(); ++e) {
+                    if (modidx == edges[e].modidx) {
+                      if (edges[e].distype == DISTYPE_EUCLIDEAN) {
+                        distance = sqrt((xyz[i*3]-xyz[j*3])*(xyz[i*3]-xyz[j*3])+
+                            (xyz[i*3+1]-xyz[j*3+1])*(xyz[i*3+1]-xyz[j*3+1])+
+                            (xyz[i*3+2]-xyz[j*3+2])*(xyz[i*3+2]-xyz[j*3+2]));              
+                      }
+                      else if (edges[e].distype == DISTYPE_SPHERE) {
+                        // TODO: assumes the sphere is centered at 0,0,0
+                        // dist = r*theta = r*acos(dot(a,b)/r^2)
+                        real_t theta = std::acos((xyz[i*3]*xyz[j*3] + xyz[i*3+1]*xyz[j*3+1] + xyz[i*3+2]*xyz[j*3+2])/
+                            (edges[e].distparam[0]*edges[e].distparam[0]));
+                        distance = edges[e].distparam[0] * theta;
+                      }
+                      else if (edges[e].distype == DISTYPE_PERIRECT) {
+                        // TODO: assumes bottom right corner (x,y) starts at 0,0,0
+                        // width/height subject to periodic boundary conditions
+                        real_t dx = xyz[i*3] - xyz[j*3];
+                        real_t dy = xyz[i*3+1] - xyz[j*3+1];
+                        if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
+                        if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
+                        // Distance currently doesn't depend on z
+                        distance = sqrt((dx*dx)+(dy*dy));
+                      }
+                      else {
+                        // TODO: error message for this
+                        // This shouldn't happen
+                      }
+                    }
+                  }
                   // build state from j to i
                   state[i].push_back(BuildEdgState(modidx, distance, vtxordidx[j], vtxordidx[i]));
                   stick[i].push_back(BuildEdgStick(modidx, distance, vtxordidx[j], vtxordidx[i]));
@@ -444,9 +513,41 @@ void Netdata::Connect(mConn *msg) {
           }
         }
         else if (i < j) {
-          real_t distance = sqrt((xyz[i*3]-xyz[j*3])*(xyz[i*3]-xyz[j*3])+
-                            (xyz[i*3+1]-xyz[j*3+1])*(xyz[i*3+1]-xyz[j*3+1])+
-                            (xyz[i*3+2]-xyz[j*3+2])*(xyz[i*3+2]-xyz[j*3+2]));
+          real_t distance = 0.0;
+          for (std::size_t e = 0; e < edges.size(); ++e) {
+            if (vtxmodidx[i] == edges[e].source) {
+              for (std::size_t t = 0; t < edges[e].target.size(); ++t) {
+                if (vtxmodidx[j] == edges[e].target[t]) {
+                  if (edges[e].distype == DISTYPE_EUCLIDEAN) {
+                    distance = sqrt((xyz[i*3]-xyz[j*3])*(xyz[i*3]-xyz[j*3])+
+                        (xyz[i*3+1]-xyz[j*3+1])*(xyz[i*3+1]-xyz[j*3+1])+
+                        (xyz[i*3+2]-xyz[j*3+2])*(xyz[i*3+2]-xyz[j*3+2]));              
+                  }
+                  else if (edges[e].distype == DISTYPE_SPHERE) {
+                    // TODO: assumes the sphere is centered at 0,0,0
+                    // dist = r*theta = r*acos(dot(a,b)/r^2)
+                    real_t theta = std::acos((xyz[i*3]*xyz[j*3] + xyz[i*3+1]*xyz[j*3+1] + xyz[i*3+2]*xyz[j*3+2])/
+                        (edges[e].distparam[0]*edges[e].distparam[0]));
+                    distance = edges[e].distparam[0] * theta;
+                  }
+                  else if (edges[e].distype == DISTYPE_PERIRECT) {
+                    // TODO: assumes bottom right corner (x,y) starts at 0,0,0
+                    // width/height subject to periodic boundary conditions
+                    real_t dx = xyz[i*3] - xyz[j*3];
+                    real_t dy = xyz[i*3+1] - xyz[j*3+1];
+                    if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
+                    if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
+                    // Distance currently doesn't depend on z
+                    distance = sqrt((dx*dx)+(dy*dy));
+                  }
+                  else {
+                    // TODO: error message for this
+                    // This shouldn't happen
+                  }
+                }
+              }
+            }
+          }
           idx_t modidx;
           // check possible connections from i to j
           if ((modidx = MakeConnection(vtxmodidx[i], vtxmodidx[j], vtxordidx[i], vtxordidx[j], distance))) {
@@ -494,9 +595,41 @@ void Netdata::Connect(mConn *msg) {
     // connect to later part (connections both ways)
     for (idx_t i = 0; i < norderdat; ++i) {
       for (idx_t j = 0; j < msg->nvtx; ++j) {
-        real_t distance = sqrt((xyz[i*3]-msg->xyz[j*3])*(xyz[i*3]-msg->xyz[j*3])+
-                          (xyz[i*3+1]-msg->xyz[j*3+1])*(xyz[i*3+1]-msg->xyz[j*3+1])+
-                          (xyz[i*3+2]-msg->xyz[j*3+2])*(xyz[i*3+2]-msg->xyz[j*3+2]));
+        real_t distance = 0.0;
+        for (std::size_t e = 0; e < edges.size(); ++e) {
+          if (vtxmodidx[i] == edges[e].source) {
+            for (std::size_t t = 0; t < edges[e].target.size(); ++t) {
+              if (vtxmodidx[j] == edges[e].target[t]) {
+                if (edges[e].distype == DISTYPE_EUCLIDEAN) {
+                  distance = sqrt((xyz[i*3]-msg->xyz[j*3])*(xyz[i*3]-msg->xyz[j*3])+
+                      (xyz[i*3+1]-msg->xyz[j*3+1])*(xyz[i*3+1]-msg->xyz[j*3+1])+
+                      (xyz[i*3+2]-msg->xyz[j*3+2])*(xyz[i*3+2]-msg->xyz[j*3+2]));              
+                }
+                else if (edges[e].distype == DISTYPE_SPHERE) {
+                  // TODO: assumes the sphere is centered at 0,0,0
+                  // dist = r*theta = r*acos(dot(a,b)/r^2)
+                  real_t theta = std::acos((xyz[i*3]*msg->xyz[j*3] + xyz[i*3+1]*msg->xyz[j*3+1] + xyz[i*3+2]*msg->xyz[j*3+2])/
+                      (edges[e].distparam[0]*edges[e].distparam[0]));
+                  distance = edges[e].distparam[0] * theta;
+                }
+                else if (edges[e].distype == DISTYPE_PERIRECT) {
+                  // TODO: assumes bottom right corner (x,y) starts at 0,0,0
+                  // width/height subject to periodic boundary conditions
+                  real_t dx = xyz[i*3] - msg->xyz[j*3];
+                  real_t dy = xyz[i*3+1] - msg->xyz[j*3+1];
+                  if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
+                  if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
+                  // Distance currently doesn't depend on z
+                  distance = sqrt((dx*dx)+(dy*dy));
+                }
+                else {
+                  // TODO: error message for this
+                  // This shouldn't happen
+                }
+              }
+            }
+          }
+        }
         idx_t modidx;
         // check possible connections from i to j
         if ((modidx = MakeConnection(vtxmodidx[i], msg->vtxmodidx[j], vtxordidx[i], msg->vtxordidx[j], distance))) {

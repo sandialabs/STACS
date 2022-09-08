@@ -74,6 +74,15 @@
 #define PROBPARAM_SMPL  1
 #define MASKPARAM_SMPL  2
 
+#define DISTYPE_EUCLIDEAN   0
+#define DISTPARAM_EUCLIDEAN 0
+
+#define DISTYPE_SPHERE      1
+#define DISTPARAM_SPHERE    1
+
+#define DISTYPE_PERIRECT    2
+#define DISTPARAM_PERIRECT  2
+
 #define FT_DEFAULT      "csv-sparse"
 #define FT_CSV_SPARSE   0
 #define FT_CSV_DENSE    1

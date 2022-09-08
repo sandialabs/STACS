@@ -307,6 +307,8 @@ mGraph* Main::BuildGraph() {
   idx_t jvtxparam;
   idx_t nedgtarget;
   idx_t jedgtarget;
+  idx_t nedgdistparam;
+  idx_t jedgdistparam;
   idx_t nedgconntype;
   idx_t jedgconntype;
   idx_t nedgprobparam;
@@ -320,11 +322,13 @@ mGraph* Main::BuildGraph() {
     nvtxparam += vertices[i].param.size();
   }
   nedgtarget = 0;
+  nedgdistparam = 0;
   nedgconntype = 0;
   nedgprobparam = 0;
   nedgmaskparam = 0;
   for (std::size_t i = 0; i < edges.size(); ++i) {
     nedgtarget += edges[i].target.size();
+    nedgdistparam += edges[i].distparam.size();
     nedgconntype += edges[i].conntype.size();
     for (std::size_t j = 0; j < edges[i].conntype.size(); ++j) {
       nedgprobparam += edges[i].probparam[j].size();
@@ -345,18 +349,22 @@ mGraph* Main::BuildGraph() {
   msgSize[8] = nedgtarget;        // edgtarget
   msgSize[9] = edges.size();      // edgmodidx
   msgSize[10] = edges.size();     // edgcutoff
-  msgSize[11] = edges.size()+1;   // xedgconntype
-  msgSize[12] = nedgconntype;     // edgconntype
-  msgSize[13] = nedgconntype;     // medgprobparam
-  msgSize[14] = nedgprobparam;    // edgprobparam
-  msgSize[15] = nedgconntype;     // medgmaskparam
-  msgSize[16] = nedgmaskparam;    // edgmaskparam
+  msgSize[11] = edges.size();     // edgdistype
+  msgSize[12] = edges.size();     // medgdistparam
+  msgSize[13] = nedgdistparam;    // edgdistparam
+  msgSize[14] = edges.size()+1;   // xedgconntype
+  msgSize[15] = nedgconntype;     // edgconntype
+  msgSize[16] = nedgconntype;     // medgprobparam
+  msgSize[17] = nedgprobparam;    // edgprobparam
+  msgSize[18] = nedgconntype;     // medgmaskparam
+  msgSize[19] = nedgmaskparam;    // edgmaskparam
   mGraph *mgraph = new(msgSize, 0) mGraph;
   // Sizes
   mgraph->nvtx = vertices.size();
   mgraph->nvtxparam = nvtxparam;
   mgraph->nedg = edges.size();
   mgraph->nedgtarget = nedgtarget;
+  mgraph->nedgdistparam = nedgdistparam;
   mgraph->nedgconntype = nedgconntype;
   mgraph->nedgprobparam = nedgprobparam;
   mgraph->nedgmaskparam = nedgmaskparam;
@@ -389,6 +397,7 @@ mGraph* Main::BuildGraph() {
 
   // set up counters
   jedgtarget = 0;
+  jedgdistparam = 0;
   jedgconntype = 0;
   jedgprobparam = 0;
   jedgmaskparam = 0;
@@ -398,10 +407,17 @@ mGraph* Main::BuildGraph() {
     mgraph->edgsource[i] = edges[i].source;
     mgraph->edgmodidx[i] = edges[i].modidx;
     mgraph->edgcutoff[i] = edges[i].cutoff;
+    mgraph->edgdistype[i] = edges[i].distype;
 
+    // TODO: figure out why some of these use prefixes and others not
     mgraph->xedgtarget[i+1] = mgraph->xedgtarget[i] + edges[i].target.size();
     for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
       mgraph->edgtarget[jedgtarget++] = edges[i].target[j];
+    }
+
+    mgraph->medgdistparam[i] = edges[i].distparam.size();
+    for (std::size_t j = 0; j < edges[i].distparam.size(); ++j) {
+      mgraph->edgdistparam[jedgdistparam++] = edges[i].distparam[j];
     }
 
     mgraph->xedgconntype[i+1] = mgraph->xedgconntype[i] + edges[i].conntype.size();
@@ -418,6 +434,7 @@ mGraph* Main::BuildGraph() {
     }
   }
   CkAssert(jedgtarget == nedgtarget);
+  CkAssert(jedgdistparam == nedgdistparam);
   CkAssert(jedgconntype == nedgconntype);
   CkAssert(jedgprobparam == nedgprobparam);
   CkAssert(jedgmaskparam == nedgmaskparam);

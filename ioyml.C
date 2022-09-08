@@ -1306,6 +1306,53 @@ int Main::ReadGraph() {
       CkPrintf("  warning: cutoff not defined, defaulting to none\n");
       edges[i].cutoff = 0.0;
     }
+    // Distance function
+    std::string distype;
+    try {
+      // distance computation
+      distype = edge[i]["dist"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      // Default to euclidean distance
+      distype = std::string("euclidean");
+    }
+    if (distype == "sphere") {
+      edges[i].distype = DISTYPE_SPHERE;
+      edges[i].distparam.resize(DISTPARAM_SPHERE);
+      // Additional information for computing distances on spheres
+      // TODO: there's no checks for if this radius matches the one that
+      //       was used to instantiate the neural population (yet)
+      try {
+        // TODO: assumes the sphere is centered at 0,0,0
+        edges[i].distparam[0] = edge[i]["radius"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  connect distance sphere radius: %s\n", e.what());
+        return 1;
+      }
+    }
+    else if (distype == "periodic rectangle") {
+      edges[i].distype = DISTYPE_PERIRECT;
+      edges[i].distparam.resize(DISTPARAM_PERIRECT);
+      // Additional information for computing on periodic rectangles
+      try {
+        // TODO: assumes the bottom left (x, y) corner is at 0,0,0
+        //       also doesn't allow for (x, z) or (y, z) rectangles
+        edges[i].distparam[0] = edge[i]["width"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  connect distance rect width: %s\n", e.what());
+        return 1;
+      }
+      try {
+        edges[i].distparam[1] = edge[i]["height"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  connect distance rect height: %s\n", e.what());
+        return 1;
+      }
+    }
+    else {
+      // No additional information needed for Euclidean
+      edges[i].distype = DISTYPE_EUCLIDEAN;
+      edges[i].distparam.resize(DISTPARAM_EUCLIDEAN);
+    }
 
     // Connection types are their own 'node'
     YAML::Node conn = edge[i]["connect"];
