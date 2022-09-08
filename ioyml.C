@@ -1187,7 +1187,18 @@ int Main::ReadGraph() {
         // radius
         vertices[jvtx].param[0] = vertex[i]["radius"].as<real_t>();
       } catch (YAML::RepresentationException& e) {
-        CkPrintf("  vertex circle radius: %s\n", e.what());
+        CkPrintf("  vertex sphere radius: %s\n", e.what());
+        return 1;
+      }
+    }
+    else if (name == "sphere surface") {
+      vertices[jvtx].shape = VTXSHAPE_SPHERE_SURFACE;
+      vertices[jvtx].param.resize(VTXPARAM_SPHERE_SURFACE);
+      try {
+        // radius
+        vertices[jvtx].param[0] = vertex[i]["radius"].as<real_t>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  vertex sphere surface radius: %s\n", e.what());
         return 1;
       }
     }

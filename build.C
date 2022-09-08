@@ -220,6 +220,16 @@ void Netdata::Build(mGraph *msg) {
           xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*y;
           xyz[jvtxidx*3+2] = vertices[i].coord[2] + r*z;
         }
+        else if (vertices[i].shape == VTXSHAPE_SPHERE_SURFACE) {
+          // uniformly on surface of sphere
+          real_t x = ((*normdist)(rngine));
+          real_t y = ((*normdist)(rngine));
+          real_t z = ((*normdist)(rngine));
+          real_t r = vertices[i].param[0] / std::sqrt(x*x+y*y+z*z);
+          xyz[jvtxidx*3+0] = vertices[i].coord[0] + r*x;
+          xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*y;
+          xyz[jvtxidx*3+2] = vertices[i].coord[2] + r*z;
+        }
         else if (vertices[i].shape == VTXSHAPE_LINE) {
           // uniformly along a line
           real_t l = vertices[i].param[0]*((*unifdist)(rngine));
