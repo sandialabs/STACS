@@ -690,6 +690,44 @@ class Netdata : public CBase_Netdata {
       }
       return state;
     }
+    // Distance Functions
+    real_t distfunc(idx_t distype, real_t *xyz1, real_t *xyz2, real_t *param) {
+      if (distype == DISTYPE_EUCLIDEAN) {
+        // Normal Euclidean (just compute inline)
+        return sqrt((xyz1[0]-xyz2[0])*(xyz1[0]-xyz2[0])+
+                    (xyz1[1]-xyz2[1])*(xyz1[1]-xyz2[1])+
+                    (xyz1[2]-xyz2[2])*(xyz1[2]-xyz2[2]));
+      }
+      else if (distype == DISTYPE_PERIRECT) {
+        return dist_perirect(xyz1, xyz2, param);
+      }
+      else if (distype == DISTYPE_SPHERE) {
+        return dist_spheresurf(xyz1, xyz2, param);
+      }
+      else {
+        // This shoudn't happen
+        CkPrintf("  error: unknown distance error type\n");
+        return 0.0;
+      }
+    }
+    // Periodic rectangle
+    real_t dist_perirect(real_t *xyz1, real_t *xyz2, real_t *param) {
+      // TODO: assumes bottom right corner (x,y) starts at 0,0,0
+      // width/height subject to periodic boundary conditions
+      real_t dx = std::abs(xyz1[0] - xyz2[0]);
+      real_t dy = std::abs(xyz1[1] - xyz2[1]);
+      if (dx > param[0]/2.0) { dx -= param[0]/2.0; }
+      if (dy > param[1]/2.0) { dy -= param[1]/2.0; }
+      // Distance currently doesn't depend on z
+      return sqrt((dx*dx)+(dy*dy));
+    }
+    // Surface of sphere
+    real_t dist_spheresurf(real_t *xyz1, real_t *xyz2, real_t *param) {
+      // TODO: assumes the sphere is centered at 0,0,0
+      // dist = r*theta = r*acos(dot(a,b)/r^2)
+      real_t theta = std::acos((xyz1[0]*xyz2[0] + xyz1[1]*xyz2[1] + xyz1[2]*xyz2[2])/(param[0]*param[0]));
+      return param[0] * theta;
+    }
 
   private:
     /* Network Data */

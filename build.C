@@ -407,6 +407,8 @@ void Netdata::Connect(mConn *msg) {
               real_t distance = 0.0;
               for (std::size_t e = 0; e < edges.size(); ++e) {
                 if (modidx == edges[e].modidx) {
+                  distance = distfunc(edges[e].distype, xyz.data()+i*3, msg->xyz+j*3, edges[e].distparam.data());
+                  /*
                   if (edges[e].distype == DISTYPE_EUCLIDEAN) {
                     distance = sqrt((xyz[i*3]-msg->xyz[j*3])*(xyz[i*3]-msg->xyz[j*3])+
                                     (xyz[i*3+1]-msg->xyz[j*3+1])*(xyz[i*3+1]-msg->xyz[j*3+1])+
@@ -433,6 +435,7 @@ void Netdata::Connect(mConn *msg) {
                     // TODO: error message for this
                     // This shouldn't happen
                   }
+                  */
                 }
               }
               // build state from j to i
@@ -480,32 +483,7 @@ void Netdata::Connect(mConn *msg) {
                   real_t distance = 0.0;
                   for (std::size_t e = 0; e < edges.size(); ++e) {
                     if (modidx == edges[e].modidx) {
-                      if (edges[e].distype == DISTYPE_EUCLIDEAN) {
-                        distance = sqrt((xyz[i*3]-xyz[j*3])*(xyz[i*3]-xyz[j*3])+
-                            (xyz[i*3+1]-xyz[j*3+1])*(xyz[i*3+1]-xyz[j*3+1])+
-                            (xyz[i*3+2]-xyz[j*3+2])*(xyz[i*3+2]-xyz[j*3+2]));              
-                      }
-                      else if (edges[e].distype == DISTYPE_SPHERE) {
-                        // TODO: assumes the sphere is centered at 0,0,0
-                        // dist = r*theta = r*acos(dot(a,b)/r^2)
-                        real_t theta = std::acos((xyz[i*3]*xyz[j*3] + xyz[i*3+1]*xyz[j*3+1] + xyz[i*3+2]*xyz[j*3+2])/
-                            (edges[e].distparam[0]*edges[e].distparam[0]));
-                        distance = edges[e].distparam[0] * theta;
-                      }
-                      else if (edges[e].distype == DISTYPE_PERIRECT) {
-                        // TODO: assumes bottom right corner (x,y) starts at 0,0,0
-                        // width/height subject to periodic boundary conditions
-                        real_t dx = std::abs(xyz[i*3] - xyz[j*3]);
-                        real_t dy = std::abs(xyz[i*3+1] - xyz[j*3+1]);
-                        if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
-                        if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
-                        // Distance currently doesn't depend on z
-                        distance = sqrt((dx*dx)+(dy*dy));
-                      }
-                      else {
-                        // TODO: error message for this
-                        // This shouldn't happen
-                      }
+                      distance = distfunc(edges[e].distype, xyz.data()+i*3, xyz.data()+j*3, edges[e].distparam.data());
                     }
                   }
                   // build state from j to i
@@ -528,32 +506,7 @@ void Netdata::Connect(mConn *msg) {
             if (vtxmodidx[i] == edges[e].source) {
               for (std::size_t t = 0; t < edges[e].target.size(); ++t) {
                 if (vtxmodidx[j] == edges[e].target[t]) {
-                  if (edges[e].distype == DISTYPE_EUCLIDEAN) {
-                    distance = sqrt((xyz[i*3]-xyz[j*3])*(xyz[i*3]-xyz[j*3])+
-                        (xyz[i*3+1]-xyz[j*3+1])*(xyz[i*3+1]-xyz[j*3+1])+
-                        (xyz[i*3+2]-xyz[j*3+2])*(xyz[i*3+2]-xyz[j*3+2]));              
-                  }
-                  else if (edges[e].distype == DISTYPE_SPHERE) {
-                    // TODO: assumes the sphere is centered at 0,0,0
-                    // dist = r*theta = r*acos(dot(a,b)/r^2)
-                    real_t theta = std::acos((xyz[i*3]*xyz[j*3] + xyz[i*3+1]*xyz[j*3+1] + xyz[i*3+2]*xyz[j*3+2])/
-                        (edges[e].distparam[0]*edges[e].distparam[0]));
-                    distance = edges[e].distparam[0] * theta;
-                  }
-                  else if (edges[e].distype == DISTYPE_PERIRECT) {
-                    // TODO: assumes bottom right corner (x,y) starts at 0,0,0
-                    // width/height subject to periodic boundary conditions
-                    real_t dx = std::abs(xyz[i*3] - xyz[j*3]);
-                    real_t dy = std::abs(xyz[i*3+1] - xyz[j*3+1]);
-                    if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
-                    if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
-                    // Distance currently doesn't depend on z
-                    distance = sqrt((dx*dx)+(dy*dy));
-                  }
-                  else {
-                    // TODO: error message for this
-                    // This shouldn't happen
-                  }
+                  distance = distfunc(edges[e].distype, xyz.data()+i*3, xyz.data()+j*3, edges[e].distparam.data());
                 }
               }
             }
@@ -610,32 +563,7 @@ void Netdata::Connect(mConn *msg) {
           if (vtxmodidx[i] == edges[e].source) {
             for (std::size_t t = 0; t < edges[e].target.size(); ++t) {
               if (vtxmodidx[j] == edges[e].target[t]) {
-                if (edges[e].distype == DISTYPE_EUCLIDEAN) {
-                  distance = sqrt((xyz[i*3]-msg->xyz[j*3])*(xyz[i*3]-msg->xyz[j*3])+
-                      (xyz[i*3+1]-msg->xyz[j*3+1])*(xyz[i*3+1]-msg->xyz[j*3+1])+
-                      (xyz[i*3+2]-msg->xyz[j*3+2])*(xyz[i*3+2]-msg->xyz[j*3+2]));              
-                }
-                else if (edges[e].distype == DISTYPE_SPHERE) {
-                  // TODO: assumes the sphere is centered at 0,0,0
-                  // dist = r*theta = r*acos(dot(a,b)/r^2)
-                  real_t theta = std::acos((xyz[i*3]*msg->xyz[j*3] + xyz[i*3+1]*msg->xyz[j*3+1] + xyz[i*3+2]*msg->xyz[j*3+2])/
-                      (edges[e].distparam[0]*edges[e].distparam[0]));
-                  distance = edges[e].distparam[0] * theta;
-                }
-                else if (edges[e].distype == DISTYPE_PERIRECT) {
-                  // TODO: assumes bottom right corner (x,y) starts at 0,0,0
-                  // width/height subject to periodic boundary conditions
-                  real_t dx = std::abs(xyz[i*3] - msg->xyz[j*3]);
-                  real_t dy = std::abs(xyz[i*3+1] - msg->xyz[j*3+1]);
-                  if (dx > edges[e].distparam[0]/2.0) { dx -= edges[e].distparam[0]/2.0; }
-                  if (dy > edges[e].distparam[1]/2.0) { dy -= edges[e].distparam[1]/2.0; }
-                  // Distance currently doesn't depend on z
-                  distance = sqrt((dx*dx)+(dy*dy));
-                }
-                else {
-                  // TODO: error message for this
-                  // This shouldn't happen
-                }
+                distance = distfunc(edges[e].distype, xyz.data()+i*3, msg->xyz+j*3, edges[e].distparam.data());
               }
             }
           }
