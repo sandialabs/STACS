@@ -14,6 +14,7 @@
 #define EVENT_GROUP         3
 #define EVENT_CURRENT       4
 #define EVENT_COUNT         5
+#define EVENT_CLAMP         6
 
 #define REMOTE_EDGES        0x00001
 #define REMOTE_EDGE         0x00010
