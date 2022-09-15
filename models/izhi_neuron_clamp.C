@@ -115,7 +115,7 @@ tick_t IzhiNeuronClamp::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& s
     events.push_back(event);
   }
   // suppress any spiking
-  else {
+  else if (state[4] < 0.0) {
     // keep at default state
     state[0] = param[2];
     state[1] = param[1] * param[2];

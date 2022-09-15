@@ -68,6 +68,7 @@ tick_t SpikeInput::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
   event_t event;
   event.type = EVENT_CLAMP;
   event.source = REMOTE_EDGE;
+  event.data = 1.0;
   if (tdrift >= next_tick_update) {
     // TODO: there is probably a more efficient way of doing this
     next_tick_update = TICK_T_MAX;
@@ -75,21 +76,20 @@ tick_t SpikeInput::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
       if (tdrift >= next_spike_tick[i]) {
         // Add event to queue
         event.index = i;
-        event.data = 1.0;
         event.diffuse = tdrift + TICKS_PER_MS;
         events.push_back(event);
         // Update control timing
         next_spike_index[i] += 1;
-        if (next_spike_index[i] >= spike_list[i].size()) {
-          next_spike_tick[i] = TICK_T_MAX;
-        }
-        else {
+        if (next_spike_index[i] < spike_list[i].size()) {
           next_spike_tick[i] = (tick_t)(spike_list[i][next_spike_index[i]] * TICKS_PER_MS);
         }
-        // Find min for next tick update
-        if (next_spike_tick[i] < next_tick_update) {
-          next_tick_update = next_spike_tick[i];
+        else {
+          next_spike_tick[i] = TICK_T_MAX;
         }
+      }
+      // Find min for next tick update
+      if (next_spike_tick[i] < next_tick_update) {
+        next_tick_update = next_spike_tick[i];
       }
     }
     //next_tick_update = *std::min_element(next_spike_tick.begin(), next_spike_tick.end());
@@ -121,6 +121,7 @@ void SpikeInput::OpenPorts() {
   // Make sure the number of connected vertices matches the yaml file input
   CkAssert(param[0] == spike_list.size());
   // Set up spiking updates
+  next_tick_update = TICK_T_MAX;
   next_spike_tick.resize(spike_list.size());
   next_spike_index.resize(spike_list.size());
   for (std::size_t i = 0; i < spike_list.size(); ++i) {
@@ -131,6 +132,10 @@ void SpikeInput::OpenPorts() {
     else {
       // for vertices with no input
       next_spike_tick[i] = TICK_T_MAX;
+    }
+    // Find min for next tick update
+    if (next_spike_tick[i] < next_tick_update) {
+      next_tick_update = next_spike_tick[i];
     }
   }
 }
