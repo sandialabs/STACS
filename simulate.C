@@ -99,8 +99,15 @@ void Network::CycleSim() {
         model[vtxmodidx[i]]->Renew(state[i][0], stick[i][0]);
       }
     
-      // Start a new cycle (after checked data sent)
-      thisProxy(partidx).SaveRecord();
+      if (iter >= reciter) {
+        reciter += intrec;
+        // Start a new cycle (after checked data sent)
+        thisProxy(partidx).SaveRecord();
+      }
+      else {
+        // Start a new cycle (basically a continue)
+        cyclepart.send();
+      }
     }
   }
   // Saving

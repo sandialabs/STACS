@@ -105,7 +105,7 @@ void LIFSynSTDP::Leap(const event_t& event, std::vector<std::vector<real_t>>& st
   if (event.type == EVENT_SYNUP) {
     idx_t e = event.index;
     // Update weight only every second
-    state[e][0] += 0.01 + state[e][1];
+    state[e][0] += 0.0001 + state[e][1];
     if (state[e][0] < 0) {
       state[e][0] = 0;
     }
