@@ -78,7 +78,7 @@ tick_t DGIzhiPoisson::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
 
   // Update applied current (applied current is constant)
   //state[2] = state[2]*exp(-(tstep/param[9]));
-  state[0] = param[1];
+  //state[0] = param[1];
 
   // if spike occured, generate event
   if (state[0] >= param[0]) {

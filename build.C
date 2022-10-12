@@ -373,7 +373,7 @@ void Netdata::Build(mGraph *msg) {
     adjcyset[i].clear();
     // TODO: this is highly innefficient...
     for (int prt = 0; prt < netparts; ++prt) {
-      if (vtxordidx[i] > xpopidxprt[vtxmodidx[i]-1][prt]) {
+      if (vtxordidx[i] >= xpopidxprt[vtxmodidx[i]-1][prt]) {
         globalthisidx = xvtxidxprt[vtxmodidx[i]-1][prt] + vtxordidx[i] - xpopidxprt[vtxmodidx[i]-1][prt];
         break;
       }

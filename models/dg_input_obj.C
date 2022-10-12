@@ -80,30 +80,27 @@ tick_t DGInputObject::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
 
     // Figure out which object is going to be attended to (nearest object)
     int attended_obj = 0;
-    real_t attended_dist =  std::sqrt((trajectory[traj_index][0] - object_location[0][0]) * 
-                                      (trajectory[traj_index][0] - object_location[0][0]) +
-                                      (trajectory[traj_index][1] - object_location[0][1]) *
-                                      (trajectory[traj_index][1] - object_location[0][1]));
-    for (int i = 1; i < obj_act.size(); ++i) {
+    real_t attended_salience = 0;
+    for (int i = 0; i < obj_act.size(); ++i) {
       real_t dist = std::sqrt((trajectory[traj_index][0] - object_location[i][0]) * 
                               (trajectory[traj_index][0] - object_location[i][0]) +
                               (trajectory[traj_index][1] - object_location[i][1]) *
                               (trajectory[traj_index][1] - object_location[i][1]));
-      if (dist < attended_dist) {
+      real_t theta = std::atan2(trajectory[traj_index][1] - object_location[i][1],
+                                trajectory[traj_index][0] - object_location[i][0]) - trajectory[traj_index][2];
+      real_t salience = exp(-dist*theta*theta);
+      // TODO: attend probabilistically based on salience values
+      if (salience < attended_salience) {
         attended_obj = i;
-        attended_dist = dist;
       }
     }
     // Compute salience cell activation
     for (std::size_t j = 0; j < obj_act[attended_obj].size(); ++j) {
       // Figure out the rate without discontinuities
-      real_t theta = std::atan2(trajectory[traj_index][1] - object_location[attended_obj][1],
-                                trajectory[traj_index][0] - object_location[attended_obj][0]) - trajectory[traj_index][2];
-      real_t salience_act = exp(-attended_dist*theta*theta);
-      real_t I_obj = param[0]*param[1]*obj_act[attended_obj][j]*salience_act;
+      real_t I_obj = param[0]*param[1]*obj_act[attended_obj][j];
       
       // generate events
-      event.index = j;
+      event.index = (idx_t) (j);
       event.data = I_obj;
       events.push_back(event);
     }

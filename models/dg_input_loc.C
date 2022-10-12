@@ -83,18 +83,18 @@ tick_t DGInputLocation::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& s
 
     // Compute grid cell activation
     for (std::size_t i = 0; i < loc_act.size(); ++i) {
-      real_t k1 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI/12) + std::sin(theta[i]+M_PI/12))*(x - psi_x[i]) +
-                                            (std::cos(theta[i]+M_PI/12) - std::sin(theta[i]+M_PI/12))*(y - psi_y[i]));
-      real_t k2 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI*5/12) + std::sin(theta[i]+M_PI*5/12))*(x - psi_x[i]) +
-                                            (std::cos(theta[i]+M_PI*5/12) - std::sin(theta[i]+M_PI*5/12))*(y - psi_y[i]));
-      real_t k3 = (4*M_PI*lambda[i]/std::sqrt(6))*((std::cos(theta[i]+M_PI*3/4) + std::sin(theta[i]+M_PI*3/4))*(x - psi_x[i]) +
-                                            (std::cos(theta[i]+M_PI*3/4) - std::sin(theta[i]+M_PI*3/4))*(y - psi_y[i]));
-      real_t grid_act = 2/3*((std::cos(k1) + std::cos(k2) + std::cos(k3))/3+0.5);
+      real_t k1 = (4.0*M_PI*lambda[i]/std::sqrt(6.0))*((std::cos(theta[i]+M_PI/12.0) + std::sin(theta[i]+M_PI/12.0))*(x - psi_x[i]) +
+                                            (std::cos(theta[i]+M_PI/12.0) - std::sin(theta[i]+M_PI/12.0))*(y - psi_y[i]));
+      real_t k2 = (4.0*M_PI*lambda[i]/std::sqrt(6.0))*((std::cos(theta[i]+M_PI*5.0/12.0) + std::sin(theta[i]+M_PI*5.0/12.0))*(x - psi_x[i]) +
+                                            (std::cos(theta[i]+M_PI*5.0/12.0) - std::sin(theta[i]+M_PI*5.0/12.0))*(y - psi_y[i]));
+      real_t k3 = (4.0*M_PI*lambda[i]/std::sqrt(6.0))*((std::cos(theta[i]+M_PI*3.0/4.0) + std::sin(theta[i]+M_PI*3.0/4.0))*(x - psi_x[i]) +
+                                            (std::cos(theta[i]+M_PI*3.0/4.0) - std::sin(theta[i]+M_PI*3.0/4.0))*(y - psi_y[i]));
+      real_t grid_act = 2.0/3.0*((std::cos(k1) + std::cos(k2) + std::cos(k3))/3.0+0.5);
 
       real_t I_loc = param[0]*param[1]*loc_act[i]*grid_act;
       
       // generate events
-      event.index = i;
+      event.index = (idx_t) (i);
       event.data = I_loc;
       events.push_back(event);
     }
