@@ -678,12 +678,17 @@ void Netdata::Build(mGraph *msg) {
 //   but these evaluations still need to happen for connections requiring local information
 //   this is because the local vertex information is stored on a per-partition level and
 //   thus needs to be communicated to the connecting partition when needed
-// The work on this new branch for sample-based connections only works for networks that
+// The connectivity functions for sample-based connections only works for networks that
 //   connect based on ordinal (index-based) connectivity, where the assumption is that
 //   we no longer need proximity information to perform connection existence, but we may
 //   need it to determine the instantiation of the connection parameters (e.g. delay)
 //   as a result, this modification will go through and create the adjcy lists first
 //   then go through and instantiate the connection parameters via the pipeline
+// TODO: These two connection methods have been glued together through an intermediate
+//   checkpoint function, but it could definitely use some additional work to clean up,
+//   especially to move the distance-based connectivity more in line with the sample-
+//   based connectivity so that there doesn't need to be an n-squared pipeline, but
+//   rather a broadcast of vertex information, per-vertex edge generation, then sorting
 
 // Connect Network
 //
@@ -975,7 +980,7 @@ void Netdata::Connect(mConn *msg) {
       edgmodsize += edgmodidx[i].size();
       edgmodcap += edgmodidx[i].capacity();
     }
-    CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
+    //CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     contribute(0, NULL, CkReduction::nop);
   }
   // Request data from next part
@@ -1468,7 +1473,7 @@ void Netdata::ConnectNone(mConnNone *msg) {
       edgmodsize += edgmodidx[i].size();
       edgmodcap += edgmodidx[i].capacity();
     }
-    CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
+    //CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     
     // (re)start the process for distance-based connections
     //contribute(0, NULL, CkReduction::nop);
