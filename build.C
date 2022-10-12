@@ -351,6 +351,7 @@ void Netdata::Build(mGraph *msg) {
 
   // Prepare for connection
   cpdat = 0;
+  cpdatcheck = 0;
   vtxdist.resize(netfiles+1);
   vtxdist[0] = 0;
   adjcy.clear();
@@ -620,6 +621,7 @@ void Netdata::Build(mGraph *msg) {
   /*
   //TODO: Figure out a way to perform both sampling as above
   //      and the per-connection evaluation as below (hopefully faster)
+  //  Update: Moving/copying this code to after the ConnectNone is done
   // Request data from prev part
   if (cpdat < datidx) {
     thisProxy(cpdat).ConnRequest(datidx);
@@ -1088,6 +1090,12 @@ idx_t Netdata::MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t
             }
             // TODO: this is currently set to sample from source order
             // TODO: we want to enable a weighting of the indices w.r.t. distance
+            else if (edges[i].conntype[k] == CONNTYPE_SMPL ||
+                     edges[i].conntype[k] == CONNTYPE_SMPL_NORM ||
+                     edges[i].conntype[k] == CONNTYPE_SMPL_ANORM) {
+              return 0;
+            }
+            /*
             else if (edges[i].conntype[k] == CONNTYPE_SMPL) {
               // Sample sourceidx from the source vertex population order
               if (samplecache[i].find(targetidx) == samplecache[i].end()) {
@@ -1110,6 +1118,7 @@ idx_t Netdata::MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t
                 mask = 1;
               }
             }
+            */
             else if (edges[i].conntype[k] == CONNTYPE_FILE) {
               // Check to see if it's in the file list
               // set mask to 1 if there is a non-zero entry
@@ -1265,6 +1274,34 @@ std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
   return rngstick;
 }
 
+// Checkpoint between sample and distance-based connectivity
+//
+void Netdata::ConnectCheckpoint() {
+  ++cpdatcheck;
+  // return control to main when done
+  if (cpdatcheck == netfiles) {
+    cpdat = 0;
+    adjcyconn.clear();
+    adjcyconn.resize(netfiles);
+    edgmodidxconn.clear();
+    edgmodidxconn.resize(netfiles);
+    adjcyset.resize(norderdat);
+    
+    if (cpdat < datidx) {
+      thisProxy(cpdat).ConnRequest(datidx);
+    }
+    // Connect to curr part
+    else if (cpdat == datidx) {
+      mConn *mconn = BuildCurrConn();
+      thisProxy(cpdat).Connect(mconn);
+    }
+    // Request data from next part
+    else if (cpdat > datidx) {
+      // this shouldn't happen
+      thisProxy(cpdat).ConnRequest(datidx);
+    }
+  }
+}
 
 // The following is W.I.P for sending none edges between fully build directed graph
 // This enables the source partition to know where to send
@@ -1360,7 +1397,10 @@ void Netdata::ConnectNone(mConnNone *msg) {
       edgmodcap += edgmodidx[i].capacity();
     }
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
-    contribute(0, NULL, CkReduction::nop);
+    
+    // (re)start the process for distance-based connections
+    //contribute(0, NULL, CkReduction::nop);
+    thisProxy.ConnectCheckpoint();
   }
   // Request data from next part
   else if (cpdat < datidx) {

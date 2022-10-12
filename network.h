@@ -577,6 +577,7 @@ class Netdata : public CBase_Netdata {
     mConn* BuildNextConn();
     idx_t MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t targetidx, real_t dist);
     /* Connecting Sample */
+    void ConnectCheckpoint();
     void ConnectNone(mConnNone *msg);
     void ConnNoneRequest(idx_t reqidx);
     mConnNone* BuildConnNone(idx_t reqidx);
@@ -777,6 +778,7 @@ class Netdata : public CBase_Netdata {
     /* Additional Bookkeeping */
     int datidx;
     int cpdat;
+    int cpdatcheck;
     idx_t cpprt;
     idx_t nprt, xprt;
     idx_t norder; // total order

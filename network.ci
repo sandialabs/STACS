@@ -163,6 +163,7 @@ module network {
     entry void SaveBuild();
     entry void Connect(mConn *msg);
     entry void ConnRequest(idx_t reqidx);
+    entry void ConnectCheckpoint();
     entry void ConnectNone(mConnNone *msg);
     entry void ConnNoneRequest(idx_t reqidx);
     
