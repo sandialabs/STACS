@@ -186,6 +186,9 @@ Netdata::Netdata(mModel *msg) {
         case RNGTYPE_LBNORM:
           modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_LBNORM);
           break;
+        case RNGTYPE_LBLOGNORM:
+          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_LBLOGNORM);
+          break;
         case RNGTYPE_LIN:
           modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_LIN);
           break;
@@ -230,6 +233,9 @@ Netdata::Netdata(mModel *msg) {
           break;
         case RNGTYPE_LBNORM:
           modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_LBNORM);
+          break;
+        case RNGTYPE_LBLOGNORM:
+          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_LBLOGNORM);
           break;
         case RNGTYPE_LIN:
           modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_LIN);

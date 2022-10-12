@@ -7,7 +7,7 @@
 #ifndef __STACS_EVENT_H__
 #define __STACS_EVENT_H__
 
-#define EVENT_TOTAL         6
+#define EVENT_TOTAL         7
 #define EVENT_SPIKE         0
 #define EVENT_STIM          1
 #define EVENT_SYNUP         2
@@ -15,6 +15,7 @@
 #define EVENT_CURRENT       4
 #define EVENT_COUNT         5
 #define EVENT_CLAMP         6
+#define EVENT_CHGRATE       7
 
 #define REMOTE_EDGES        0x00001
 #define REMOTE_EDGE         0x00010

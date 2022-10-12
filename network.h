@@ -50,6 +50,18 @@ struct datafile_t {
   std::vector<std::unordered_map<idx_t, real_t>> matrix;
 };
 
+// Edge ordering
+//
+struct edgorder_t {
+  idx_t edgidx;
+  idx_t modidx;
+  std::vector<real_t> state;
+  std::vector<tick_t> stick;
+  bool operator < (const edgorder_t& edg) const {
+    return (edgidx < edg.edgidx);
+  }
+};
+
 // Auxiliary indices
 //
 struct auxidx_t {
@@ -270,6 +282,17 @@ class mConn : public CMessage_mConn {
     idx_t *xadj;        // prefix for adjacency
     idx_t *adjcy;       // adjacent vertices
     idx_t *edgmodidx;   // edge models
+    idx_t datidx;
+    idx_t nvtx;
+};
+
+#define MSG_ConnNone 4
+class mConnNone : public CMessage_mConnNone {
+  public:
+    idx_t *vtxidx;      // vertex global idx
+    real_t *xyz;         // vertex coordinate
+    idx_t *xadj;        // prefix for adjacency
+    idx_t *adjcy;       // relevant adjacent vertices
     idx_t datidx;
     idx_t nvtx;
 };
@@ -559,6 +582,13 @@ class Netdata : public CBase_Netdata {
     mConn* BuildCurrConn();
     mConn* BuildNextConn();
     idx_t MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t targetidx, real_t dist);
+    /* Connecting Sample */
+    void ConnectCheckpoint();
+    void ConnectNone(mConnNone *msg);
+    void ConnNoneRequest(idx_t reqidx);
+    mConnNone* BuildConnNone(idx_t reqidx);
+    void ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rngstate);
+    void ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick);
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
@@ -648,6 +678,15 @@ class Netdata : public CBase_Netdata {
     real_t rnglbnorm(real_t *param) {
       real_t state = (*normdist)(rngine);
       state = param[0] + (std::abs(param[1]))*state;
+      if (state < param[2]) { state = param[2]; }
+      return state;
+    }
+    // RNG State lower bounded lognorm
+    real_t rnglblognorm(real_t *param) {
+      real_t mu = param[3]*param[0];
+      real_t var = std::sqrt(std::log(param[1]/(mu*mu) + 1));
+      real_t state = std::log(mu*mu/std::sqrt(mu*mu + param[1]));
+      state = std::exp(state + var*(*normdist)(rngine));
       if (state < param[2]) { state = param[2]; }
       return state;
     }
@@ -761,6 +800,9 @@ class Netdata : public CBase_Netdata {
     std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
     std::vector<datafile_t> datafiles;
     std::vector<std::unordered_map<idx_t, std::vector<idx_t>>> samplecache; // local connectivity storage
+    std::vector<edgorder_t> edgorder; // edgidx and states for sorting
+    std::vector<std::size_t> adjcylocalcount;
+    std::vector<std::set<idx_t>> adjcyset;
     /* Connection information */
     std::vector<std::vector<std::vector<idx_t>>> adjcyconn;
         // first level is the data parts, second level are per vertex, third level is edges
@@ -781,6 +823,7 @@ class Netdata : public CBase_Netdata {
     /* Additional Bookkeeping */
     int datidx;
     int cpdat;
+    int cpdatcheck;
     idx_t cpprt;
     idx_t nprt, xprt;
     idx_t norder; // total order
@@ -788,6 +831,8 @@ class Netdata : public CBase_Netdata {
     std::vector<idx_t> norderprt;  // order of vertices per network part
     std::vector<std::vector<idx_t>> nordervtx;  // order of vertex models 
     std::vector<std::vector<idx_t>> xordervtx;  // prefix of vertex models
+    std::vector<std::vector<idx_t>> xpopidxprt;  // prefix of populations over partitions
+    std::vector<std::vector<idx_t>> xvtxidxprt;  // prefix of vertex over partitions (population global)
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;

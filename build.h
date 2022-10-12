@@ -17,7 +17,7 @@
 #define REPTYPE_TICK    1
 
 // TODO: reorder these numbers sometime
-#define RNGTYPE_NRNG    11
+#define RNGTYPE_NRNG    12
 #define RNGTYPE_CONST   0
 #define RNGTYPE_UNIF    1
 #define RNGTYPE_UNINT   2
@@ -28,7 +28,8 @@
 #define RNGTYPE_LBLIN   7
 #define RNGTYPE_UBLIN   8
 #define RNGTYPE_BLIN    9
-#define RNGTYPE_FILE    10
+#define RNGTYPE_LBLOGNORM  10
+#define RNGTYPE_FILE    11
 
 #define RNGPARAM_CONST  1
 #define RNGPARAM_UNIF   2
@@ -40,6 +41,7 @@
 #define RNGPARAM_LBLIN  3
 #define RNGPARAM_UBLIN  3
 #define RNGPARAM_BLIN   4
+#define RNGPARAM_LBLOGNORM 4
 #define RNGPARAM_FILE   1
 
 #define VTXSHAPE_POINT  0
@@ -73,8 +75,16 @@
 #define MASKPARAM_FILE  2
 
 #define CONNTYPE_SMPL   4
-#define PROBPARAM_SMPL  1
+#define PROBPARAM_SMPL  0
 #define MASKPARAM_SMPL  2
+
+#define CONNTYPE_SMPL_NORM   5
+#define PROBPARAM_SMPL_NORM  1
+#define MASKPARAM_SMPL_NORM  2
+
+#define CONNTYPE_SMPL_ANORM   6
+#define PROBPARAM_SMPL_ANORM  2
+#define MASKPARAM_SMPL_ANORM  2
 
 #define DISTYPE_EUCLIDEAN   0
 #define DISTPARAM_EUCLIDEAN 0

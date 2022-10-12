@@ -93,6 +93,15 @@ module network {
     idx_t nvtx;
   };
 
+  message mConnNone {
+    idx_t vtxidx[];
+    real_t xyz[];
+    idx_t xadj[];
+    idx_t adjcy[];
+    int datidx;
+    idx_t nvtx;
+  };
+
   message mPart {
     idx_t vtxdist[];
     idx_t vtxmodidx[];
@@ -159,6 +168,9 @@ module network {
     entry void SaveBuild();
     entry void Connect(mConn *msg);
     entry void ConnRequest(idx_t reqidx);
+    entry void ConnectCheckpoint();
+    entry void ConnectNone(mConnNone *msg);
+    entry void ConnNoneRequest(idx_t reqidx);
     
     entry void LoadData(mDist *msg);
     entry void LoadNetwork(int partidx, const CkCallback &cbpart);

@@ -11,7 +11,7 @@
 #include "network.h"
 
 // Maximum size of input line (bytes)
-#define MAXLINE 1280000
+#define MAXLINE 2560000
 
 /**************************************************************************
 * Charm++ Read-Only Variables

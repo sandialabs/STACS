@@ -813,6 +813,76 @@ int Main::ReadModel() {
             ++jstate;
           }
         }
+        else if (rngtype == "lower bounded lognorm") {
+          if (reptype == "tick") {
+            // Normal distribution
+            models[i].sticktype[jstick] = RNGTYPE_LBLOGNORM;
+            models[i].stickparam[jstick].resize(RNGPARAM_LBLOGNORM);
+            try {
+              // mean
+              models[i].stickparam[jstick][0] = state[j]["mean"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm mean: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // standard deviation
+              models[i].stickparam[jstick][1] = state[j]["std"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm std: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // bounds
+              models[i].stickparam[jstick][2] = state[j]["bound"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm bound: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // scale
+              models[i].stickparam[jstick][3] = state[j]["scale"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm scale: %s\n", e.what());
+              return 1;
+            }
+            ++jstick;
+          }
+          else {
+            // Normal distribution
+            models[i].statetype[jstate] = RNGTYPE_LBLOGNORM;
+            models[i].stateparam[jstate].resize(RNGPARAM_LBLOGNORM);
+            try {
+              // mean
+              models[i].stateparam[jstate][0] = state[j]["mean"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm mean: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // standard deviation
+              models[i].stateparam[jstate][1] = state[j]["std"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm std: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // bounds
+              models[i].stateparam[jstate][2] = state[j]["bound"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm bound: %s\n", e.what());
+              return 1;
+            }
+            try {
+              // scale
+              models[i].stateparam[jstate][3] = state[j]["scale"].as<real_t>();
+            } catch (YAML::RepresentationException& e) {
+              CkPrintf("  state lower bounded lognorm scale: %s\n", e.what());
+              return 1;
+            }
+            ++jstate;
+          }
+        }
         else if (rngtype == "linear") {
           if (reptype == "tick") {
             // Proportional to distance
@@ -1482,6 +1552,75 @@ int Main::ReadGraph() {
           edges[i].maskparam[j][1] = conn[j]["order"].as<idx_t>();
         } catch (YAML::RepresentationException& e) {
           CkPrintf("  connect sample order: %s\n", e.what());
+          return 1;
+        }
+      }
+      else if (conntype == "sample norm") {
+        // Connect by sampling index from source population
+        edges[i].conntype[j] = CONNTYPE_SMPL_NORM;
+        edges[i].probparam[j].resize(PROBPARAM_SMPL_NORM);
+        edges[i].maskparam[j].resize(MASKPARAM_SMPL_NORM);
+        // By index requires single source and target
+        if (edges[i].target.size() > 1) {
+          CkPrintf("  connect sample is single target only\n");
+          return 1;
+        }
+        try {
+          // maximum probability
+          edges[i].probparam[j][0] = conn[j]["variance"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sample norm variance: %s\n", e.what());
+          return 1;
+        }
+        // source order
+        for (std::size_t v = 0; v < vertices.size(); ++v) {
+          if (edges[i].source == vertices[v].modidx) {
+            edges[i].maskparam[j][0] = vertices[v].order;
+          }
+        }
+        try {
+          // connection source sample number
+          edges[i].maskparam[j][1] = conn[j]["order"].as<idx_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sample norm order: %s\n", e.what());
+          return 1;
+        }
+      }
+      else if (conntype == "sample anti-norm") {
+        // Connect by sampling index from source population
+        edges[i].conntype[j] = CONNTYPE_SMPL_ANORM;
+        edges[i].probparam[j].resize(PROBPARAM_SMPL_ANORM);
+        edges[i].maskparam[j].resize(MASKPARAM_SMPL_ANORM);
+        // By index requires single source and target
+        if (edges[i].target.size() > 1) {
+          CkPrintf("  connect sample is single target only\n");
+          return 1;
+        }
+        try {
+          // maximum probability
+          edges[i].probparam[j][0] = conn[j]["variance"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sample anti-norm variance: %s\n", e.what());
+          return 1;
+        }
+        try {
+          // maximum probability
+          edges[i].probparam[j][1] = conn[j]["variance-y"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sample anti-norm variance-y: %s\n", e.what());
+          return 1;
+        }
+        // source order
+        for (std::size_t v = 0; v < vertices.size(); ++v) {
+          if (edges[i].source == vertices[v].modidx) {
+            edges[i].maskparam[j][0] = vertices[v].order;
+          }
+        }
+        try {
+          // connection source sample number
+          edges[i].maskparam[j][1] = conn[j]["order"].as<idx_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  connect sample anti-norm order: %s\n", e.what());
           return 1;
         }
       }
