@@ -72,6 +72,7 @@ int Main::ReadConfig(std::string configfile) {
   if (runmode != std::string(RUNMODE_SIMULATE) && 
       runmode != std::string(RUNMODE_SIMGPU) &&
       runmode != std::string(RUNMODE_BUILD) &&
+      runmode != std::string(RUNMODE_ORDER) &&
       runmode != std::string(RUNMODE_FINDGROUP) && 
       runmode != std::string(RUNMODE_ESTIMATE)) {
     runmode = std::string(RUNMODE_DEFAULT);

@@ -50,6 +50,17 @@ struct datafile_t {
   std::vector<std::unordered_map<idx_t, real_t>> matrix;
 };
 
+// Vertex ordering
+//
+struct vtxorder_t {
+  idx_t modidx;
+  idx_t vtxidx;
+  idx_t vtxidxloc; // local index of vertex
+  bool operator < (const vtxorder_t& vtx) const {
+    return (modidx < vtx.modidx);
+  }
+};
+
 // Edge ordering
 //
 struct edgorder_t {
@@ -57,6 +68,7 @@ struct edgorder_t {
   idx_t modidx;
   std::vector<real_t> state;
   std::vector<tick_t> stick;
+  idx_t evtidx;
   bool operator < (const edgorder_t& edg) const {
     return (edgidx < edg.edgidx);
   }
@@ -293,6 +305,15 @@ class mConnNone : public CMessage_mConnNone {
     real_t *xyz;         // vertex coordinate
     idx_t *xadj;        // prefix for adjacency
     idx_t *adjcy;       // relevant adjacent vertices
+    idx_t datidx;
+    idx_t nvtx;
+};
+
+#define MSG_Order 2
+class mOrder : public CMessage_mOrder {
+  public:
+    idx_t *vtxidxold;
+    idx_t *vtxidxnew;
     idx_t datidx;
     idx_t nvtx;
 };
@@ -589,6 +610,15 @@ class Netdata : public CBase_Netdata {
     mConnNone* BuildConnNone(idx_t reqidx);
     void ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rngstate);
     void ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick);
+
+    /* Reorder Network */
+    void ReadPart(mDist *msg);
+    void ScatterPart();
+    void GatherPart(mPart *msg);
+    void Order(mOrder *msg);
+    void Reorder(mOrder *msg);
+    mOrder* BuildOrder();
+
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
@@ -800,9 +830,37 @@ class Netdata : public CBase_Netdata {
     std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
     std::vector<datafile_t> datafiles;
     std::vector<std::unordered_map<idx_t, std::vector<idx_t>>> samplecache; // local connectivity storage
-    std::vector<edgorder_t> edgorder; // edgidx and states for sorting
     std::vector<std::size_t> adjcylocalcount;
     std::vector<std::set<idx_t>> adjcyset;
+    /* Metis */
+    std::vector<idx_t> vtxdistmetis; // distribution of vertices on data
+    std::vector<idx_t> edgdistmetis; // distribution of edges on data
+    std::vector<idx_t> partmetis; // which vertex goes to which part
+    std::vector<std::vector<idx_t>> vtxidxpart; // vertex indices to go to a part
+    std::vector<std::vector<idx_t>> vtxmodidxpart; // vertex models to go to a part
+    std::vector<std::vector<idx_t>> xyzpart; // vertex models to go to a part
+    std::vector<std::vector<std::vector<idx_t>>> adjcypart; // edge indices (by vtxidx) to go to a part
+    std::vector<std::vector<std::vector<idx_t>>> edgmodidxpart; // edge models to go to a part
+    std::vector<std::vector<std::vector<real_t>>> statepart;
+        // first level is the part, second is the models, thrid is state data
+    std::vector<std::vector<std::vector<tick_t>>> stickpart;
+    std::vector<std::vector<std::vector<event_t>>> eventpart;
+    /* Reordering */
+    std::vector<std::vector<vtxorder_t>> vtxorder; // modidx and vtxidx for sorting
+    std::vector<edgorder_t> edgorder; // edgidx and states for sorting
+    std::vector<std::vector<real_t>> xyzorder; // coordinates by vertex
+    std::vector<std::vector<std::vector<idx_t>>> adjcyorder; // adjacency by vertex
+    std::vector<std::vector<std::vector<idx_t>>> adjcyreorder; // adjacency by vertex
+    std::vector<std::vector<std::vector<idx_t>>> edgmodidxorder; // edge models by vertex
+    std::vector<std::vector<std::vector<idx_t>>> edgmodidxreorder; // edge models by vertex
+    std::vector<std::vector<std::vector<std::vector<real_t>>>> stateorder; // state by vertex
+    std::vector<std::vector<std::vector<std::vector<real_t>>>> statereorder; // state by vertex
+    std::vector<std::vector<std::vector<std::vector<tick_t>>>> stickorder; // stick by vertex
+    std::vector<std::vector<std::vector<std::vector<tick_t>>>> stickreorder; // stick by vertex
+    std::vector<std::vector<std::vector<event_t>>> eventorder; // event by vertex
+    std::vector<std::vector<idx_t>> eventsourceorder; // source reordering
+    std::vector<std::vector<idx_t>> eventindexorder; // index reordering
+    std::list<mOrder *> ordering;
     /* Connection information */
     std::vector<std::vector<std::vector<idx_t>>> adjcyconn;
         // first level is the data parts, second level are per vertex, third level is edges
@@ -821,6 +879,7 @@ class Netdata : public CBase_Netdata {
     int cpart, rpart;
     int npart, xpart;
     /* Additional Bookkeeping */
+    // TODO: Consolidate these
     int datidx;
     int cpdat;
     int cpdatcheck;

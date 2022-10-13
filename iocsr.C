@@ -364,6 +364,250 @@ void Netdata::ReadNetwork() {
   fclose(pEvent);
   delete[] line;
 }
+
+// Read network parts (ordering)
+//
+void Netdata::ReadPart(mDist *msg) {
+  /* Bookkeeping */
+  idx_t nsizedat;
+  idx_t nstatedat;
+  idx_t nstickdat;
+  idx_t neventdat;
+  /* File operations */
+  FILE *pPart;
+  FILE *pCoord;
+  FILE *pAdjcy;
+  FILE *pState;
+  FILE *pEvent;
+  char csrfile[100];
+  char *line;
+  char *oldstr, *newstr;
+
+  // Copy over metis distribution from dist
+  vtxdistmetis.resize(netfiles+1);
+  edgdistmetis.resize(netfiles+1);
+  int ndiv = netparts/netfiles;
+  int nrem = netparts%netfiles;
+  for (int i = 0; i < netfiles ; ++i) {
+    int j = i*ndiv + (i < nrem ? i : nrem);
+    vtxdistmetis[i] = msg->vtxdist[j];
+    edgdistmetis[i] = msg->edgdist[j];
+  }
+  vtxdistmetis[netfiles] = msg->vtxdist[netparts];
+  edgdistmetis[netfiles] = msg->edgdist[netparts];
+  // cleanup
+  delete msg;
+
+  // Prepare buffer
+  line = new char[MAXLINE];
+
+  // Open files for reading
+  sprintf(csrfile, "%s/%s.part.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pPart = fopen(csrfile,"r");
+  sprintf(csrfile, "%s/%s.coord.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pCoord = fopen(csrfile,"r");
+  sprintf(csrfile, "%s/%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pAdjcy = fopen(csrfile,"r");
+  sprintf(csrfile, "%s/%s.state.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pState = fopen(csrfile,"r");
+  sprintf(csrfile, "%s/%s.event.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pEvent = fopen(csrfile,"r");
+  if (pPart == NULL || pCoord == NULL || pAdjcy == NULL ||
+      pState == NULL || pEvent == NULL) {
+    CkPrintf("Error opening files for reading\n");
+    CkExit();
+  }
+  if (line == NULL) {
+    CkPrintf("Could not allocate memory for lines\n");
+    CkExit();
+  }
+
+  // Initialize sizes
+  partmetis.resize(vtxdistmetis[datidx+1] - vtxdistmetis[datidx]);
+  vtxidxpart.resize(netparts);
+  vtxmodidxpart.resize(netparts);
+  xyzpart.resize(netparts);
+  edgmodidxpart.resize(netparts);
+  adjcypart.resize(netparts);
+  statepart.resize(netparts);
+  stickpart.resize(netparts);
+  eventpart.resize(netparts);
+  nsizedat = 0;
+  nstatedat = 0;
+  nstickdat = 0;
+  neventdat = 0;
+
+  // Read in graph information
+  for (std::size_t i = 0; i < partmetis.size(); ++i) {
+    while(fgets(line, MAXLINE, pPart) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    // partmetis
+    partmetis[i] = strtoidx(oldstr, &newstr, 10);
+    CkAssert(partmetis[i] < netparts);
+    vtxidxpart[partmetis[i]].push_back(vtxdistmetis[datidx]+i);
+    adjcypart[partmetis[i]].push_back(std::vector<idx_t>());
+
+    // Read in line (coordinates)
+    while(fgets(line, MAXLINE, pCoord) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    // xyz
+    for (idx_t j = 0; j < 3; ++j) {
+      real_t coord = strtoreal(oldstr, &newstr);
+      oldstr = newstr;
+      xyzpart[partmetis[i]].push_back(coord);
+    }
+
+    // Read line (per vertex)
+    while(fgets(line, MAXLINE, pAdjcy) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    for(;;) {
+      idx_t edg = strtoidx(oldstr, &newstr, 10);
+      // check for end of line
+      if (edg == 0 && oldstr != line)
+        break;
+      oldstr = newstr;
+      // adjcy
+      adjcypart[partmetis[i]].back().push_back(edg);
+      ++nsizedat;
+    }
+
+    // Extract State Information
+    // Read line (vertex)
+    while(fgets(line, MAXLINE, pState) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    // extract model index from name
+    idx_t modidx = strtomodidx(oldstr, &newstr);
+    CkAssert(modidx != IDX_T_MAX);
+    oldstr = newstr;
+    // vtxmodidx
+    vtxmodidxpart[partmetis[i]].push_back(modidx);
+    statepart[partmetis[i]].push_back(std::vector<real_t>());
+    stickpart[partmetis[i]].push_back(std::vector<tick_t>());
+    CkAssert(modidx > 0);
+    for(std::size_t s = 0; s < modeldata[modidx-1].statetype.size(); ++s) {
+      real_t stt = strtoreal(oldstr, &newstr);
+      oldstr = newstr;
+      // state
+      statepart[partmetis[i]].back().push_back(stt);
+      ++nstatedat;
+    }
+    for(std::size_t s = 0; s < modeldata[modidx-1].sticktype.size(); ++s) {
+      tick_t stt = strtotick(oldstr, &newstr, 16);
+      oldstr = newstr;
+      // state
+      stickpart[partmetis[i]].back().push_back(stt);
+      ++nstickdat;
+    }
+
+    // edgmodidx
+    modidx = strtomodidx(oldstr, &newstr);
+    oldstr = newstr;
+    edgmodidxpart[partmetis[i]].push_back(std::vector<idx_t>());
+    while (modidx != IDX_T_MAX) {
+      // modidx
+      edgmodidxpart[partmetis[i]].back().push_back(modidx);
+      statepart[partmetis[i]].push_back(std::vector<real_t>());
+      stickpart[partmetis[i]].push_back(std::vector<tick_t>());
+      // only push edge state if model and not 'none'
+      if (modidx > 0) {
+        for(std::size_t s = 0; s < modeldata[modidx-1].statetype.size(); ++s) {
+          real_t stt = strtoreal(oldstr, &newstr);
+          oldstr = newstr;
+          // state
+          statepart[partmetis[i]].back().push_back(stt);
+          ++nstatedat;
+        }
+        for(std::size_t s = 0; s < modeldata[modidx-1].sticktype.size(); ++s) {
+          tick_t stt = strtotick(oldstr, &newstr, 16);
+          oldstr = newstr;
+          // state
+          stickpart[partmetis[i]].back().push_back(stt);
+          ++nstickdat;
+        }
+      }
+      modidx = strtomodidx(oldstr, &newstr);
+      oldstr = newstr;
+    }
+
+    // Extract event information
+    // Read line (per vertex)
+    while(fgets(line, MAXLINE, pEvent) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    // number of events
+    idx_t jevent = strtoidx(oldstr, &newstr, 10);
+    oldstr = newstr;
+    eventpart[partmetis[i]].push_back(std::vector<event_t>());
+    event_t eventpre;
+    for (idx_t j = 0; j < jevent; ++j) {
+      // diffuse
+      eventpre.diffuse = strtotick(oldstr, &newstr, 16);
+      oldstr = newstr;
+      // type
+      idx_t type = strtoidx(oldstr, &newstr, 10);
+      oldstr = newstr;
+      eventpre.type = type;
+      // source
+      eventpre.source = strtoidx(oldstr, &newstr, 10);
+      oldstr = newstr;
+      // index
+      eventpre.index = strtoidx(oldstr, &newstr, 10);
+      oldstr = newstr;
+      // data
+      if (type == EVENT_SPIKE) {
+        eventpre.data = 0.0;
+      }
+      else {
+        eventpre.data = strtoreal(oldstr, &newstr);
+        oldstr = newstr;
+      }
+      eventpart[partmetis[i]].back().push_back(eventpre);
+    }
+    neventdat += jevent;
+    CkAssert(eventpart[partmetis[i]].back().size() == jevent);
+  }
+
+  // Cleanup
+  fclose(pPart);
+  fclose(pCoord);
+  fclose(pAdjcy);
+  fclose(pState);
+  fclose(pEvent);
+  delete[] line;
+
+  // Print out some information
+  CkPrintf("  File: %d   Vertices: %" PRIidx "   Edges: %" PRIidx "   States: %" PRIidx "   Sticks: %" PRIidx"   Events: %" PRIidx"\n",
+      datidx, partmetis.size(), nsizedat, nstatedat, nstickdat, neventdat);
+
+  // Prepare for partitioning
+  cpdat = 0;
+  cpprt = 0;
+  norderdat = 0;
+  vtxorder.resize(nprt);
+  xyzorder.resize(nprt);
+  adjcyorder.resize(nprt);
+  adjcyreorder.resize(nprt);
+  edgmodidxorder.resize(nprt);
+  edgmodidxreorder.resize(nprt);
+  stateorder.resize(nprt);
+  statereorder.resize(nprt);
+  stickorder.resize(nprt);
+  stickreorder.resize(nprt);
+  eventorder.resize(nprt);
+  norderprt.resize(nprt);
+  for (idx_t i = 0; i < nprt; ++i) {
+    norderprt[i] = 0;
+  }
+  vtxdist.resize(netfiles+1);
+  vtxdist[0] = 0;
+
+  // return control to main
+  contribute(0, NULL, CkReduction::nop);
+}
     
 // Write out network files
 //

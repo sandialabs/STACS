@@ -114,6 +114,8 @@ Main::Main(CkArgMsg *msg) {
 
   // bookkeeping for program control
   buildflag = true;
+  orderflag = true;
+  readflag = true;
   writeflag = true;
 }
 
@@ -147,6 +149,56 @@ void Main::Control() {
       CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
       mGraph *mgraph = BuildGraph();
       netdata.Build(mgraph);
+      netdata.ckSetReductionClient(&cbcontrol);
+    }
+    else if (writeflag) {
+      CkPrintf("Writing network\n");
+      writeflag = false;
+      
+      // Stop timer
+      wcstop = std::chrono::system_clock::now();
+      // Print timing
+      std::chrono::duration<real_t> wctime = std::chrono::duration_cast<std::chrono::milliseconds>(wcstop - wcstart);
+      CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", wctime.count());
+
+      // Halting coordination
+      chalt = 0;
+      nhalt = 0;
+      // Set callback for halting (actually not needed)
+      CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
+      netdata.ckSetReductionClient(&cbhalt);
+      // Write network to disk
+      netdata.SaveBuild();
+      ++nhalt;
+    }
+  }
+
+  // Reorder an already built network
+  else if (runmode == std::string(RUNMODE_ORDER)) {
+    if (readflag) {
+      CkPrintf("Reading network\n");
+      readflag = false;
+
+      // Start timer
+      wcstart = std::chrono::system_clock::now();
+
+      // Read graph distribution files
+      if (ReadDist()) {
+        CkPrintf("Error reading graph distribution...\n");
+        CkExit();
+      }
+      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+      mDist *mdist = BuildDist();
+      netdata.ReadPart(mdist);
+      netdata.ckSetReductionClient(&cbcontrol);
+    }
+    else if (orderflag) {
+      CkPrintf("Reordering network\n");
+      orderflag = false;
+
+      // Scatter and gather part information
+      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+      netdata.ScatterPart();
       netdata.ckSetReductionClient(&cbcontrol);
     }
     else if (writeflag) {

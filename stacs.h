@@ -24,6 +24,7 @@
 #define RUNMODE_SIMULATE  "simulate"
 #define RUNMODE_SIMGPU    "simgpu"
 #define RUNMODE_BUILD     "build"
+#define RUNMODE_ORDER     "order"
 #define RUNMODE_FINDGROUP "findgroup"
 #define RUNMODE_ESTIMATE  "estimate"
 #define RUNMODE_EMPTY     ""
@@ -196,6 +197,8 @@ class Main : public CBase_Main {
     int ninit, cinit;
     int nhalt, chalt;
     bool buildflag;
+    bool orderflag;
+    bool readflag;
     bool writeflag;
 #ifdef STACS_WITH_YARP
     /* YARP */
