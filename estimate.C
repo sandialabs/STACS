@@ -52,12 +52,12 @@ CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs) {
 void Network::InitEst(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  //cyclepart = CkCallback(CkIndex_Network::CycleEst(), partidx, thisProxy);
-  cyclepart = CkCallback(CkIndex_Network::CycleEst(), thisProxy(partidx));
+  //cyclepart = CkCallback(CkIndex_Network::CycleEst(), prtidx, thisProxy);
+  cyclepart = CkCallback(CkIndex_Network::CycleEst(), thisProxy(prtidx));
   
   // Request network part from input
-  netdata(fileidx).LoadNetwork(partidx,
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(partidx)));
+  netdata(datidx).LoadNetwork(prtidx,
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(prtidx)));
 }
 
 
@@ -70,9 +70,9 @@ void Network::InitEst(CProxy_Netdata cpdata) {
 void Network::SaveEstimate() {
   // Build record message for saving
   mRecord* mrecord = BuildRecord();
-  netdata(fileidx).SaveRecord(mrecord);
+  netdata(datidx).SaveRecord(mrecord);
 
-  if (partidx == 0) {
+  if (prtidx == 0) {
     // Recording information
     event_t event;
     event.diffuse = 0;
@@ -96,9 +96,9 @@ void Network::SaveEstimate() {
 void Network::SaveFinalEstimate() {
   // Build record message for saving
   mRecord* mrecord = BuildRecord();
-  netdata(fileidx).SaveFinalRecord(mrecord);
+  netdata(datidx).SaveFinalRecord(mrecord);
   
-  if (partidx == 0) {
+  if (prtidx == 0) {
     // Recording information
     event_t event;
     event.diffuse = 0;
@@ -134,7 +134,7 @@ void Network::CycleEst() {
     reciter += intrec;
 
     // Send records
-    thisProxy(partidx).SaveRecord();
+    thisProxy(prtidx).SaveRecord();
   }
   // Check if episode is complete
   else if (tsim >= teps && episodic) {
@@ -159,7 +159,7 @@ void Network::CycleEst() {
       }
     
       // Start a new cycle (after checked data sent)
-      thisProxy(partidx).SaveRecord();
+      thisProxy(prtidx).SaveRecord();
     }
   }
 #ifdef STACS_WITH_YARP
@@ -181,7 +181,7 @@ void Network::CycleEst() {
       synciter = IDX_T_MAX;
       
       // Display synchronization information
-      if (partidx == 0) {
+      if (prtidx == 0) {
         CkPrintf("  Synchronized at iteration %" PRIidx "\n", iter);
       }
 
@@ -193,7 +193,7 @@ void Network::CycleEst() {
   // Simulate next cycle
   else {
     // Display iteration information
-    if (iter >= dispiter && partidx == 0) {
+    if (iter >= dispiter && prtidx == 0) {
       dispiter += intdisp;
       if (episodic) {
         CkPrintf("  Estimating episode %" PRIidx "\n", epsidx);

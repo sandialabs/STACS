@@ -23,7 +23,7 @@ extern /*readonly*/ idx_t nevtday;
 // Receive and handle RPC messages
 //
 void Network::CommRPC(mRPC *msg) {
-  //CkPrintf("Received %" PRIidx" on %" PRIidx " in iteration %" PRIidx "\n", msg->command, partidx, iter);
+  //CkPrintf("Received %" PRIidx" on %" PRIidx " in iteration %" PRIidx "\n", msg->command, prtidx, iter);
 
   // Pausing/Checkpointing/Stepping
   //
@@ -35,8 +35,8 @@ void Network::CommRPC(mRPC *msg) {
     synciter = iter;
     cyclepart.send();
     // TODO make this print with debugging flag
-    //CkPrintf("Messages on %" PRIidx ": c0: %d, c1: %d, pi: % " PRIidx "\n", partidx, cadjpart[0], cadjpart[1], partiter);
-    //CkPrintf("Pausing %" PRIidx " in iteration %" PRIidx " (comm: %" PRIidx ", sim: %" PRIidx ")\n", partidx, synciter, commiter, iter);
+    //CkPrintf("Messages on %" PRIidx ": c0: %d, c1: %d, pi: % " PRIidx "\n", prtidx, cadjpart[0], cadjpart[1], partiter);
+    //CkPrintf("Pausing %" PRIidx " in iteration %" PRIidx " (comm: %" PRIidx ", sim: %" PRIidx ")\n", prtidx, synciter, commiter, iter);
   }
   else if (msg->command == RPCCOMMAND_PAUSED) {
     synciter = msg->nrpcdata;
@@ -51,7 +51,7 @@ void Network::CommRPC(mRPC *msg) {
     // Coordinate the synchronization iteration
     synciter = iter;
     // Perform checkpointing
-    thisProxy(partidx).SaveNetwork();
+    thisProxy(prtidx).SaveNetwork();
   }
   else if (msg->command == RPCCOMMAND_STEP) {
     if (msg->nrpcdata == 0) {
@@ -121,7 +121,7 @@ void Network::CommRPC(mRPC *msg) {
     }
     // Resync if necessary
     if (msg->command == RPCCOMMAND_PSTIM) {
-      //thisProxy(partidx).CycleNetwork();
+      //thisProxy(prtidx).CycleNetwork();
       cyclepart.send();
     }
   }
@@ -132,14 +132,14 @@ void Network::CommRPC(mRPC *msg) {
     // Coordinate the syncronization iteration
     synciter = iter;
     // Resync
-    //thisProxy(partidx).CycleNetwork();
+    //thisProxy(prtidx).CycleNetwork();
     cyclepart.send();
   }
   else if (msg->command == RPCCOMMAND_CLOSE) {
     // Coordinate the syncronization iteration
     synciter = iter;
     // Resync
-    //thisProxy(partidx).CycleNetwork();
+    //thisProxy(prtidx).CycleNetwork();
     cyclepart.send();
   }
 

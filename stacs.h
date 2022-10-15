@@ -50,7 +50,7 @@
 // Network Size Distributions
 //
 struct dist_t {
-  int partidx;
+  int prtidx;
   idx_t nvtx;
   idx_t nedg;
   idx_t nstate;
@@ -58,7 +58,7 @@ struct dist_t {
   idx_t nevent;
 
   bool operator<(const dist_t& dist) const {
-    return partidx < dist.partidx;
+    return prtidx < dist.prtidx;
   }
 };
 

@@ -56,7 +56,7 @@ void Network::AddRecord() {
 void Network::SaveRecord() {
   // Build record message for saving
   mRecord* mrecord = BuildRecord();
-  netdata(fileidx).SaveRecord(mrecord);
+  netdata(datidx).SaveRecord(mrecord);
   
   // Start a new cycle (checked data sent)
   cyclepart.send();
@@ -67,25 +67,25 @@ void Network::SaveRecord() {
 void Network::SaveFinalRecord() {
   // Build record message for saving
   mRecord* mrecord = BuildRecord();
-  netdata(fileidx).SaveFinalRecord(mrecord);
+  netdata(datidx).SaveFinalRecord(mrecord);
 }
 
 // Write records to file
 //
 void Netdata::SaveRecord(mRecord *msg) {
   // Stash record
-  records[msg->partidx - xpart] = msg;
+  records[msg->prtidx - xprt] = msg;
   
   // Wait for all parts
-  if (++rpart == npart) {
-    rpart = 0;
+  if (++rprt == nprt) {
+    rprt = 0;
     
     // Write data
-    //CkPrintf("  Writing records %" PRIidx "\n", fileidx);
+    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
     WriteRecord();
 
     // Cleanup stash
-    for (idx_t i = 0; i < npart; ++i) {
+    for (idx_t i = 0; i < nprt; ++i) {
       delete records[i];
     }
   }
@@ -95,18 +95,18 @@ void Netdata::SaveRecord(mRecord *msg) {
 //
 void Netdata::SaveFinalRecord(mRecord *msg) {
   // Stash record
-  records[msg->partidx - xpart] = msg;
+  records[msg->prtidx - xprt] = msg;
   
   // Wait for all parts
-  if (++rpart == npart) {
-    rpart = 0;
+  if (++rprt == nprt) {
+    rprt = 0;
     
     // Write data
-    //CkPrintf("  Writing records %" PRIidx "\n", fileidx);
+    //CkPrintf("  Writing records %" PRIidx "\n", datidx);
     WriteRecord();
 
     // Cleanup stash
-    for (idx_t i = 0; i < npart; ++i) {
+    for (idx_t i = 0; i < nprt; ++i) {
       delete records[i];
     }
     
@@ -150,7 +150,7 @@ mRecord* Network::BuildRecord() {
   mrecord->nevtlog = evtlog.size();
   mrecord->nrecord = record.size();
   mrecord->iter = iter;
-  mrecord->partidx = partidx;
+  mrecord->prtidx = prtidx;
 
   // Pack event information
   for (std::size_t i = 0; i < evtlog.size(); ++i) {

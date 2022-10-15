@@ -86,16 +86,7 @@ module network {
     idx_t vtxmodidx[];
     idx_t vtxordidx[];
     real_t xyz[];
-    idx_t xadj[];
-    idx_t adjcy[];
-    idx_t edgmodidx[];
-    int datidx;
-    idx_t nvtx;
-  };
-
-  message mConnNone {
     idx_t vtxidx[];
-    real_t xyz[];
     idx_t xadj[];
     idx_t adjcy[];
     int datidx;
@@ -129,7 +120,7 @@ module network {
     idx_t nstate;
     idx_t nstick;
     idx_t nevent;
-    int partidx;
+    int prtidx;
   };
   
   message mRecord {
@@ -142,7 +133,7 @@ module network {
     idx_t xdata[];
     idx_t xdiffuse[];
     idx_t xindex[];
-    int partidx;
+    int prtidx;
     idx_t iter;
     idx_t nevtlog;
     idx_t nrecord;
@@ -173,11 +164,11 @@ module network {
     
     entry void Build(mGraph *msg);
     entry void SaveBuild();
-    entry void Connect(mConn *msg);
-    entry void ConnRequest(idx_t reqidx);
-    entry void ConnectCheckpoint();
-    entry void ConnectNone(mConnNone *msg);
-    entry void ConnNoneRequest(idx_t reqidx);
+    entry void ConnectVtx(mConn *msg);
+    entry void RequestConnVtx(idx_t reqidx);
+    entry void ConnectHandover();
+    entry void ConnectEdg(mConn *msg);
+    entry void RequestConnEdg(idx_t reqidx);
 
     entry void ReadPart(mDist *msg);
     entry void ScatterPart();
@@ -185,7 +176,7 @@ module network {
     entry void Order(mOrder *msg);
     
     entry void LoadData(mDist *msg);
-    entry void LoadNetwork(int partidx, const CkCallback &cbpart);
+    entry void LoadNetwork(int prtidx, const CkCallback &cbpart);
     
     entry void SaveNetwork(mPart *msg);
     entry void SaveCloseNetwork(mPart *msg);

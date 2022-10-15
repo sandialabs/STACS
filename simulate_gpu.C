@@ -38,11 +38,11 @@ extern CkReduction::reducerType max_idx;
 void Network::InitSimGPU(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleSim(), thisProxy(partidx));
+  cyclepart = CkCallback(CkIndex_Network::CycleSim(), thisProxy(prtidx));
 
   // Request network part from input
-  netdata(fileidx).LoadNetwork(partidx,
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(partidx)));
+  netdata(datidx).LoadNetwork(prtidx,
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(prtidx)));
 }
 
 
@@ -64,7 +64,7 @@ void Network::CycleSimGPU() {
     reciter += intrec;
 
     // Send records
-    thisProxy(partidx).SaveRecord();
+    thisProxy(prtidx).SaveRecord();
   }
   // Check if episode is complete
   else if (tsim >= teps && episodic) {
@@ -82,7 +82,7 @@ void Network::CycleSimGPU() {
       }
     
       // Start a new cycle (after checked data sent)
-      thisProxy(partidx).SaveRecord();
+      thisProxy(prtidx).SaveRecord();
     }
   }
   // Saving
@@ -91,12 +91,12 @@ void Network::CycleSimGPU() {
     saveiter += intsave;
     
     // Display checkpointing information
-    if (partidx == 0) {
+    if (prtidx == 0) {
       CkPrintf("  Saving network at iteration %" PRIidx "\n", iter);
     }
 
     // Checkpoint
-    thisProxy(partidx).SaveNetwork();
+    thisProxy(prtidx).SaveNetwork();
   }
 #ifdef STACS_WITH_YARP
   else if (syncing && synciter == IDX_T_MAX) {
@@ -117,7 +117,7 @@ void Network::CycleSimGPU() {
       synciter = IDX_T_MAX;
       
       // Display synchronization information
-      if (partidx == 0) {
+      if (prtidx == 0) {
         CkPrintf("  Synchronized at iteration %" PRIidx "\n", iter);
       }
 
@@ -129,7 +129,7 @@ void Network::CycleSimGPU() {
   // Simulate next cycle
   else {
     // Display iteration information
-    if (iter >= dispiter && partidx == 0) {
+    if (iter >= dispiter && prtidx == 0) {
       dispiter += intdisp;
       if (episodic) {
         CkPrintf("  Simulating episode %" PRIidx "\n", epsidx);
@@ -212,7 +212,7 @@ void Network::CycleSimGPU() {
       //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", partidx, nevent);
+    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
 
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();

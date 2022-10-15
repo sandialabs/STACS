@@ -47,16 +47,10 @@ CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs) {
 //
 Netdata::Netdata(mModel *msg) {
   // Bookkeeping
-  fileidx = thisIndex;
+  datidx = thisIndex;
   int ndiv = netparts/netfiles;
   int nrem = netparts%netfiles;
-  cpart = rpart = 0;
-  npart = ndiv + (fileidx < nrem);
-  xpart = fileidx*ndiv + (fileidx < nrem ? fileidx : nrem);
-  
-  // Bookkeeping 2
-  // TODO: consolidate these...
-  datidx = thisIndex;
+  cprt = rprt = 0;
   nprt = ndiv + (datidx < nrem);
   xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
 
@@ -353,11 +347,11 @@ void Netdata::LoadData(mDist *msg) {
   maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
   
   // Data
-  parts.resize(npart);
-  records.resize(npart);
+  parts.resize(nprt);
+  records.resize(nprt);
 
   // Read in files
-  CkPrintf("Reading network data files %" PRIidx "\n", fileidx);
+  CkPrintf("Reading network data files %" PRIidx "\n", datidx);
   ReadNetwork();
 
   // Return control to main
@@ -366,9 +360,9 @@ void Netdata::LoadData(mDist *msg) {
 
 // Send data to network partition
 //
-void Netdata::LoadNetwork(int partidx, const CkCallback &cbpart) {
+void Netdata::LoadNetwork(int prtidx, const CkCallback &cbpart) {
   // Send part to network
-  cbpart.send(parts[partidx - xpart]);
+  cbpart.send(parts[prtidx - xprt]);
 }
 
 
@@ -383,7 +377,7 @@ void Netdata::SaveBuild() {
   WriteBuild();
 
   // Return control to main
-  contribute(npart*sizeof(dist_t), netdist.data(), net_dist,
+  contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
       CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
 }
 
@@ -391,22 +385,22 @@ void Netdata::SaveBuild() {
 //
 void Netdata::SaveNetwork(mPart *msg) {
   // Stash part
-  parts[msg->partidx - xpart] = msg;
+  parts[msg->prtidx - xprt] = msg;
   
   // Wait for all parts
-  if (++cpart == npart) {
-    cpart = 0;
+  if (++cprt == nprt) {
+    cprt = 0;
 
     // Write data
     WriteNetwork();
 
     // Cleanup stash
-    for (idx_t i = 0; i < npart; ++i) {
+    for (idx_t i = 0; i < nprt; ++i) {
       delete parts[i];
     }
 
     // Return control to main
-    contribute(npart*sizeof(dist_t), netdist.data(), net_dist, maindist);
+    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, maindist);
   }
 }
 
@@ -414,17 +408,17 @@ void Netdata::SaveNetwork(mPart *msg) {
 //
 void Netdata::SaveCloseNetwork(mPart *msg) {
   // Stash part
-  parts[msg->partidx - xpart] = msg;
+  parts[msg->prtidx - xprt] = msg;
   
   // Wait for all parts
-  if (++cpart == npart) {
-    cpart = 0;
+  if (++cprt == nprt) {
+    cprt = 0;
 
     // Write data
     WriteNetwork();
 
     // Cleanup stash
-    for (idx_t i = 0; i < npart; ++i) {
+    for (idx_t i = 0; i < nprt; ++i) {
       delete parts[i];
     }
 
@@ -434,7 +428,7 @@ void Netdata::SaveCloseNetwork(mPart *msg) {
 #endif
 
     // Return control to main
-    contribute(npart*sizeof(dist_t), netdist.data(), net_dist,
+    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
         CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
   }
 }
@@ -443,8 +437,8 @@ void Netdata::SaveCloseNetwork(mPart *msg) {
 //
 void Netdata::CloseNetwork() {
   // Wait for all parts
-  if (++cpart == npart) {
-    cpart = 0;
+  if (++cprt == nprt) {
+    cprt = 0;
 
 #ifdef STACS_WITH_YARP
     // Finalize YARP

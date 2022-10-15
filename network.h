@@ -239,6 +239,7 @@ class mModel : public CMessage_mModel {
     idx_t *xdatafiles;  // prefix sum for filenames
     char *datafiles;    // filenames (concatenated)
     idx_t *datatypes;   // data filetypes
+    // TODO: remove polychron from base sim/model and create separate header/files for it
     bool *grpactive;   // polychronization (active)
     bool *grpmother;   // polychronization (mother)
     bool *grpanchor;   // polychronization (anchor)
@@ -291,20 +292,9 @@ class mConn : public CMessage_mConn {
     idx_t *vtxmodidx;   // vertex model
     idx_t *vtxordidx;   // vertex model order
     real_t *xyz;        // vertex coordinates
+    idx_t *vtxidx;      // vertex global idx
     idx_t *xadj;        // prefix for adjacency
     idx_t *adjcy;       // adjacent vertices
-    idx_t *edgmodidx;   // edge models
-    idx_t datidx;
-    idx_t nvtx;
-};
-
-#define MSG_ConnNone 4
-class mConnNone : public CMessage_mConnNone {
-  public:
-    idx_t *vtxidx;      // vertex global idx
-    real_t *xyz;         // vertex coordinate
-    idx_t *xadj;        // prefix for adjacency
-    idx_t *adjcy;       // relevant adjacent vertices
     idx_t datidx;
     idx_t nvtx;
 };
@@ -347,7 +337,7 @@ class mPart : public CMessage_mPart {
     idx_t nstick;
     idx_t nevent;
     /* Bookkeeping */
-    int partidx;
+    int prtidx;
 };
 
 // Network record data
@@ -365,7 +355,7 @@ class mRecord : public CMessage_mRecord {
     idx_t *xdiffuse;
     idx_t *xindex;
     /* Bookkeeping */
-    int partidx;
+    int prtidx;
     idx_t iter;
     idx_t nevtlog;
     idx_t nrecord;
@@ -590,26 +580,22 @@ class Netdata : public CBase_Netdata {
 
     /* Building */
     void Build(mGraph *msg);
-    std::vector<real_t> BuildEdgState(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
-    std::vector<tick_t> BuildEdgStick(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
     void SaveBuild();
     void WriteBuild();
-    //void CopytoPart();
-
-    /* Connecting */
-    void Connect(mConn *msg);
-    void ConnRequest(idx_t reqidx);
-    mConn* BuildPrevConn(idx_t reqidx);
-    mConn* BuildCurrConn();
-    mConn* BuildNextConn();
-    idx_t MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t targetidx, real_t dist);
-    /* Connecting Sample */
-    void ConnectCheckpoint();
-    void ConnectNone(mConnNone *msg);
-    void ConnNoneRequest(idx_t reqidx);
-    mConnNone* BuildConnNone(idx_t reqidx);
+    std::vector<real_t> BuildEdgState(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
+    std::vector<tick_t> BuildEdgStick(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
     void ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rngstate);
     void ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick);
+
+    /* Connecting */
+    idx_t MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t targetidx, real_t dist);
+    void ConnectVtx(mConn *msg);
+    void RequestConnVtx(idx_t reqidx);
+    mConn* BuildConnVtx(idx_t reqidx);
+    void ConnectHandover();
+    void ConnectEdg(mConn *msg);
+    void RequestConnEdg(idx_t reqidx);
+    mConn* BuildConnEdg(idx_t reqidx);
 
     /* Reorder Network */
     void ReadPart(mDist *msg);
@@ -626,7 +612,7 @@ class Netdata : public CBase_Netdata {
 
     /* Loading */
     void LoadData(mDist *msg);
-    void LoadNetwork(int partidx, const CkCallback &cbnet);
+    void LoadNetwork(int prtidx, const CkCallback &cbnet);
     void ReadNetwork();
 
     /* Saving */
@@ -829,9 +815,11 @@ class Netdata : public CBase_Netdata {
     std::vector<idx_t> vtxordidx; // vertex index within model order
     std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
     std::vector<datafile_t> datafiles;
-    std::vector<std::unordered_map<idx_t, std::vector<idx_t>>> samplecache; // local connectivity storage
-    std::vector<std::size_t> adjcylocalcount;
-    std::vector<std::set<idx_t>> adjcyset;
+    /* Connecting */
+    //std::unordered_map<std::array<idx_t, 2>,idx_t> connmodmap; // (source, target) to edge
+    std::vector<std::set<idx_t>> adjcyset; // set of directed afferent edges
+    std::list<idx_t> connvtxreq; // parts that are requesting their vertex into
+    std::list<idx_t> connedgreq; // parts that are requesting their edge info
     /* Metis */
     std::vector<idx_t> vtxdistmetis; // distribution of vertices on data
     std::vector<idx_t> edgdistmetis; // distribution of edges on data
@@ -861,12 +849,6 @@ class Netdata : public CBase_Netdata {
     std::vector<std::vector<idx_t>> eventsourceorder; // source reordering
     std::vector<std::vector<idx_t>> eventindexorder; // index reordering
     std::list<mOrder *> ordering;
-    /* Connection information */
-    std::vector<std::vector<std::vector<idx_t>>> adjcyconn;
-        // first level is the data parts, second level are per vertex, third level is edges
-    std::list<idx_t> adjcyreq; // parts that are requesting thier adjacency info
-    std::vector<std::vector<std::vector<idx_t>>> edgmodidxconn; // edge model index into netmodel
-        // first level is the data parts, second level are per vertex, third level is edges
     /* Graph information */
     std::vector<vertex_t> vertices; // vertex models and build information
     std::vector<edge_t> edges; // edge models and connection information
@@ -875,16 +857,11 @@ class Netdata : public CBase_Netdata {
     std::uniform_real_distribution<real_t> *unifdist;
     std::normal_distribution<real_t> *normdist;
     /* Bookkeeping */
-    int fileidx;
-    int cpart, rpart;
-    int npart, xpart;
-    /* Additional Bookkeeping */
-    // TODO: Consolidate these
     int datidx;
-    int cpdat;
-    int cpdatcheck;
-    idx_t cpprt;
-    idx_t nprt, xprt;
+    int cprt, rprt;
+    int nprt, xprt;
+    /* Additional Bookkeeping */
+    int cpdat, cphnd, cpprt;
     idx_t norder; // total order
     idx_t norderdat; // order per data
     std::vector<idx_t> norderprt;  // order of vertices per network part
@@ -1022,7 +999,7 @@ class Network : public CBase_Network {
     /* Bookkeeping */
     CProxy_Netdata netdata;
     CkCallback cyclepart;
-    int partidx, fileidx;
+    int prtidx, datidx;
     /* Configuration */
     bool plastic;
     bool episodic;
