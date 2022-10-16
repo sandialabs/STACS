@@ -153,9 +153,6 @@ Netdata::Netdata(mModel *msg) {
       ++jstickname;
     }
     // prepare containers for parameters
-    //modeldata[i].statetype.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
-    //modeldata[i].stateparam.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
-    //CkAssert(modeldata[i].nstate == msg->xstatetype[i+1] - msg->xstatetype[i]);
     modeldata[i].statetype.resize(modeldata[i].nstate);
     modeldata[i].stateparam.resize(modeldata[i].nstate);
     for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
@@ -201,9 +198,6 @@ Netdata::Netdata(mModel *msg) {
       }
     }
     // prepare containers
-    //modeldata[i].sticktype.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
-    //modeldata[i].stickparam.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
-    //CkAssert(modeldata[i].nstick == msg->xsticktype[i+1] - msg->xsticktype[i]);
     modeldata[i].sticktype.resize(modeldata[i].nstick);
     modeldata[i].stickparam.resize(modeldata[i].nstick);
     for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
@@ -266,9 +260,6 @@ Netdata::Netdata(mModel *msg) {
     }
   }
   // Sanity check
-  // TODO: potentially provide these numbers in the msg as well
-  //CkAssert(jstatename == msg->nstatename);
-  //CkAssert(jstickname == msg->nstickname);
   CkAssert(jstateparam == msg->nstateparam);
   CkAssert(jstickparam == msg->nstickparam);
 
@@ -304,6 +295,10 @@ Netdata::Netdata(mModel *msg) {
 #endif
 
   // Printing model configuration information
+  
+  // Preparing network build (if needed)
+  connvtxreq.clear();
+  connedgreq.clear();
 
   // Return control to main
   contribute(0, NULL, CkReduction::nop);

@@ -802,22 +802,22 @@ class Netdata : public CBase_Netdata {
     std::vector<model_t> modeldata;    // model information from config and implementation defaults
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
-    /* Build Data */
+    std::vector<std::string> rngtype; // rng types in order of definitions
+    std::vector<datafile_t> datafiles;
+    /* Network Data */
+    std::vector<idx_t> vtxmodidx; // vertex model index into netmodel
+    std::vector<idx_t> vtxordidx; // vertex index within model order
     std::vector<real_t> xyz;
     std::vector<std::vector<idx_t>> adjcy;
+    std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
     std::vector<std::vector<std::vector<real_t>>> state;
         // first level is the vertex, second level is the models, third is state data
     std::vector<std::vector<std::vector<tick_t>>> stick;
     std::vector<std::vector<event_t>> event;
-    /* Models */
-    std::vector<std::string> rngtype; // rng types in order of definitions
-    std::vector<idx_t> vtxmodidx; // vertex model index into netmodel
-    std::vector<idx_t> vtxordidx; // vertex index within model order
-    std::vector<std::vector<idx_t>> edgmodidx; // edge model index into netmodel
-    std::vector<datafile_t> datafiles;
     /* Connecting */
-    //std::unordered_map<std::array<idx_t, 2>,idx_t> connmodmap; // (source, target) to edge
+    std::unordered_map<idx_t,idx_t> connmodmap; // (source*edges.size + target) to edge
     std::vector<std::set<idx_t>> adjcyset; // set of directed afferent edges
+    std::vector<idx_t> nadjcysample; // counts of number of adjcy for index-based connections
     std::list<idx_t> connvtxreq; // parts that are requesting their vertex into
     std::list<idx_t> connedgreq; // parts that are requesting their edge info
     /* Metis */
