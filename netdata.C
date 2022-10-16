@@ -298,7 +298,6 @@ Netdata::Netdata(mModel *msg) {
   
   // Preparing network build (if needed)
   connvtxreq.clear();
-  connedgreq.clear();
 
   // Return control to main
   contribute(0, NULL, CkReduction::nop);

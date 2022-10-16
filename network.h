@@ -819,7 +819,6 @@ class Netdata : public CBase_Netdata {
     std::vector<std::set<idx_t>> adjcyset; // set of directed afferent edges
     std::vector<idx_t> nadjcysample; // counts of number of adjcy for index-based connections
     std::list<idx_t> connvtxreq; // parts that are requesting their vertex into
-    std::list<idx_t> connedgreq; // parts that are requesting their edge info
     /* Metis */
     std::vector<idx_t> vtxdistmetis; // distribution of vertices on data
     std::vector<idx_t> edgdistmetis; // distribution of edges on data
@@ -863,12 +862,11 @@ class Netdata : public CBase_Netdata {
     /* Additional Bookkeeping */
     int cpdat, cphnd, cpprt;
     idx_t norder; // total order
-    idx_t norderdat; // order per data
-    std::vector<idx_t> norderprt;  // order of vertices per network part
-    std::vector<std::vector<idx_t>> nordervtx;  // order of vertex models 
-    std::vector<std::vector<idx_t>> xordervtx;  // prefix of vertex models
-    std::vector<std::vector<idx_t>> xpopidxprt;  // prefix of populations over partitions
-    std::vector<std::vector<idx_t>> xvtxidxprt;  // prefix of vertex over partitions (population global)
+    idx_t norderdat; // order for this netdata chare
+    std::vector<idx_t> xorderdat; // prefix order for netdata
+    std::vector<idx_t> norderprt; // order per network partition
+    std::vector<std::vector<idx_t>> xpopvtxidxprt;  // prefix of populations over partitions
+    std::vector<std::vector<idx_t>> xglbvtxidxprt;  // prefix of vertex over partitions (population global)
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;

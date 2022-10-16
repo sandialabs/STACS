@@ -133,75 +133,71 @@ void Netdata::Build(mGraph *msg) {
   // Taking into account the different parts too
   // Initial distribution is simply contructing
   // vertices as evenly as possible across the parts
-  nordervtx.resize(nprt);
-  xordervtx.resize(nprt);
-  for (idx_t k = 0; k < nprt; ++k) {
-    nordervtx[k].resize(vertices.size());
-    xordervtx[k].resize(vertices.size());
-  }
-  // Bookkeeping across all populations (as opposed to vtx order?)
-  // TODO: Document what all these bookkeeping data structures do and where they're used
-  xpopidxprt.resize(vertices.size());
-  xvtxidxprt.resize(vertices.size());
+  xpopvtxidxprt.resize(vertices.size()); // Prefix vertex index within population (per partition)
+  xglbvtxidxprt.resize(vertices.size()); // Prefix vertex index globally (per partition)
   // Loop through vertex populations
   idx_t xremvtx = 0;
   for (std::size_t i = 0; i < vertices.size(); ++i) {
     idx_t ndivvtx = (vertices[i].order)/netparts;
     idx_t nremvtx = (vertices[i].order)%netparts;
-    xvtxidxprt[i].resize(netparts);
-    xpopidxprt[i].resize(netparts+1);
-    // by vertex order
-    for (idx_t k = 0; k < nprt; ++k) {
-      // looping integer magic
-      nordervtx[k][i] = ndivvtx + (((xprt+k) >= xremvtx && (xprt+k) < nremvtx+xremvtx) ||
-          (nremvtx+xremvtx >= netparts && (xprt+k) < xremvtx && (xprt+k) < (nremvtx+xremvtx)%netparts));
-      xordervtx[k][i] = ndivvtx * (xprt+k);
-      // TODO: see if you can get rid of the loop
-      for (idx_t j = 0; j < xprt+k; ++j) {
-        xordervtx[k][i] += ((j >= xremvtx && j < nremvtx+xremvtx) ||
-            (nremvtx+xremvtx >= netparts && j < xremvtx && j < (nremvtx+xremvtx)%netparts));
-      }
-    }
+    xpopvtxidxprt[i].resize(netparts+1);
     // By population
     for (idx_t k = 0; k < netparts; ++k) {
-      xpopidxprt[i][k] = ndivvtx * k;
-      // TODO: see if you can get rid of the loop
+      xpopvtxidxprt[i][k] = ndivvtx * k;
       for (idx_t j = 0; j < k; ++j) {
-        xpopidxprt[i][k] += ((j >= xremvtx && j < nremvtx+xremvtx) ||
+        xpopvtxidxprt[i][k] += ((j >= xremvtx && j < nremvtx+xremvtx) ||
             (nremvtx+xremvtx >= netparts && j < xremvtx && j < (nremvtx+xremvtx)%netparts));
       }
     }
     // Add order to final set
-    xpopidxprt[i][netparts] = vertices[i].order;
+    xpopvtxidxprt[i][netparts] = vertices[i].order;
     // update remainder
     xremvtx = (xremvtx+nremvtx)%netparts;
   }
   // Global population vertex index
   for (std::size_t i = 0; i < vertices.size(); ++i) {
+    xglbvtxidxprt[i].resize(netparts+1);
     for (int k = 0; k < netparts; ++k) {
-      xvtxidxprt[i][k] = 0;
+      xglbvtxidxprt[i][k] = 0;
       for (std::size_t j = 0; j < i; ++j) {
-        xvtxidxprt[i][k] += xpopidxprt[j][k+1];
+        xglbvtxidxprt[i][k] += xpopvtxidxprt[j][k+1];
       }
       for (std::size_t j = i; j < vertices.size(); ++j) {
-        xvtxidxprt[i][k] += xpopidxprt[j][k];
+        xglbvtxidxprt[i][k] += xpopvtxidxprt[j][k];
       }
     }
+    xglbvtxidxprt[i][netparts] = norder;
   }
-  // xvtxidxprt[0][datidx] gives the global vtx offset for datidx
-  
-  // counting for vertices on this part
-  // TODO: is norderprt used anywhere?
+  // Note: xglbvtxidxprt[0][xprt] gives the global vtx offset for datidx
+  xorderdat.resize(netfiles+1);
+  for (int k = 0; k < netfiles; ++k) {
+    int ndiv = netparts/netfiles;
+    int nrem = netparts%netfiles;
+    int prt = k*ndiv + (k < nrem ? k : nrem);
+    xorderdat[k] = xglbvtxidxprt[0][prt];
+  }
+  xorderdat[netfiles] = norder;
+
+  // Compute how much this chare builds
   norderdat = 0;
   norderprt.resize(nprt);
+  // population specific sizes
+  std::vector<std::vector<idx_t>> nordervtx;
+  std::vector<std::vector<idx_t>> xordervtx;
+  nordervtx.resize(nprt);
+  xordervtx.resize(nprt);
   for (idx_t k = 0; k < nprt; ++k) {
     norderprt[k] = 0;
+    nordervtx[k].resize(vertices.size());
+    xordervtx[k].resize(vertices.size());
     for (std::size_t i = 0; i < vertices.size(); ++i) {
+      nordervtx[k][i] = xpopvtxidxprt[i][xprt+k+1] - xpopvtxidxprt[i][xprt+k];
+      xordervtx[k][i] = xpopvtxidxprt[i][xprt+k];
       norderprt[k] += nordervtx[k][i];
     }
     norderdat += norderprt[k];
   }
-
+  
   // Print out vertex distribution information
   std::string orderprts;
   // collect order parts
@@ -212,7 +208,7 @@ void Netdata::Build(mGraph *msg) {
     orderprts.append(" [");
     for (std::size_t i = 0; i < vertices.size(); ++i) {
       std::ostringstream ordervtx;
-      ordervtx << " " << nordervtx[k][i] << "(" << xordervtx[k][i] << ", " << xvtxidxprt[i][xprt+k] << ")";
+      ordervtx << " " << nordervtx[k][i] << "(" << xordervtx[k][i] << ", " << xglbvtxidxprt[i][xprt+k] << ")";
       orderprts.append(ordervtx.str());
     }
     orderprts.append(" ]");
@@ -379,14 +375,7 @@ void Netdata::Build(mGraph *msg) {
   // Any index-based sample connectivity occurs first
   // for each vertex
   for (idx_t i = 0; i < norderdat; ++i) {
-    idx_t targetidx_glb = 0;
-    // TODO: this is highly innefficient...
-    for (int prt = 0; prt < netparts; ++prt) {
-      if (vtxordidx[i] >= xpopidxprt[vtxmodidx[i]-1][prt]) {
-        targetidx_glb = xvtxidxprt[vtxmodidx[i]-1][prt] + vtxordidx[i] - xpopidxprt[vtxmodidx[i]-1][prt];
-        break;
-      }
-    }
+    idx_t glbtargetidx = xorderdat[datidx] + i;
     // for each edge population
     for (std::size_t e = 0; e < edges.size(); ++e) {
       // Sample types should only have one target at the moment
@@ -407,20 +396,20 @@ void Netdata::Build(mGraph *msg) {
             // copy over the shuffled indices for the sampling
             for (idx_t j = 0; j < edges[e].maskparam[k][1]; ++j) {
               // Convert from population index to global index
-              idx_t sourceidx_glb = 0;
+              idx_t glbsourceidx = 0;
               // TODO: this is highly innefficient...
               for (int prt = 0; prt < netparts; ++prt) {
-                if (sourceorder[j] >= xpopidxprt[edges[e].source-1][prt] && sourceorder[j] < xpopidxprt[edges[e].source-1][prt+1]) {
-                  sourceidx_glb = xvtxidxprt[edges[e].source-1][prt] + (sourceorder[j] - xpopidxprt[edges[e].source-1][prt]);
+                if (sourceorder[j] >= xpopvtxidxprt[edges[e].source-1][prt] && sourceorder[j] < xpopvtxidxprt[edges[e].source-1][prt+1]) {
+                  glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder[j] - xpopvtxidxprt[edges[e].source-1][prt]);
                   break;
                 }
               }
-              if (sourceidx_glb == targetidx_glb) {
+              if (glbsourceidx == glbtargetidx) {
                 continue;
               }
               // this is just to check on memory usage
-              adjcy[i].push_back(sourceidx_glb);
-              adjcyset[i].insert(sourceidx_glb); // The set is useful for faster searching of edge existence
+              adjcy[i].push_back(glbsourceidx);
+              adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
               edgmodidx[i].push_back(edges[e].modidx);
               // The state/stick will need to be reparameterized with correct distance information later
               // TODO: make a version that doesn't use dist, idxs, depending on the edge model
@@ -462,19 +451,19 @@ void Netdata::Build(mGraph *msg) {
             for (idx_t iter = 0; iter < edges[e].maskparam[k][1]; iter++) {
               idx_t sourceorder = valswithindices[iter].first;
               // Convert from population index to global index
-              idx_t sourceidx_glb = 0;
+              idx_t glbsourceidx = 0;
               // TODO: this is highly innefficient...
               for (int prt = 0; prt < netparts; ++prt) {
-                if (sourceorder >= xpopidxprt[edges[e].source-1][prt] && sourceorder < xpopidxprt[edges[e].source-1][prt+1]) {
-                  sourceidx_glb = xvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopidxprt[edges[e].source-1][prt]);
+                if (sourceorder >= xpopvtxidxprt[edges[e].source-1][prt] && sourceorder < xpopvtxidxprt[edges[e].source-1][prt+1]) {
+                  glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopvtxidxprt[edges[e].source-1][prt]);
                   break;
                 }
               }
-              if (sourceidx_glb == targetidx_glb) {// || adjcyset[i].find(sourceidx_glb) == adjcyset[i].end()) {
+              if (glbsourceidx == glbtargetidx) {// || adjcyset[i].find(glbsourceidx) == adjcyset[i].end()) {
                 continue;
               } else {
-                adjcy[i].push_back(sourceidx_glb);
-                adjcyset[i].insert(sourceidx_glb); // The set is useful for faster searching of edge existence
+                adjcy[i].push_back(glbsourceidx);
+                adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
                 edgmodidx[i].push_back(edges[e].modidx);
                 // The state/stick will need to be reparameterized with correct distance information later
                 state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceorder, vtxordidx[i]));
@@ -521,19 +510,19 @@ void Netdata::Build(mGraph *msg) {
             for (idx_t iter = 0; iter < edges[e].maskparam[k][1]; iter++) {
               idx_t sourceorder = valswithindices[iter].first;
               // Convert from population index to global index
-              idx_t sourceidx_glb = 0;
+              idx_t glbsourceidx = 0;
               // TODO: this is highly innefficient...
               for (int prt = 0; prt < netparts; ++prt) {
-                if (sourceorder >= xpopidxprt[edges[e].source-1][prt] && sourceorder < xpopidxprt[edges[e].source-1][prt+1]) {
-                  sourceidx_glb = xvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopidxprt[edges[e].source-1][prt]);
+                if (sourceorder >= xpopvtxidxprt[edges[e].source-1][prt] && sourceorder < xpopvtxidxprt[edges[e].source-1][prt+1]) {
+                  glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopvtxidxprt[edges[e].source-1][prt]);
                   break;
                 }
               }
-              if (sourceidx_glb == targetidx_glb) {
+              if (glbsourceidx == glbtargetidx) {
                 continue;
               } else {
-                adjcy[i].push_back(sourceidx_glb);
-                adjcyset[i].insert(sourceidx_glb); // The set is useful for faster searching of edge existence
+                adjcy[i].push_back(glbsourceidx);
+                adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
                 edgmodidx[i].push_back(edges[e].modidx);
                 // The state/stick will need to be reparameterized with correct distance information later
                 state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceorder, vtxordidx[i]));
@@ -579,16 +568,14 @@ void Netdata::ConnectVtx(mConn *msg) {
   //CkPrintf("  Connecting %d to %d\n", datidx, msg->datidx);
   
   // Go through the incoming state and reparameterize the state/sticks if needed
-  idx_t sourceidx_glb_min = xvtxidxprt[0][msg->datidx];
-  idx_t sourceidx_glb_max = xvtxidxprt[0][msg->datidx] + msg->nvtx;
   for (idx_t i = 0; i < norderdat; ++i) {
     for (std::size_t j = 0; j < nadjcysample[i]; ++j) {
-      if (adjcy[i][j] >= sourceidx_glb_min && adjcy[i][j] < sourceidx_glb_max) {
+      if (xorderdat[msg->datidx] <= adjcy[i][j] && adjcy[i][j] < xorderdat[msg->datidx+1]) {
         // Reparameterize with information
-        idx_t sourceidx_loc = adjcy[i][j] - sourceidx_glb_min;
-        idx_t e = connmodmap[msg->vtxmodidx[sourceidx_loc]*edges.size()+vtxmodidx[i]];
-        //CkPrintf("%" PRIidx ", %" PRIidx ": %" PRIidx ", %" PRIidx"\n", i, adjcy[i][j], sourceidx_loc, e);
-        real_t distance = distfunc(edges[e].distype, xyz.data()+i*3, msg->xyz+sourceidx_loc*3, edges[e].distparam.data());
+        idx_t locsourceidx = adjcy[i][j] - xorderdat[msg->datidx];
+        idx_t e = connmodmap[msg->vtxmodidx[locsourceidx]*edges.size()+vtxmodidx[i]];
+        //CkPrintf("%" PRIidx ", %" PRIidx ": %" PRIidx ", %" PRIidx"\n", i, adjcy[i][j], locsourceidx, e);
+        real_t distance = distfunc(edges[e].distype, xyz.data()+i*3, msg->xyz+locsourceidx*3, edges[e].distparam.data());
         ReBuildEdgState(edgmodidx[i][j], distance, state[i][j+1]);
         ReBuildEdgStick(edgmodidx[i][j], distance, stick[i][j+1]);
       }
@@ -604,7 +591,7 @@ void Netdata::ConnectVtx(mConn *msg) {
         continue;
       }
       // Skip same index i == j
-      else if(xvtxidxprt[0][datidx]+i == xvtxidxprt[0][msg->datidx]+j) {
+      else if(xorderdat[datidx]+i == xorderdat[msg->datidx]+j) {
         continue;
       }
       // Evaluate connection between i and j
@@ -615,8 +602,8 @@ void Netdata::ConnectVtx(mConn *msg) {
         idx_t modidx;
         // check possible connections from j (source) to i (target)
         if ((modidx = MakeConnection(msg->vtxmodidx[j], vtxmodidx[i], msg->vtxordidx[j], vtxordidx[i], distance))) {
-          adjcy[i].push_back(xvtxidxprt[0][msg->datidx]+j);
-          adjcyset[i].insert(xvtxidxprt[0][msg->datidx]+j); // The set is useful for faster searching of edge existence
+          adjcy[i].push_back(xorderdat[msg->datidx]+j);
+          adjcyset[i].insert(xorderdat[msg->datidx]+j); // The set is useful for faster searching of edge existence
           edgmodidx[i].push_back(modidx);
           if (modidx) {
             // build state from j to i
@@ -635,7 +622,6 @@ void Netdata::ConnectVtx(mConn *msg) {
 
   // send any outstanding requests of built vertieces
   for (std::list<idx_t>::iterator ireqidx = connvtxreq.begin(); ireqidx != connvtxreq.end(); ++ireqidx) {
-    CkPrintf("Test\n");
     mConn *mconn = BuildConnVtx(*ireqidx);
     thisProxy(*ireqidx).ConnectVtx(mconn);
     ireqidx = connvtxreq.erase(ireqidx);
@@ -723,14 +709,6 @@ void Netdata::ConnectEdg(mConn *msg) {
     }
   }
 
-  // send any outstanding requests of built adjcy
-  // TODO: Is this really needed still?
-  for (std::list<idx_t>::iterator ireqidx = connedgreq.begin(); ireqidx != connedgreq.end(); ++ireqidx) {
-    mConn *mconn = BuildConnEdg(*ireqidx);
-    thisProxy(*ireqidx).ConnectEdg(mconn);
-    ireqidx = connedgreq.erase(ireqidx);
-  }
-
   delete msg;
 
   // Move to next part
@@ -790,16 +768,9 @@ void Netdata::ConnectEdg(mConn *msg) {
 // Connect Network Finished
 //
 void Netdata::RequestConnEdg(idx_t reqidx) {
-  // send data adjacency and vertex info to requesting part
-  // check if vertex is built
-  if (vtxmodidx.size()) {
-    mConn *mconn = BuildConnEdg(reqidx);
-    thisProxy(reqidx).ConnectEdg(mconn);
-  }
-  else {
-    // record request for when adjcy is built
-    connedgreq.push_back(reqidx);
-  }
+  // send data adjacency info to requesting part
+  mConn *mconn = BuildConnEdg(reqidx);
+  thisProxy(reqidx).ConnectEdg(mconn);
 }
 
 
@@ -846,32 +817,21 @@ mConn* Netdata::BuildConnEdg(idx_t reqidx) {
   std::vector<std::vector<idx_t>> adjcyconn;
   adjcyconn.resize(norderdat);
 
-  // Figure out the min and max global indices on partition reqidx
-  idx_t globalsource_min = xvtxidxprt[0][reqidx];
-  idx_t globalsource_max = 0;
-  if (reqidx+1 == netparts) {
-    for (std::size_t i = 0; i < vertices.size(); ++i) {
-      globalsource_max += vertices[i].order;
-    }
-  } else {
-    globalsource_max = xvtxidxprt[0][reqidx+1];
-  }
-
   // Count the sizes
   nsizedat = 0;
   for (idx_t i = 0; i < norderdat; ++i) {
     adjcyconn[i].clear();
     for (std::size_t j = 0; j < adjcyset[i].size(); ++j) {
-      if (globalsource_min <= adjcy[i][j] && adjcy[i][j] < globalsource_max) {
+      // Add adjcy information between the min and max global indices on partition reqidx
+      if (xorderdat[reqidx] <= adjcy[i][j] && adjcy[i][j] < xorderdat[reqidx+1]) {
         // global source idx to local
-        // should really have an xvtxidxdat
-        adjcyconn[i].push_back(adjcy[i][j] - xvtxidxprt[0][reqidx]);
+        adjcyconn[i].push_back(adjcy[i][j] - xorderdat[reqidx]);
       }
     }
     // Add none connections to size
     nsizedat += adjcyconn[i].size();
   }
-  //CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx ", adj: %" PRIidx "\n", reqidx, globalsource_min, globalsource_max, nsizedat);
+  //CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx ", adj: %" PRIidx "\n", reqidx, xorderdat[reqidx], xorderdat[reqidx+1], nsizedat);
 
   // Initialize connection message
   int msgSize[MSG_Conn];
@@ -893,7 +853,7 @@ mConn* Netdata::BuildConnEdg(idx_t reqidx) {
   
   // Build message
   for (idx_t i = 0; i < norderdat; ++i) {
-    mconn->vtxidx[i] = xvtxidxprt[0][datidx]+i; // need to convert from local to global
+    mconn->vtxidx[i] = xorderdat[datidx]+i; // need to convert from local to global
     // xadj
     mconn->xadj[i+1] = mconn->xadj[i] + adjcyconn[i].size();
     for (std::size_t j = 0; j < adjcyconn[i].size(); ++j) {
@@ -936,7 +896,6 @@ idx_t Netdata::MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t
             else if (edges[i].conntype[k] == CONNTYPE_IDX) {
               mask += (((sourceidx * edges[i].maskparam[k][2]) + edges[i].maskparam[k][3]) == targetidx);
             }
-            // TODO: this is currently set to sample from source order
             // TODO: we want to enable a weighting of the indices w.r.t. distance
             else if (edges[i].conntype[k] == CONNTYPE_SMPL ||
                      edges[i].conntype[k] == CONNTYPE_SMPL_NORM ||
