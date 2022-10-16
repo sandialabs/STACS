@@ -385,6 +385,7 @@ void Netdata::Build(mGraph *msg) {
           if (edges[e].conntype[k] == CONNTYPE_SMPL) {
             // Sample sourceidx from the source vertex population order
             // generate the sample cache (once per target vertex per connection type)
+            // TODO: this should be the same size as vertices[edges[e].source-1].order
             std::vector<idx_t> sourceorder(edges[e].maskparam[k][0]);
             std::iota(sourceorder.begin(), sourceorder.end(), 0);
             // pick the seed based on the targetidx so it is consistent across cores
@@ -396,14 +397,11 @@ void Netdata::Build(mGraph *msg) {
             // copy over the shuffled indices for the sampling
             for (idx_t j = 0; j < edges[e].maskparam[k][1]; ++j) {
               // Convert from population index to global index
-              idx_t glbsourceidx = 0;
-              // TODO: this is highly innefficient...
-              for (int prt = 0; prt < netparts; ++prt) {
-                if (sourceorder[j] >= xpopvtxidxprt[edges[e].source-1][prt] && sourceorder[j] < xpopvtxidxprt[edges[e].source-1][prt+1]) {
-                  glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder[j] - xpopvtxidxprt[edges[e].source-1][prt]);
-                  break;
-                }
-              }
+              std::vector<idx_t>::iterator iprt;
+              iprt = std::upper_bound(xpopvtxidxprt[edges[e].source-1].begin(), xpopvtxidxprt[edges[e].source-1].end(), sourceorder[j]);
+              int prt = (iprt - xpopvtxidxprt[edges[e].source-1].begin()) - 1;
+              idx_t glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder[j] - xpopvtxidxprt[edges[e].source-1][prt]);
+              // Check for self connections
               if (glbsourceidx == glbtargetidx) {
                 continue;
               }
@@ -451,14 +449,10 @@ void Netdata::Build(mGraph *msg) {
             for (idx_t iter = 0; iter < edges[e].maskparam[k][1]; iter++) {
               idx_t sourceorder = valswithindices[iter].first;
               // Convert from population index to global index
-              idx_t glbsourceidx = 0;
-              // TODO: this is highly innefficient...
-              for (int prt = 0; prt < netparts; ++prt) {
-                if (sourceorder >= xpopvtxidxprt[edges[e].source-1][prt] && sourceorder < xpopvtxidxprt[edges[e].source-1][prt+1]) {
-                  glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopvtxidxprt[edges[e].source-1][prt]);
-                  break;
-                }
-              }
+              std::vector<idx_t>::iterator iprt;
+              iprt = std::upper_bound(xpopvtxidxprt[edges[e].source-1].begin(), xpopvtxidxprt[edges[e].source-1].end(), sourceorder);
+              int prt = (iprt - xpopvtxidxprt[edges[e].source-1].begin()) - 1;
+              idx_t glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopvtxidxprt[edges[e].source-1][prt]);
               if (glbsourceidx == glbtargetidx) {// || adjcyset[i].find(glbsourceidx) == adjcyset[i].end()) {
                 continue;
               } else {
@@ -510,14 +504,10 @@ void Netdata::Build(mGraph *msg) {
             for (idx_t iter = 0; iter < edges[e].maskparam[k][1]; iter++) {
               idx_t sourceorder = valswithindices[iter].first;
               // Convert from population index to global index
-              idx_t glbsourceidx = 0;
-              // TODO: this is highly innefficient...
-              for (int prt = 0; prt < netparts; ++prt) {
-                if (sourceorder >= xpopvtxidxprt[edges[e].source-1][prt] && sourceorder < xpopvtxidxprt[edges[e].source-1][prt+1]) {
-                  glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopvtxidxprt[edges[e].source-1][prt]);
-                  break;
-                }
-              }
+              std::vector<idx_t>::iterator iprt;
+              iprt = std::upper_bound(xpopvtxidxprt[edges[e].source-1].begin(), xpopvtxidxprt[edges[e].source-1].end(), sourceorder);
+              int prt = (iprt - xpopvtxidxprt[edges[e].source-1].begin()) - 1;
+              idx_t glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopvtxidxprt[edges[e].source-1][prt]);
               if (glbsourceidx == glbtargetidx) {
                 continue;
               } else {
