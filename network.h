@@ -833,7 +833,7 @@ class Netdata : public CBase_Netdata {
     std::vector<idx_t> edgmetis; // distribution of edges over files
     std::vector<std::vector<idx_t>> vtxidxreprt; // vertex indices to go to a part
     std::vector<std::vector<idx_t>> vtxmodidxreprt; // vertex models to go to a part
-    std::vector<std::vector<idx_t>> xyzreprt; // vertex models to go to a part
+    std::vector<std::vector<real_t>> xyzreprt; // coordinates to go to a part
     std::vector<std::vector<std::vector<idx_t>>> adjcyreprt; // edge indices (by vtxidx) to go to a part
     std::vector<std::vector<std::vector<idx_t>>> edgmodidxreprt; // edge models to go to a part
     std::vector<std::vector<std::vector<real_t>>> statereprt;
