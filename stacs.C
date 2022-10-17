@@ -114,7 +114,7 @@ Main::Main(CkArgMsg *msg) {
 
   // bookkeeping for program control
   buildflag = true;
-  orderflag = true;
+  repartflag = true;
   readflag = true;
   writeflag = true;
 }
@@ -174,7 +174,7 @@ void Main::Control() {
   }
 
   // Reorder an already built network
-  else if (runmode == std::string(RUNMODE_ORDER)) {
+  else if (runmode == std::string(RUNMODE_REPART)) {
     if (readflag) {
       CkPrintf("Reading network\n");
       readflag = false;
@@ -192,9 +192,9 @@ void Main::Control() {
       netdata.LoadPart(mdist);
       netdata.ckSetReductionClient(&cbcontrol);
     }
-    else if (orderflag) {
-      CkPrintf("Reordering network\n");
-      orderflag = false;
+    else if (repartflag) {
+      CkPrintf("Repartitioning network\n");
+      repartflag = false;
 
       // Scatter and gather part information
       CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
