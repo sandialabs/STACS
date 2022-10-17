@@ -173,8 +173,8 @@ void Netdata::Build(mGraph *msg) {
   for (int k = 0; k < netfiles; ++k) {
     int ndiv = netparts/netfiles;
     int nrem = netparts%netfiles;
-    int prt = k*ndiv + (k < nrem ? k : nrem);
-    xorderdat[k] = xglbvtxidxprt[0][prt];
+    int xprt = k*ndiv + (k < nrem ? k : nrem);
+    xorderdat[k] = xglbvtxidxprt[0][xprt];
   }
   xorderdat[netfiles] = norder;
 
@@ -708,22 +708,22 @@ void Netdata::ConnectEdg(mConn *msg) {
     // We can reorder all the edges by global ordering now
     // Reorder edges vertex-by-vertex
     for (idx_t i = 0; i < norderdat; ++i) {
-      edgorder.clear();
+      edgreord.clear();
       for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
-        edgorder.push_back(edgorder_t());
-        edgorder.back().edgidx = adjcy[i][j];
-        edgorder.back().modidx = edgmodidx[i][j];
-        edgorder.back().state = state[i][j+1];
-        edgorder.back().stick = stick[i][j+1];
+        edgreord.push_back(edgreord_t());
+        edgreord.back().edgidx = adjcy[i][j];
+        edgreord.back().modidx = edgmodidx[i][j];
+        edgreord.back().state = state[i][j+1];
+        edgreord.back().stick = stick[i][j+1];
       }
       // sort edge indices by global ordering
-      std::sort(edgorder.begin(), edgorder.end());
+      std::sort(edgreord.begin(), edgreord.end());
       // add indices to data structures
       for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
-        adjcy[i][j] = edgorder[j].edgidx;
-        edgmodidx[i][j] = edgorder[j].modidx;
-        state[i][j+1] = edgorder[j].state;
-        stick[i][j+1] = edgorder[j].stick;
+        adjcy[i][j] = edgreord[j].edgidx;
+        edgmodidx[i][j] = edgreord[j].modidx;
+        state[i][j+1] = edgreord[j].state;
+        stick[i][j+1] = edgreord[j].stick;
       }
     }
     // Print memory allocated

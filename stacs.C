@@ -189,7 +189,7 @@ void Main::Control() {
       }
       CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
       mDist *mdist = BuildDist();
-      netdata.ReadPart(mdist);
+      netdata.LoadPart(mdist);
       netdata.ckSetReductionClient(&cbcontrol);
     }
     else if (orderflag) {

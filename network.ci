@@ -93,7 +93,7 @@ module network {
     idx_t nvtx;
   };
 
-  message mOrder {
+  message mReorder {
     idx_t vtxidxold[];
     idx_t vtxidxnew[];
     idx_t datidx;
@@ -170,10 +170,10 @@ module network {
     entry void ConnectEdg(mConn *msg);
     entry void RequestConnEdg(idx_t reqidx);
 
-    entry void ReadPart(mDist *msg);
+    entry void LoadPart(mDist *msg);
     entry void ScatterPart();
     entry void GatherPart(mPart *msg);
-    entry void Order(mOrder *msg);
+    entry void Reorder(mReorder *msg);
     
     entry void LoadData(mDist *msg);
     entry void LoadNetwork(int prtidx, const CkCallback &cbpart);

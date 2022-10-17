@@ -336,6 +336,8 @@ void Netdata::LoadData(mDist *msg) {
     stickdist[i] = msg->stickdist[i];
     eventdist[i] = msg->eventdist[i];
   }
+  // cleanup
+  delete msg;
 
   // Network distribution
   maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);

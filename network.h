@@ -50,26 +50,26 @@ struct datafile_t {
   std::vector<std::unordered_map<idx_t, real_t>> matrix;
 };
 
-// Vertex ordering
+// Vertex reordering
 //
-struct vtxorder_t {
+struct vtxreord_t {
   idx_t modidx;
   idx_t vtxidx;
   idx_t vtxidxloc; // local index of vertex
-  bool operator < (const vtxorder_t& vtx) const {
+  bool operator < (const vtxreord_t& vtx) const {
     return (modidx < vtx.modidx);
   }
 };
 
-// Edge ordering
+// Edge reordering
 //
-struct edgorder_t {
+struct edgreord_t {
   idx_t edgidx;
   idx_t modidx;
   std::vector<real_t> state;
   std::vector<tick_t> stick;
   idx_t evtidx;
-  bool operator < (const edgorder_t& edg) const {
+  bool operator < (const edgreord_t& edg) const {
     return (edgidx < edg.edgidx);
   }
 };
@@ -299,8 +299,8 @@ class mConn : public CMessage_mConn {
     idx_t nvtx;
 };
 
-#define MSG_Order 2
-class mOrder : public CMessage_mOrder {
+#define MSG_Reorder 2
+class mReorder : public CMessage_mReorder {
   public:
     idx_t *vtxidxold;
     idx_t *vtxidxnew;
@@ -597,14 +597,14 @@ class Netdata : public CBase_Netdata {
     void RequestConnEdg(idx_t reqidx);
     mConn* BuildConnEdg(idx_t reqidx);
 
-    /* Reorder Network */
-    void ReadPart(mDist *msg);
+    /* Repartitioning */
+    void LoadPart(mDist *msg);
+    void ReadPart();
     void ScatterPart();
     void GatherPart(mPart *msg);
-    void Order(mOrder *msg);
-    void Reorder(mOrder *msg);
-    mOrder* BuildOrder();
-
+    void Reorder(mReorder *msg);
+    void ReordEdg(mReorder *msg);
+    mReorder* BuildReorder();
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
@@ -804,7 +804,16 @@ class Netdata : public CBase_Netdata {
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     std::vector<std::string> rngtype; // rng types in order of definitions
     std::vector<datafile_t> datafiles;
-    /* Network Data */
+    /* Network Build */
+    std::vector<vertex_t> vertices; // vertex models and build information
+    std::vector<edge_t> edges; // edge models and connection information
+    idx_t norder; // total order
+    idx_t norderdat; // order for this netdata chare
+    std::vector<idx_t> xorderdat; // prefix order for netdata
+    std::vector<idx_t> norderprt; // order per network partition
+    std::vector<std::vector<idx_t>> xpopvtxidxprt;  // prefix of populations over partitions
+    std::vector<std::vector<idx_t>> xglbvtxidxprt;  // prefix of vertex over partitions (population global)
+    /* Network State */
     std::vector<idx_t> vtxmodidx; // vertex model index into netmodel
     std::vector<idx_t> vtxordidx; // vertex index within model order
     std::vector<real_t> xyz;
@@ -819,38 +828,34 @@ class Netdata : public CBase_Netdata {
     std::vector<std::set<idx_t>> adjcyset; // set of directed afferent edges
     std::vector<idx_t> nadjcysample; // counts of number of adjcy for index-based connections
     std::list<idx_t> connvtxreq; // parts that are requesting their vertex into
-    /* Metis */
-    std::vector<idx_t> vtxdistmetis; // distribution of vertices on data
-    std::vector<idx_t> edgdistmetis; // distribution of edges on data
-    std::vector<idx_t> partmetis; // which vertex goes to which part
-    std::vector<std::vector<idx_t>> vtxidxpart; // vertex indices to go to a part
-    std::vector<std::vector<idx_t>> vtxmodidxpart; // vertex models to go to a part
-    std::vector<std::vector<idx_t>> xyzpart; // vertex models to go to a part
-    std::vector<std::vector<std::vector<idx_t>>> adjcypart; // edge indices (by vtxidx) to go to a part
-    std::vector<std::vector<std::vector<idx_t>>> edgmodidxpart; // edge models to go to a part
-    std::vector<std::vector<std::vector<real_t>>> statepart;
+    /* Repartitioning */
+    std::vector<idx_t> vtxmetis; // distribution of vertices over files
+    std::vector<idx_t> edgmetis; // distribution of edges over files
+    std::vector<std::vector<idx_t>> vtxidxreprt; // vertex indices to go to a part
+    std::vector<std::vector<idx_t>> vtxmodidxreprt; // vertex models to go to a part
+    std::vector<std::vector<idx_t>> xyzreprt; // vertex models to go to a part
+    std::vector<std::vector<std::vector<idx_t>>> adjcyreprt; // edge indices (by vtxidx) to go to a part
+    std::vector<std::vector<std::vector<idx_t>>> edgmodidxreprt; // edge models to go to a part
+    std::vector<std::vector<std::vector<real_t>>> statereprt;
         // first level is the part, second is the models, thrid is state data
-    std::vector<std::vector<std::vector<tick_t>>> stickpart;
-    std::vector<std::vector<std::vector<event_t>>> eventpart;
+    std::vector<std::vector<std::vector<tick_t>>> stickreprt;
+    std::vector<std::vector<std::vector<event_t>>> eventreprt;
+    std::vector<std::vector<vtxreord_t>> vtxprted; // modidx and vtxidx for sorting
+    std::vector<std::vector<real_t>> xyzprted; // coordinates by vertex
+    std::vector<std::vector<std::vector<idx_t>>> adjcyprted; // adjacency by vertex
+    std::vector<std::vector<std::vector<idx_t>>> edgmodidxprted; // edge models by vertex
+    std::vector<std::vector<std::vector<std::vector<real_t>>>> stateprted; // state by vertex
+    std::vector<std::vector<std::vector<std::vector<tick_t>>>> stickprted; // stick by vertex
+    std::vector<std::vector<std::vector<event_t>>> eventprted; // event by vertex
     /* Reordering */
-    std::vector<std::vector<vtxorder_t>> vtxorder; // modidx and vtxidx for sorting
-    std::vector<edgorder_t> edgorder; // edgidx and states for sorting
-    std::vector<std::vector<real_t>> xyzorder; // coordinates by vertex
-    std::vector<std::vector<std::vector<idx_t>>> adjcyorder; // adjacency by vertex
-    std::vector<std::vector<std::vector<idx_t>>> adjcyreorder; // adjacency by vertex
-    std::vector<std::vector<std::vector<idx_t>>> edgmodidxorder; // edge models by vertex
-    std::vector<std::vector<std::vector<idx_t>>> edgmodidxreorder; // edge models by vertex
-    std::vector<std::vector<std::vector<std::vector<real_t>>>> stateorder; // state by vertex
-    std::vector<std::vector<std::vector<std::vector<real_t>>>> statereorder; // state by vertex
-    std::vector<std::vector<std::vector<std::vector<tick_t>>>> stickorder; // stick by vertex
-    std::vector<std::vector<std::vector<std::vector<tick_t>>>> stickreorder; // stick by vertex
-    std::vector<std::vector<std::vector<event_t>>> eventorder; // event by vertex
-    std::vector<std::vector<idx_t>> eventsourceorder; // source reordering
-    std::vector<std::vector<idx_t>> eventindexorder; // index reordering
-    std::list<mOrder *> ordering;
-    /* Graph information */
-    std::vector<vertex_t> vertices; // vertex models and build information
-    std::vector<edge_t> edges; // edge models and connection information
+    std::list<mReorder *> reordlist;
+    std::vector<edgreord_t> edgreord; // edgidx and states for sorting
+    std::vector<std::vector<std::vector<idx_t>>> adjcyreord; // adjacency by vertex
+    std::vector<std::vector<std::vector<idx_t>>> edgmodidxreord; // edge models by vertex
+    std::vector<std::vector<std::vector<std::vector<real_t>>>> statereord; // state by vertex
+    std::vector<std::vector<std::vector<std::vector<tick_t>>>> stickreord; // stick by vertex
+    std::vector<std::vector<idx_t>> eventsourcereord; // source reordering
+    std::vector<std::vector<idx_t>> eventindexreord; // index reordering
     /* Random Number Generation */
     std::mt19937 rngine;
     std::uniform_real_distribution<real_t> *unifdist;
@@ -859,14 +864,7 @@ class Netdata : public CBase_Netdata {
     int datidx;
     int cprt, rprt;
     int nprt, xprt;
-    /* Additional Bookkeeping */
     int cpdat, cphnd, cpprt;
-    idx_t norder; // total order
-    idx_t norderdat; // order for this netdata chare
-    std::vector<idx_t> xorderdat; // prefix order for netdata
-    std::vector<idx_t> norderprt; // order per network partition
-    std::vector<std::vector<idx_t>> xpopvtxidxprt;  // prefix of populations over partitions
-    std::vector<std::vector<idx_t>> xglbvtxidxprt;  // prefix of vertex over partitions (population global)
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;
