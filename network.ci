@@ -164,6 +164,7 @@ module network {
     
     entry void Build(mGraph *msg);
     entry void SaveBuild();
+    entry void SaveCloseBuild();
     entry void ConnectVtx(mConn *msg);
     entry void RequestConnVtx(idx_t reqidx);
     entry void ConnectHandover();

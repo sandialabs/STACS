@@ -23,6 +23,7 @@
 
 #define RUNMODE_SIMULATE  "simulate"
 #define RUNMODE_SIMGPU    "simgpu"
+#define RUNMODE_BUILDSIM  "buildsim"
 #define RUNMODE_BUILD     "build"
 #define RUNMODE_REPART    "repart"
 #define RUNMODE_FINDGROUP "findgroup"

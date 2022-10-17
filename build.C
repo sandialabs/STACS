@@ -169,6 +169,11 @@ void Netdata::Build(mGraph *msg) {
     xglbvtxidxprt[i][netparts] = norder;
   }
   // Note: xglbvtxidxprt[0][xprt] gives the global vtx offset for datidx
+  vtxdist.resize(netparts+1);
+  for (int k = 0; k < netparts; ++k) {
+    vtxdist[k] = xglbvtxidxprt[0][k];
+  }
+  vtxdist[netparts] = norder;
   xorderdat.resize(netfiles+1);
   for (int k = 0; k < netfiles; ++k) {
     int ndiv = netparts/netfiles;
@@ -741,6 +746,7 @@ void Netdata::ConnectEdg(mConn *msg) {
     }
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     
+    BuildParts();
     // Done building all edges, return control to main
     contribute(0, NULL, CkReduction::nop);
   }

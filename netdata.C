@@ -374,6 +374,17 @@ void Netdata::SaveBuild() {
 
   // Return control to main
   contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
+      CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy));
+}
+
+// Save data from built network
+//
+void Netdata::SaveCloseBuild() {
+  // Write data
+  WriteBuild();
+
+  // Return control to main
+  contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
       CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
 }
 
@@ -529,4 +540,125 @@ void Netdata::SaveFinalEstimate(CkReductionMsg *msg) {
     
   // Return control to main (halting)
   mainProxy.Halt();
+}
+
+
+/**************************************************************************
+* Convert built network state to part messages
+**************************************************************************/
+
+void Netdata::BuildParts() {
+  /* Bookkeeping */
+  idx_t nadjcy;
+  idx_t nstate;
+  idx_t nstick;
+  idx_t nevent;
+  idx_t xvtxidx;
+  
+  // Network distribution
+  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
+  
+  // Data
+  parts.resize(nprt);
+  records.resize(nprt);
+
+  for (int k = 0; k < nprt; ++k) {
+    // Get total size of adjcy
+    nadjcy = 0;
+    nstate = 0;
+    nstick = 0;
+    nevent = 0;
+    xvtxidx = vtxdist[xprt+k] - vtxdist[xprt];
+    for (idx_t i = 0; i < norderprt[k]; ++i) {
+      nadjcy += adjcy[xvtxidx+i].size();
+      for (std::size_t j = 0; j < adjcy[xvtxidx+i].size()+1; ++j) {
+        nstate += state[xvtxidx+i][j].size();
+        nstick += stick[xvtxidx+i][j].size();
+      }
+      nevent += event[xvtxidx+i].size();
+    }
+
+    // Initialize partition data message
+    int msgSize[MSG_Part];
+    msgSize[0] = netparts+1;       // vtxdist
+    msgSize[1] = norderprt[k];  // vtxmodidx
+    msgSize[2] = norderprt[k]*3;// xyz
+    msgSize[3] = norderprt[k]+1;// xadj
+    msgSize[4] = nadjcy;        // adjcy
+    msgSize[5] = nadjcy;        // edgmodidx
+    msgSize[6] = nstate;        // state
+    msgSize[7] = nstick;        // stick
+    msgSize[8] = norderprt[k]+1;// xevent
+    msgSize[9] = nevent;        // diffuse
+    msgSize[10] = nevent;       // type
+    msgSize[11] = nevent;       // source
+    msgSize[12] = nevent;       // index
+    msgSize[13] = nevent;       // data
+    parts[k] = new(msgSize, 0) mPart;
+
+    // Data sizes
+    parts[k]->nvtx = norderprt[k];
+    parts[k]->nedg = nadjcy;
+    parts[k]->nstate = nstate;
+    parts[k]->nstick = nstick;
+    parts[k]->nevent = nevent;
+    parts[k]->prtidx = xprt + k;
+  
+    // Graph Information
+    for (int i = 0; i < netparts+1; ++i) {
+      // vtxdist
+      parts[k]->vtxdist[i] = vtxdist[i];
+    }
+    // Vertex and Edge Information
+    idx_t jstate = 0;
+    idx_t jstick = 0;
+    idx_t jevent = 0;
+    parts[k]->xadj[0] = 0;
+    parts[k]->xevent[0] = 0;
+    for (idx_t i = 0; i < norderprt[k]; ++i) {
+      // vtxmodidx
+      parts[k]->vtxmodidx[i] = vtxmodidx[xvtxidx+i];
+      // xyz
+      parts[k]->xyz[i*3+0] = xyz[xvtxidx+i*3+0];
+      parts[k]->xyz[i*3+1] = xyz[xvtxidx+i*3+1];
+      parts[k]->xyz[i*3+2] = xyz[xvtxidx+i*3+2];
+      // vertex state
+      for (std::size_t s = 0; s < state[xvtxidx+i][0].size(); ++s) {
+        parts[k]->state[jstate++] = state[xvtxidx+i][0][s];
+      }
+      for (std::size_t s = 0; s < stick[xvtxidx+i][0].size(); ++s) {
+        parts[k]->stick[jstick++] = stick[xvtxidx+i][0][s];
+      }
+
+      // xadj
+      parts[k]->xadj[i+1] = parts[k]->xadj[i] + adjcy[xvtxidx+i].size();
+      for (std::size_t j = 0; j < adjcy[xvtxidx+i].size(); ++j) {
+        // adjcy
+        parts[k]->adjcy[parts[k]->xadj[i] + j] = adjcy[xvtxidx+i][j];
+        // edgmodidx
+        parts[k]->edgmodidx[parts[k]->xadj[i] + j] = edgmodidx[xvtxidx+i][j];
+        // state
+        for (std::size_t s = 0; s < state[xvtxidx+i][j+1].size(); ++s) {
+          parts[k]->state[jstate++] = state[xvtxidx+i][j+1][s];
+        }
+        for (std::size_t s = 0; s < stick[xvtxidx+i][j+1].size(); ++s) {
+          parts[k]->stick[jstick++] = stick[xvtxidx+i][j+1][s];
+        }
+      }
+      
+      // events
+      for (std::size_t s = 0; s < event[xvtxidx+i].size(); ++s) {
+        parts[k]->diffuse[jevent] = event[xvtxidx+i][s].diffuse;
+        parts[k]->type[jevent] = event[xvtxidx+i][s].type;
+        parts[k]->source[jevent] = event[xvtxidx+i][s].source;
+        parts[k]->index[jevent] = event[xvtxidx+i][s].index;
+        parts[k]->data[jevent++] = event[xvtxidx+i][s].data;
+      }
+      // xevent
+      parts[k]->xevent[i+1] = jevent;
+    }
+    CkAssert(jstate == nstate);
+    CkAssert(jstick == nstick);
+    CkAssert(jevent == nevent);
+  }
 }

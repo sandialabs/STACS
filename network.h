@@ -580,7 +580,9 @@ class Netdata : public CBase_Netdata {
 
     /* Building */
     void Build(mGraph *msg);
+    void BuildParts();
     void SaveBuild();
+    void SaveCloseBuild();
     void WriteBuild();
     std::vector<real_t> BuildEdgState(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
     std::vector<tick_t> BuildEdgStick(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
@@ -609,7 +611,7 @@ class Netdata : public CBase_Netdata {
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
     int ReadDataCSVSparse(datafile_t &datafile);
-
+    
     /* Loading */
     void LoadData(mDist *msg);
     void LoadNetwork(int prtidx, const CkCallback &cbnet);
@@ -790,8 +792,8 @@ class Netdata : public CBase_Netdata {
     std::vector<mRecord*> records;
     std::vector<event_t> grplog;
     /* Distributions */
-    std::vector<dist_t> netdist;
-    std::vector<idx_t> vtxdist;
+    std::vector<dist_t> netdist; // over local partitions
+    std::vector<idx_t> vtxdist; // over all partitions
     std::vector<idx_t> edgdist;
     std::vector<idx_t> statedist;
     std::vector<idx_t> stickdist;
