@@ -615,6 +615,7 @@ class Netdata : public CBase_Netdata {
     void LoadNetwork(int prtidx, const CkCallback &cbnet);
     void ReadNetwork();
     void BuildParts();
+    //void BuildAdjcy();
 
     /* Saving */
     void SaveNetwork(mPart *msg);

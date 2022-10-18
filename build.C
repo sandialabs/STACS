@@ -738,6 +738,7 @@ void Netdata::ConnectEdg(mConn *msg) {
         stick[i][j+1] = edgreord[j].stick;
       }
     }
+    /*
     // Print memory allocated
     int adjcysize = 0;
     int adjcycap = 0;
@@ -752,6 +753,7 @@ void Netdata::ConnectEdg(mConn *msg) {
       edgmodcap += edgmodidx[i].capacity();
     }
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
+    */
     
     // Done building all edges, return control to main
     contribute(0, NULL, CkReduction::nop);
