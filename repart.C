@@ -54,10 +54,9 @@ void Netdata::LoadPart(mDist *msg) {
   contribute(0, NULL, CkReduction::nop);
 }
 
-/*
 // Load data from network into partitions
 //
-void Netdata::BuildAdjcy(mPart *msg) {
+void Netdata::LoadRepart(mPart *msg) {
   // Stash part
   parts[msg->prtidx - xprt] = msg;
   
@@ -66,7 +65,7 @@ void Netdata::BuildAdjcy(mPart *msg) {
     cprt = 0;
 
     // Convert parts to local data
-    BuildAdjcy();
+    BuildRepart();
 
     // Cleanup stash
     for (idx_t i = 0; i < nprt; ++i) {
@@ -74,10 +73,9 @@ void Netdata::BuildAdjcy(mPart *msg) {
     }
 
     // begin repartitioning
-    netdata(datidx).ScatterPart();
+    thisProxy(datidx).ScatterPart();
   }
 }
-*/
 
 // Scatter Partitions across Network
 //
@@ -288,6 +286,7 @@ void Netdata::GatherPart(mPart *msg) {
   // When all parts are gathered from all other data,
   // Perform reordering of vertex indices and start reordering
   if (++cpprt == netfiles*nprt) {
+    cpprt = 0;
     // cleanup finished data structures
     vtxmetis.clear();
     edgmetis.clear();
@@ -527,4 +526,127 @@ mReorder* Netdata::BuildReorder() {
   CkAssert(jvtxidx == norderdat);
 
   return morder;
+}
+
+// Build part message
+//
+mPart* Network::BuildRepart() {
+  /* Bookkeeping */
+  idx_t nadjcy;
+  idx_t nstate;
+  idx_t nstick;
+  idx_t nevent;
+  
+  // Get total size of adjcy
+  nadjcy = 0;
+  nstate = 0;
+  nstick = 0;
+  nevent = 0;
+  for (std::size_t i = 0; i < adjcy.size(); ++i) {
+    nadjcy += adjcy[i].size();
+    for (std::size_t j = 0; j < adjcy[i].size()+1; ++j) {
+      nstate += state[i][j].size();
+      nstick += stick[i][j].size();
+    }
+    for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
+      nevent += evtcal[i][j].size();
+    }
+    nevent += evtcol[i].size();
+  }
+
+  // Initialize partition data message
+  int msgSize[MSG_Part];
+  msgSize[0] = netparts+1;       // vtxdist
+  msgSize[1] = adjcy.size();  // vtxmodidx
+  msgSize[2] = adjcy.size()*3;// xyz
+  msgSize[3] = adjcy.size()+1;// xadj
+  msgSize[4] = nadjcy;        // adjcy
+  msgSize[5] = nadjcy;        // edgmodidx
+  msgSize[6] = nstate;        // state
+  msgSize[7] = nstick;        // stick
+  msgSize[8] = adjcy.size()+1;// xevent
+  msgSize[9] = nevent;        // diffuse
+  msgSize[10] = nevent;       // type
+  msgSize[11] = nevent;       // source
+  msgSize[12] = nevent;       // index
+  msgSize[13] = nevent;       // data
+  mPart *mpart = new(msgSize, 0) mPart;
+
+  // Data sizes
+  mpart->nvtx = adjcy.size();
+  mpart->nedg = nadjcy;
+  mpart->nstate = nstate;
+  mpart->nstick = nstick;
+  mpart->nevent = nevent;
+  mpart->prtidx = prtidx;
+
+  // Graph Information
+  for (int i = 0; i < netparts+1; ++i) {
+    // vtxdist
+    mpart->vtxdist[i] = vtxdist[i];
+  }
+
+  // Vertex and Edge Information
+  idx_t jstate = 0;
+  idx_t jstick = 0;
+  idx_t jevent = 0;
+  mpart->xadj[0] = 0;
+  mpart->xevent[0] = 0;
+  for (std::size_t i = 0; i < adjcy.size(); ++i) {
+    // vtxmodidx
+    mpart->vtxmodidx[i] = vtxmodidx[i];
+    // xyz
+    mpart->xyz[i*3+0] = xyz[i*3+0];
+    mpart->xyz[i*3+1] = xyz[i*3+1];
+    mpart->xyz[i*3+2] = xyz[i*3+2];
+    // vertex state
+    for (std::size_t s = 0; s < state[i][0].size(); ++s) {
+      mpart->state[jstate++] = state[i][0][s];
+    }
+    for (std::size_t s = 0; s < stick[i][0].size(); ++s) {
+      mpart->stick[jstick++] = stick[i][0][s];
+    }
+
+    // xadj
+    mpart->xadj[i+1] = mpart->xadj[i] + adjcy[i].size();
+    for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
+      // adjcy
+      mpart->adjcy[mpart->xadj[i] + j] = adjcy[i][j];
+      // edgmodidx
+      mpart->edgmodidx[mpart->xadj[i] + j] = edgmodidx[i][j];
+      // state
+      for (std::size_t s = 0; s < state[i][j+1].size(); ++s) {
+        mpart->state[jstate++] = state[i][j+1][s];
+      }
+      for (std::size_t s = 0; s < stick[i][j+1].size(); ++s) {
+        mpart->stick[jstick++] = stick[i][j+1][s];
+      }
+    }
+
+    // events
+    for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
+      for (std::size_t e = 0; e < evtcal[i][j].size(); ++e) {
+        mpart->diffuse[jevent] = evtcal[i][j][e].diffuse - tsim;
+        mpart->type[jevent] = evtcal[i][j][e].type;
+        mpart->source[jevent] = evtcal[i][j][e].source;
+        mpart->index[jevent] = evtcal[i][j][e].index;
+        mpart->data[jevent++] = evtcal[i][j][e].data;
+      }
+    }
+    // events spillover
+    for (std::size_t e = 0; e < evtcol[i].size(); ++e) {
+      mpart->diffuse[jevent] = evtcol[i][e].diffuse - tsim;
+      mpart->type[jevent] = evtcol[i][e].type;
+      mpart->source[jevent] = evtcol[i][e].source;
+      mpart->index[jevent] = evtcol[i][e].index;
+      mpart->data[jevent++] = evtcol[i][e].data;
+    }
+    // xevent
+    mpart->xevent[i+1] = jevent;
+  }
+  CkAssert(jstate == nstate);
+  CkAssert(jstick == nstick);
+  CkAssert(jevent == nevent);
+
+  return mpart;
 }

@@ -418,6 +418,15 @@ void Network::LoadNetwork(mPart *msg) {
 * Network Save Data
 **************************************************************************/
 
+
+// Repartition from network
+//
+void Network::Repart() {
+  // Build network part message for saving
+  mPart *mpart = BuildPart();
+  netdata(datidx).LoadRepart(mpart);
+}
+
 // Send network partition to Netdata chare array
 //
 void Network::SaveNetwork() {

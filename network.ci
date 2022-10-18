@@ -172,6 +172,7 @@ module network {
     entry void RequestConnEdg(idx_t reqidx);
 
     entry void LoadPart(mDist *msg);
+    entry void LoadRepart(mPart *msg);
     entry void ScatterPart();
     entry void GatherPart(mPart *msg);
     entry void Reorder(mReorder *msg);

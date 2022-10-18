@@ -297,6 +297,7 @@ Netdata::Netdata(mModel *msg) {
   // Preparing network data
   parts.resize(nprt);
   records.resize(nprt);
+  cpprt = 0;
 
   // Network distribution
   maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
@@ -684,4 +685,34 @@ void Netdata::BuildParts() {
   state.clear();
   stick.clear();
   event.clear();
+}
+
+/**************************************************************************
+* Convert built network part message to repart state
+**************************************************************************/
+
+void Netdata::BuildRepart() {
+  for (int k = 0; k < nprt; ++k) {
+  }
+  // Prepare for reording partitions
+  cpdat = 0;
+  cpprt = 0;
+  norderdat = 0;
+  vtxprted.resize(nprt);
+  xyzprted.resize(nprt);
+  adjcyprted.resize(nprt);
+  edgmodidxprted.resize(nprt);
+  stateprted.resize(nprt);
+  stickprted.resize(nprt);
+  eventprted.resize(nprt);
+  adjcyreord.resize(nprt);
+  edgmodidxreord.resize(nprt);
+  statereord.resize(nprt);
+  stickreord.resize(nprt);
+  norderprt.resize(nprt);
+  for (idx_t i = 0; i < nprt; ++i) {
+    norderprt[i] = 0;
+  }
+  vtxdist.resize(netfiles+1);
+  vtxdist[0] = 0;
 }

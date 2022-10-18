@@ -580,6 +580,7 @@ class Netdata : public CBase_Netdata {
 
     /* Building */
     void Build(mGraph *msg);
+    void BuildParts();
     void SaveBuild();
     void SaveCloseBuild();
     std::vector<real_t> BuildEdgState(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
@@ -605,6 +606,8 @@ class Netdata : public CBase_Netdata {
     void Reorder(mReorder *msg);
     void ReordEdg(mReorder *msg);
     mReorder* BuildReorder();
+    void LoadRepart(mPart *msg);
+    void BuildRepart();
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
@@ -614,8 +617,6 @@ class Netdata : public CBase_Netdata {
     void LoadData(mDist *msg);
     void LoadNetwork(int prtidx, const CkCallback &cbnet);
     void ReadNetwork();
-    void BuildParts();
-    //void BuildAdjcy();
 
     /* Saving */
     void SaveNetwork(mPart *msg);
@@ -911,6 +912,8 @@ class Network : public CBase_Network {
     void EstimateGroup(const idx_t i);
     
     /* Saving */
+    mPart* BuildRepart();
+    void Repart();
     void SaveNetwork();
     void SaveCloseNetwork();
     void CloseNetwork();
