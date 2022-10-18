@@ -251,7 +251,7 @@ void Main::Control() {
       // Initialize coordination
       cinit = 0;
       ninit = 0;
-      // Set callback for halting (actually not needed)
+      // Set callback for initialization
       CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
       // Write network to disk
       netdata.SaveBuild();
@@ -261,6 +261,7 @@ void Main::Control() {
       mModel *mmodel = BuildModel();
       network = CProxy_Network::ckNew(mmodel, netparts);
       network.ckSetReductionClient(&cbinit);
+      // Convert runmode to simulate
       runmode = std::string(RUNMODE_SIMULATE);
     }
   }

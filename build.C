@@ -667,6 +667,13 @@ void Netdata::ConnectHandover() {
     cpdat = 0;
     cphnd = 0; // maybe use again?
     //CkPrintf("Build Handover\n");
+    /*
+    idx_t nadjcy = 0;
+    for (int i = 0; i < norderdat; ++i) {
+      nadjcy += adjcyset[i].size();
+    }
+    CkPrintf("File: %d, nadjcy: %" PRIidx "\n", datidx, nadjcy);
+    */
     
     if (cpdat == datidx) {
       mConn *mconn = BuildConnEdg(datidx);
@@ -746,7 +753,6 @@ void Netdata::ConnectEdg(mConn *msg) {
     }
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     
-    BuildParts();
     // Done building all edges, return control to main
     contribute(0, NULL, CkReduction::nop);
   }

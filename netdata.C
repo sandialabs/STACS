@@ -293,8 +293,13 @@ Netdata::Netdata(mModel *msg) {
   // Open yarp
   yarp.init();
 #endif
+  
+  // Preparing network data
+  parts.resize(nprt);
+  records.resize(nprt);
 
-  // Printing model configuration information
+  // Network distribution
+  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
   
   // Preparing network build (if needed)
   connvtxreq.clear();
@@ -339,13 +344,6 @@ void Netdata::LoadData(mDist *msg) {
   // cleanup
   delete msg;
 
-  // Network distribution
-  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
-  
-  // Data
-  parts.resize(nprt);
-  records.resize(nprt);
-
   // Read in files
   CkPrintf("Reading network data files %" PRIidx "\n", datidx);
   ReadNetwork();
@@ -369,20 +367,24 @@ void Netdata::LoadNetwork(int prtidx, const CkCallback &cbpart) {
 // Save data from built network
 //
 void Netdata::SaveBuild() {
+  // Build parts from file-based network information
+  BuildParts();
   // Write data
-  WriteBuild();
+  WriteNetwork(0);
 
   // Return control to main
   contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
-      CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy));
+      CkCallback(CkIndex_Main::SaveInitDist(NULL), mainProxy));
 }
 
 // Save data from built network
 //
 void Netdata::SaveCloseBuild() {
+  // Build parts from file-based network information
+  BuildParts();
   // Write data
-  WriteBuild();
-
+  WriteNetwork(0);
+  
   // Return control to main
   contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
       CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
@@ -480,6 +482,25 @@ void Main::SaveDist(CkReductionMsg *msg) {
   }
 }
 
+// Collect distribution from netdata
+//
+void Main::SaveInitDist(CkReductionMsg *msg) {
+  //CkPrintf("Checkpointing simulation\n");
+  
+  // Save network part distribution to local
+  netdist.clear();
+  for (std::size_t i = 0; i < (msg->getSize())/sizeof(dist_t); ++i) {
+    netdist.push_back(*((dist_t *)msg->getData()+i));
+  }
+  delete msg;
+
+  // Write distribution
+  if (WriteDist(0)) {
+    CkPrintf("Error writing distribution...\n");
+    CkExit();
+  }
+}
+
 // Collect distribution from netdata (final)
 //
 void Main::SaveFinalDist(CkReductionMsg *msg) {
@@ -554,13 +575,6 @@ void Netdata::BuildParts() {
   idx_t nstick;
   idx_t nevent;
   idx_t xvtxidx;
-  
-  // Network distribution
-  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
-  
-  // Data
-  parts.resize(nprt);
-  records.resize(nprt);
 
   for (int k = 0; k < nprt; ++k) {
     // Get total size of adjcy
@@ -661,4 +675,13 @@ void Netdata::BuildParts() {
     CkAssert(jstick == nstick);
     CkAssert(jevent == nevent);
   }
+  // Clear out file-based network information
+  vtxmodidx.clear();
+  vtxordidx.clear();
+  xyz.clear();
+  adjcy.clear();
+  edgmodidx.clear();
+  state.clear();
+  stick.clear();
+  event.clear();
 }

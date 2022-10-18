@@ -159,9 +159,11 @@ class Main : public CBase_Main {
     void Halt();
     
     /* Network Distribution */
+    // TODO: Consolidate the distribution writing
     void SaveDist(CkReductionMsg *msg);
+    void SaveInitDist(CkReductionMsg *msg);
     void SaveFinalDist(CkReductionMsg *msg);
-    int WriteDist();
+    int WriteDist(int checkflag=1);
 
   private:
     /* Chare Arrays */

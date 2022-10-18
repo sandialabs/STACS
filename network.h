@@ -580,10 +580,8 @@ class Netdata : public CBase_Netdata {
 
     /* Building */
     void Build(mGraph *msg);
-    void BuildParts();
     void SaveBuild();
     void SaveCloseBuild();
-    void WriteBuild();
     std::vector<real_t> BuildEdgState(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
     std::vector<tick_t> BuildEdgStick(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx);
     void ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rngstate);
@@ -616,12 +614,13 @@ class Netdata : public CBase_Netdata {
     void LoadData(mDist *msg);
     void LoadNetwork(int prtidx, const CkCallback &cbnet);
     void ReadNetwork();
+    void BuildParts();
 
     /* Saving */
     void SaveNetwork(mPart *msg);
     void SaveCloseNetwork(mPart *msg);
     void CloseNetwork();
-    void WriteNetwork();
+    void WriteNetwork(int checkflag=1);
     
     /* Recording */
     void SaveRecord(mRecord *msg);

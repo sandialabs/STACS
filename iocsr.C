@@ -85,7 +85,7 @@ int Main::ReadDist() {
 
 // Write graph adjacency distribution
 //
-int Main::WriteDist() {
+int Main::WriteDist(int checkflag) {
   /* File operations */
   FILE *pDist;
   FILE *pMetis;
@@ -97,11 +97,12 @@ int Main::WriteDist() {
   idx_t nstick;
   idx_t nevent;
 
+  std::string filecheck = (checkflag ? filesave : "");
   // Open File
   CkPrintf("Writing network distribution\n");
-  sprintf(csrfile, "%s/%s%s.dist", netwkdir.c_str(), filebase.c_str(), filesave.c_str());//(check ? ".check" : filesave.c_str()));
+  sprintf(csrfile, "%s/%s%s.dist", netwkdir.c_str(), filebase.c_str(), filecheck.c_str());//(check ? ".check" : filesave.c_str()));
   pDist = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.metis", netwkdir.c_str(), filebase.c_str(), filesave.c_str());
+  sprintf(csrfile, "%s/%s%s.metis", netwkdir.c_str(), filebase.c_str(), filecheck.c_str());
   pMetis = fopen(csrfile,"w");
   if (pDist == NULL || pMetis == NULL) {
     printf("Error opening file for writing\n");
@@ -585,7 +586,7 @@ void Netdata::ReadPart() {
     
 // Write out network files
 //
-void Netdata::WriteNetwork() {
+void Netdata::WriteNetwork(int checkflag) {
   /* File operations */
   FILE *pCoord;
   FILE *pAdjcy;
@@ -593,15 +594,16 @@ void Netdata::WriteNetwork() {
   FILE *pEvent;
   char csrfile[100];
 
+  std::string filecheck = (checkflag ? filesave : "");
   // Open files for writing
   CkPrintf("Writing network data files %d\n", datidx);
-  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pEvent = fopen(csrfile,"w");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
     CkPrintf("Error opening files for writing %d\n", datidx);
@@ -679,117 +681,6 @@ void Netdata::WriteNetwork() {
     CkAssert(jstate == parts[k]->nstate);
     CkAssert(jstick == parts[k]->nstick);
   }
-
-  // Cleanup
-  fclose(pCoord);
-  fclose(pAdjcy);
-  fclose(pState);
-  fclose(pEvent);
-}
-
-
-// Write graph adjacency distribution
-//
-void Netdata::WriteBuild() {
-  /* Bookkeeping */
-  idx_t jvtxidx;
-  /* File operations */
-  FILE *pCoord;
-  FILE *pAdjcy;
-  FILE *pState;
-  FILE *pEvent;
-  char csrfile[100];
-
-  // Open files for writing
-  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
-  pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
-  pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
-  pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
-  pEvent = fopen(csrfile,"w");
-  if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
-    CkPrintf("Error opening files for writing %d\n", datidx);
-    CkExit();
-  }
-  
-  // Set up distribution
-  netdist.resize(nprt);
-  jvtxidx = 0;
-
-  // Loop through parts
-  for (idx_t k = 0; k < nprt; ++k) {
-    netdist[k].prtidx = xprt+k;
-    netdist[k].nvtx = norderprt[k];
-    netdist[k].nedg = 0;
-    netdist[k].nstate = 0;
-    netdist[k].nstick = 0;
-    netdist[k].nevent = 0;
-
-    // Graph adjacency information
-    for (idx_t i = 0; i < norderprt[k]; ++i) {
-      // vertex coordinates
-      fprintf(pCoord, " %" PRIrealfull " %" PRIrealfull " %" PRIrealfull "\n",
-          xyz[jvtxidx*3+0], xyz[jvtxidx*3+1], xyz[jvtxidx*3+2]);
-
-      // vertex state
-      fprintf(pState, " %s", modname[vtxmodidx[jvtxidx]].c_str());
-      CkAssert(vtxmodidx[jvtxidx] > 0);
-      netdist[k].nstate += state[jvtxidx][0].size();
-      netdist[k].nstick += stick[jvtxidx][0].size();
-      for (std::size_t s = 0; s < modeldata[vtxmodidx[jvtxidx]-1].statetype.size(); ++s) {
-        fprintf(pState, " %" PRIrealfull "", state[jvtxidx][0][s]);
-      }
-      for (std::size_t s = 0; s < modeldata[vtxmodidx[jvtxidx]-1].sticktype.size(); ++s) {
-        fprintf(pState, " %" PRItickhex "", stick[jvtxidx][0][s]);
-      }
-      
-      // edge state
-      netdist[k].nedg += edgmodidx[jvtxidx].size();
-      CkAssert(state[jvtxidx].size() == edgmodidx[jvtxidx].size() + 1);
-      for (std::size_t j = 0; j < edgmodidx[jvtxidx].size(); ++j) {
-        fprintf(pState, " %s", modname[edgmodidx[jvtxidx][j]].c_str());
-        netdist[k].nstate += state[jvtxidx][j+1].size();
-        netdist[k].nstick += stick[jvtxidx][j+1].size();
-        if (edgmodidx[jvtxidx][j] > 0) {
-          for (std::size_t s = 0; s < modeldata[edgmodidx[jvtxidx][j]-1].statetype.size(); ++s) {
-            fprintf(pState, " %" PRIrealfull "", state[jvtxidx][j+1][s]);
-          }
-          for (std::size_t s = 0; s < modeldata[edgmodidx[jvtxidx][j]-1].sticktype.size(); ++s) {
-            fprintf(pState, " %" PRItickhex "", stick[jvtxidx][j+1][s]);
-          }
-        }
-      }
-
-      // adjacency information
-      CkAssert(adjcy[jvtxidx].size() == edgmodidx[jvtxidx].size());
-      for (std::size_t j = 0; j < adjcy[jvtxidx].size(); ++j) {
-        fprintf(pAdjcy, " %" PRIidx "", adjcy[jvtxidx][j]);
-      }
-
-      // event information
-      netdist[k].nevent += event[jvtxidx].size();
-      fprintf(pEvent, " %d", event[jvtxidx].size());
-      for (std::size_t j = 0; j < event[jvtxidx].size(); ++j) {
-        if (event[jvtxidx][j].type == EVENT_SPIKE) {
-          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx "",
-              event[jvtxidx][j].diffuse, event[jvtxidx][j].type, event[jvtxidx][j].source, event[jvtxidx][j].index);
-        }
-        else {
-          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx " %" PRIrealfull "",
-              event[jvtxidx][j].diffuse, event[jvtxidx][j].type, event[jvtxidx][j].source, event[jvtxidx][j].index, event[jvtxidx][j].data);
-        }
-      }
-
-      // one set per vertex
-      fprintf(pState, "\n");
-      fprintf(pAdjcy, "\n");
-      fprintf(pEvent, "\n");
-      ++jvtxidx;
-    }
-  }
-  CkAssert(jvtxidx == norderdat);
 
   // Cleanup
   fclose(pCoord);
