@@ -84,6 +84,11 @@ tick_t DGIzhiNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& stat
   state[2] = state[2]*exp(-(tstep/param[9]));
   state[3] = state[3]*exp(-(tstep/param[10]));
 
+  if (std::isnan(state[0])) {
+    state[0] = param[1];
+    state[1] = 0.0;
+  }
+
   // Make sure voltage > E_gaba
   if (state[0] < param[12]) {
     state[0] = param[12];

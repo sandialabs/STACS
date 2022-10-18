@@ -57,15 +57,15 @@ CkReductionMsg *minTick(int nMsg, CkReductionMsg **msgs) {
 //
 Network::Network(mModel *msg) {
   // Bookkeeping
-  partidx = thisIndex;
-  // Network part (partidx) to in/out file (fileidx) conversion
+  prtidx = thisIndex;
+  // Network part (prtidx) to in/out file (datidx) conversion
   // (with excess parts located modulo at the beginning)
   int datdiv = netparts/netfiles;
   int datrem = netparts%netfiles;
-  fileidx = (partidx-( ((partidx+1)/(datdiv+1))>datrem ? datrem:((partidx+1)/(datdiv+1)) ))/datdiv;
+  datidx = (prtidx-( ((prtidx+1)/(datdiv+1))>datrem ? datrem:((prtidx+1)/(datdiv+1)) ))/datdiv;
   
   // Set up random number generator
-  rngine.seed(randseed+partidx);
+  rngine.seed(randseed+prtidx);
   unifdist = new std::uniform_real_distribution<real_t> (0.0, 1.0);
   
   // Simulation configuration
@@ -136,7 +136,7 @@ Network::Network(mModel *msg) {
 
     // Print out model information
     /*
-    if (partidx == 0) {
+    if (prtidx == 0) {
       std::string params;
       // collect params
       for (idx_t j = msg->xparam[i-1]; j < msg->xparam[i]; ++j) {
@@ -242,7 +242,7 @@ void Network::LoadNetwork(mPart *msg) {
   idx_t nevent;  // events
 
   // Copy over part data
-  CkAssert(msg->partidx == partidx);
+  CkAssert(msg->prtidx == prtidx);
 
   // Setup data vectors
   vtxdist.resize(netparts+1);
@@ -288,8 +288,8 @@ void Network::LoadNetwork(mPart *msg) {
 
   // Get adjacency matrix
   for (idx_t i = 0; i < adjcy.size(); ++i) {
-    vtxidx[i] = vtxdist[partidx] + i;
-    vtxmap[vtxdist[partidx] + i] = i;
+    vtxidx[i] = vtxdist[prtidx] + i;
+    vtxmap[vtxdist[prtidx] + i] = i;
     vtxmodidx[i] = msg->vtxmodidx[i];
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
@@ -387,7 +387,7 @@ void Network::LoadNetwork(mPart *msg) {
 
   // Print some information
   CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjpart: %" PRIidx "\n",
-           partidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
+           prtidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
 
   // Set up timing
   tsim = 0;
@@ -418,12 +418,21 @@ void Network::LoadNetwork(mPart *msg) {
 * Network Save Data
 **************************************************************************/
 
+
+// Repartition from network
+//
+void Network::Repart() {
+  // Build network part message for saving
+  mPart *mpart = BuildPart();
+  netdata(datidx).LoadRepart(mpart);
+}
+
 // Send network partition to Netdata chare array
 //
 void Network::SaveNetwork() {
   // Build network part message for saving
   mPart *mpart = BuildPart();
-  netdata(fileidx).SaveNetwork(mpart);
+  netdata(datidx).SaveNetwork(mpart);
     
   // Start a new cycle (checked data sent)
   cyclepart.send();
@@ -441,7 +450,7 @@ void Network::SaveCloseNetwork() {
 
   // Build network part message for saving
   mPart *mpart = BuildPart();
-  netdata(fileidx).SaveCloseNetwork(mpart);
+  netdata(datidx).SaveCloseNetwork(mpart);
 }
 
 // Clean up Network chare array
@@ -455,7 +464,7 @@ void Network::CloseNetwork() {
   }
 
   // Move to cleanup of netdata
-  netdata(fileidx).CloseNetwork();
+  netdata(datidx).CloseNetwork();
 }
 
 
@@ -579,7 +588,7 @@ mPart* Network::BuildPart() {
   mpart->nstate = nstate;
   mpart->nstick = nstick;
   mpart->nevent = nevent;
-  mpart->partidx = partidx;
+  mpart->prtidx = prtidx;
 
   // Graph Information
   for (int i = 0; i < netparts+1; ++i) {

@@ -40,6 +40,7 @@ mainmodule stacs {
     entry [reductiontarget] void Halt();
     
     entry void SaveDist(CkReductionMsg *msg);
+    entry void SaveInitDist(CkReductionMsg *msg);
     entry void SaveFinalDist(CkReductionMsg *msg);
   };
   

@@ -47,16 +47,10 @@ CkReductionMsg *netDist(int nMsg, CkReductionMsg **msgs) {
 //
 Netdata::Netdata(mModel *msg) {
   // Bookkeeping
-  fileidx = thisIndex;
+  datidx = thisIndex;
   int ndiv = netparts/netfiles;
   int nrem = netparts%netfiles;
-  cpart = rpart = 0;
-  npart = ndiv + (fileidx < nrem);
-  xpart = fileidx*ndiv + (fileidx < nrem ? fileidx : nrem);
-  
-  // Bookkeeping 2
-  // TODO: consolidate these...
-  datidx = thisIndex;
+  cprt = rprt = 0;
   nprt = ndiv + (datidx < nrem);
   xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
 
@@ -159,9 +153,6 @@ Netdata::Netdata(mModel *msg) {
       ++jstickname;
     }
     // prepare containers for parameters
-    //modeldata[i].statetype.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
-    //modeldata[i].stateparam.resize(msg->xstatetype[i+1] - msg->xstatetype[i]);
-    //CkAssert(modeldata[i].nstate == msg->xstatetype[i+1] - msg->xstatetype[i]);
     modeldata[i].statetype.resize(modeldata[i].nstate);
     modeldata[i].stateparam.resize(modeldata[i].nstate);
     for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
@@ -207,9 +198,6 @@ Netdata::Netdata(mModel *msg) {
       }
     }
     // prepare containers
-    //modeldata[i].sticktype.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
-    //modeldata[i].stickparam.resize(msg->xsticktype[i+1] - msg->xsticktype[i]);
-    //CkAssert(modeldata[i].nstick == msg->xsticktype[i+1] - msg->xsticktype[i]);
     modeldata[i].sticktype.resize(modeldata[i].nstick);
     modeldata[i].stickparam.resize(modeldata[i].nstick);
     for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
@@ -272,9 +260,6 @@ Netdata::Netdata(mModel *msg) {
     }
   }
   // Sanity check
-  // TODO: potentially provide these numbers in the msg as well
-  //CkAssert(jstatename == msg->nstatename);
-  //CkAssert(jstickname == msg->nstickname);
   CkAssert(jstateparam == msg->nstateparam);
   CkAssert(jstickparam == msg->nstickparam);
 
@@ -308,8 +293,17 @@ Netdata::Netdata(mModel *msg) {
   // Open yarp
   yarp.init();
 #endif
+  
+  // Preparing network data
+  parts.resize(nprt);
+  records.resize(nprt);
+  cpprt = 0;
 
-  // Printing model configuration information
+  // Network distribution
+  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
+  
+  // Preparing network build (if needed)
+  connvtxreq.clear();
 
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
@@ -348,16 +342,11 @@ void Netdata::LoadData(mDist *msg) {
     stickdist[i] = msg->stickdist[i];
     eventdist[i] = msg->eventdist[i];
   }
-
-  // Network distribution
-  maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
-  
-  // Data
-  parts.resize(npart);
-  records.resize(npart);
+  // cleanup
+  delete msg;
 
   // Read in files
-  CkPrintf("Reading network data files %" PRIidx "\n", fileidx);
+  CkPrintf("Reading network data files %" PRIidx "\n", datidx);
   ReadNetwork();
 
   // Return control to main
@@ -366,9 +355,9 @@ void Netdata::LoadData(mDist *msg) {
 
 // Send data to network partition
 //
-void Netdata::LoadNetwork(int partidx, const CkCallback &cbpart) {
+void Netdata::LoadNetwork(int prtidx, const CkCallback &cbpart) {
   // Send part to network
-  cbpart.send(parts[partidx - xpart]);
+  cbpart.send(parts[prtidx - xprt]);
 }
 
 
@@ -379,11 +368,26 @@ void Netdata::LoadNetwork(int partidx, const CkCallback &cbpart) {
 // Save data from built network
 //
 void Netdata::SaveBuild() {
+  // Build parts from file-based network information
+  BuildParts();
   // Write data
-  WriteBuild();
+  WriteNetwork(0);
 
   // Return control to main
-  contribute(npart*sizeof(dist_t), netdist.data(), net_dist,
+  contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
+      CkCallback(CkIndex_Main::SaveInitDist(NULL), mainProxy));
+}
+
+// Save data from built network
+//
+void Netdata::SaveCloseBuild() {
+  // Build parts from file-based network information
+  BuildParts();
+  // Write data
+  WriteNetwork(0);
+  
+  // Return control to main
+  contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
       CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
 }
 
@@ -391,22 +395,22 @@ void Netdata::SaveBuild() {
 //
 void Netdata::SaveNetwork(mPart *msg) {
   // Stash part
-  parts[msg->partidx - xpart] = msg;
+  parts[msg->prtidx - xprt] = msg;
   
   // Wait for all parts
-  if (++cpart == npart) {
-    cpart = 0;
+  if (++cprt == nprt) {
+    cprt = 0;
 
     // Write data
     WriteNetwork();
 
     // Cleanup stash
-    for (idx_t i = 0; i < npart; ++i) {
+    for (idx_t i = 0; i < nprt; ++i) {
       delete parts[i];
     }
 
     // Return control to main
-    contribute(npart*sizeof(dist_t), netdist.data(), net_dist, maindist);
+    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist, maindist);
   }
 }
 
@@ -414,17 +418,17 @@ void Netdata::SaveNetwork(mPart *msg) {
 //
 void Netdata::SaveCloseNetwork(mPart *msg) {
   // Stash part
-  parts[msg->partidx - xpart] = msg;
+  parts[msg->prtidx - xprt] = msg;
   
   // Wait for all parts
-  if (++cpart == npart) {
-    cpart = 0;
+  if (++cprt == nprt) {
+    cprt = 0;
 
     // Write data
     WriteNetwork();
 
     // Cleanup stash
-    for (idx_t i = 0; i < npart; ++i) {
+    for (idx_t i = 0; i < nprt; ++i) {
       delete parts[i];
     }
 
@@ -434,7 +438,7 @@ void Netdata::SaveCloseNetwork(mPart *msg) {
 #endif
 
     // Return control to main
-    contribute(npart*sizeof(dist_t), netdist.data(), net_dist,
+    contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
         CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
   }
 }
@@ -443,8 +447,8 @@ void Netdata::SaveCloseNetwork(mPart *msg) {
 //
 void Netdata::CloseNetwork() {
   // Wait for all parts
-  if (++cpart == npart) {
-    cpart = 0;
+  if (++cprt == nprt) {
+    cprt = 0;
 
 #ifdef STACS_WITH_YARP
     // Finalize YARP
@@ -474,6 +478,25 @@ void Main::SaveDist(CkReductionMsg *msg) {
 
   // Write distribution
   if (WriteDist()) {
+    CkPrintf("Error writing distribution...\n");
+    CkExit();
+  }
+}
+
+// Collect distribution from netdata
+//
+void Main::SaveInitDist(CkReductionMsg *msg) {
+  //CkPrintf("Checkpointing simulation\n");
+  
+  // Save network part distribution to local
+  netdist.clear();
+  for (std::size_t i = 0; i < (msg->getSize())/sizeof(dist_t); ++i) {
+    netdist.push_back(*((dist_t *)msg->getData()+i));
+  }
+  delete msg;
+
+  // Write distribution
+  if (WriteDist(0)) {
     CkPrintf("Error writing distribution...\n");
     CkExit();
   }
@@ -539,4 +562,157 @@ void Netdata::SaveFinalEstimate(CkReductionMsg *msg) {
     
   // Return control to main (halting)
   mainProxy.Halt();
+}
+
+
+/**************************************************************************
+* Convert built network state to part messages
+**************************************************************************/
+
+void Netdata::BuildParts() {
+  /* Bookkeeping */
+  idx_t nadjcy;
+  idx_t nstate;
+  idx_t nstick;
+  idx_t nevent;
+  idx_t xvtxidx;
+
+  for (int k = 0; k < nprt; ++k) {
+    // Get total size of adjcy
+    nadjcy = 0;
+    nstate = 0;
+    nstick = 0;
+    nevent = 0;
+    xvtxidx = vtxdist[xprt+k] - vtxdist[xprt];
+    for (idx_t i = 0; i < norderprt[k]; ++i) {
+      nadjcy += adjcy[xvtxidx+i].size();
+      for (std::size_t j = 0; j < adjcy[xvtxidx+i].size()+1; ++j) {
+        nstate += state[xvtxidx+i][j].size();
+        nstick += stick[xvtxidx+i][j].size();
+      }
+      nevent += event[xvtxidx+i].size();
+    }
+
+    // Initialize partition data message
+    int msgSize[MSG_Part];
+    msgSize[0] = netparts+1;       // vtxdist
+    msgSize[1] = norderprt[k];  // vtxmodidx
+    msgSize[2] = norderprt[k]*3;// xyz
+    msgSize[3] = norderprt[k]+1;// xadj
+    msgSize[4] = nadjcy;        // adjcy
+    msgSize[5] = nadjcy;        // edgmodidx
+    msgSize[6] = nstate;        // state
+    msgSize[7] = nstick;        // stick
+    msgSize[8] = norderprt[k]+1;// xevent
+    msgSize[9] = nevent;        // diffuse
+    msgSize[10] = nevent;       // type
+    msgSize[11] = nevent;       // source
+    msgSize[12] = nevent;       // index
+    msgSize[13] = nevent;       // data
+    parts[k] = new(msgSize, 0) mPart;
+
+    // Data sizes
+    parts[k]->nvtx = norderprt[k];
+    parts[k]->nedg = nadjcy;
+    parts[k]->nstate = nstate;
+    parts[k]->nstick = nstick;
+    parts[k]->nevent = nevent;
+    parts[k]->prtidx = xprt + k;
+  
+    // Graph Information
+    for (int i = 0; i < netparts+1; ++i) {
+      // vtxdist
+      parts[k]->vtxdist[i] = vtxdist[i];
+    }
+    // Vertex and Edge Information
+    idx_t jstate = 0;
+    idx_t jstick = 0;
+    idx_t jevent = 0;
+    parts[k]->xadj[0] = 0;
+    parts[k]->xevent[0] = 0;
+    for (idx_t i = 0; i < norderprt[k]; ++i) {
+      // vtxmodidx
+      parts[k]->vtxmodidx[i] = vtxmodidx[xvtxidx+i];
+      // xyz
+      parts[k]->xyz[i*3+0] = xyz[xvtxidx+i*3+0];
+      parts[k]->xyz[i*3+1] = xyz[xvtxidx+i*3+1];
+      parts[k]->xyz[i*3+2] = xyz[xvtxidx+i*3+2];
+      // vertex state
+      for (std::size_t s = 0; s < state[xvtxidx+i][0].size(); ++s) {
+        parts[k]->state[jstate++] = state[xvtxidx+i][0][s];
+      }
+      for (std::size_t s = 0; s < stick[xvtxidx+i][0].size(); ++s) {
+        parts[k]->stick[jstick++] = stick[xvtxidx+i][0][s];
+      }
+
+      // xadj
+      parts[k]->xadj[i+1] = parts[k]->xadj[i] + adjcy[xvtxidx+i].size();
+      for (std::size_t j = 0; j < adjcy[xvtxidx+i].size(); ++j) {
+        // adjcy
+        parts[k]->adjcy[parts[k]->xadj[i] + j] = adjcy[xvtxidx+i][j];
+        // edgmodidx
+        parts[k]->edgmodidx[parts[k]->xadj[i] + j] = edgmodidx[xvtxidx+i][j];
+        // state
+        for (std::size_t s = 0; s < state[xvtxidx+i][j+1].size(); ++s) {
+          parts[k]->state[jstate++] = state[xvtxidx+i][j+1][s];
+        }
+        for (std::size_t s = 0; s < stick[xvtxidx+i][j+1].size(); ++s) {
+          parts[k]->stick[jstick++] = stick[xvtxidx+i][j+1][s];
+        }
+      }
+      
+      // events
+      for (std::size_t s = 0; s < event[xvtxidx+i].size(); ++s) {
+        parts[k]->diffuse[jevent] = event[xvtxidx+i][s].diffuse;
+        parts[k]->type[jevent] = event[xvtxidx+i][s].type;
+        parts[k]->source[jevent] = event[xvtxidx+i][s].source;
+        parts[k]->index[jevent] = event[xvtxidx+i][s].index;
+        parts[k]->data[jevent++] = event[xvtxidx+i][s].data;
+      }
+      // xevent
+      parts[k]->xevent[i+1] = jevent;
+    }
+    CkAssert(jstate == nstate);
+    CkAssert(jstick == nstick);
+    CkAssert(jevent == nevent);
+  }
+  // Clear out file-based network information
+  vtxmodidx.clear();
+  vtxordidx.clear();
+  xyz.clear();
+  adjcy.clear();
+  edgmodidx.clear();
+  state.clear();
+  stick.clear();
+  event.clear();
+}
+
+/**************************************************************************
+* Convert built network part message to repart state
+**************************************************************************/
+
+void Netdata::BuildRepart() {
+  for (int k = 0; k < nprt; ++k) {
+  }
+  // Prepare for reording partitions
+  cpdat = 0;
+  cpprt = 0;
+  norderdat = 0;
+  vtxprted.resize(nprt);
+  xyzprted.resize(nprt);
+  adjcyprted.resize(nprt);
+  edgmodidxprted.resize(nprt);
+  stateprted.resize(nprt);
+  stickprted.resize(nprt);
+  eventprted.resize(nprt);
+  adjcyreord.resize(nprt);
+  edgmodidxreord.resize(nprt);
+  statereord.resize(nprt);
+  stickreord.resize(nprt);
+  norderprt.resize(nprt);
+  for (idx_t i = 0; i < nprt; ++i) {
+    norderprt[i] = 0;
+  }
+  vtxdist.resize(netfiles+1);
+  vtxdist[0] = 0;
 }

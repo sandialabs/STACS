@@ -51,7 +51,7 @@ CkReductionMsg *netGroup(int nMsg, CkReductionMsg **msgs) {
 void Network::InitGroup(CProxy_Netdata cpdata) {
   // Set proxies
   netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleGroup(), thisProxy(partidx));
+  cyclepart = CkCallback(CkIndex_Network::CycleGroup(), thisProxy(prtidx));
 
   // Initialization
   tcomp = 0;
@@ -61,8 +61,8 @@ void Network::InitGroup(CProxy_Netdata cpdata) {
   compart = 0;
   
   // Request network part from input
-  netdata(fileidx).LoadNetwork(partidx, 
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(partidx)));
+  netdata(datidx).LoadNetwork(prtidx, 
+      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(prtidx)));
 }
 
 
@@ -163,7 +163,7 @@ void Network::FindGroup() {
           ncomp = grpseeds.size();
           // Display computation information
           CkPrintf("  Computing vertex %" PRIidx " groups %" PRIidx "\n", compidx, ncomp);
-          thisProxy.ComputeGroup(ncomp, partidx);
+          thisProxy.ComputeGroup(ncomp, prtidx);
         }
       }
       else {
@@ -192,7 +192,7 @@ void Network::ComputeGroup(idx_t nseeds, int grpart) {
   compart = grpart;
   tcomp = grpmaxdur;
 
-  thisProxy(partidx).ComputeGroup();
+  thisProxy(prtidx).ComputeGroup();
 }
 
 // Compute Group (vertex control loop)
@@ -233,7 +233,7 @@ void Network::ComputeGroup() {
       grproutes.clear();
     }
     // Return control to main loop
-    thisProxy(partidx).FindGroup();
+    thisProxy(prtidx).FindGroup();
   }
 }
 
@@ -347,7 +347,7 @@ void Network::CycleGroup() {
       synciter = IDX_T_MAX;
       
       // Display synchronization information
-      if (partidx == 0) {
+      if (prtidx == 0) {
         CkPrintf("  Synchronized at iteration %" PRIidx "\n", iter);
       }
 
@@ -588,7 +588,7 @@ void Network::SeedGroup(mEvent *msg) {
   delete msg;
 
   // Start cycle after seeding events
-  thisProxy(partidx).CycleGroup();
+  thisProxy(prtidx).CycleGroup();
 }
 
 

@@ -36,7 +36,7 @@ void Network::GoAhead(mGo *msg) {
     ++commiter;
 
     // Start a new cycle
-    //thisProxy(partidx).CycleNetwork();
+    //thisProxy(prtidx).CycleNetwork();
     cyclepart.send();
   }
 }
@@ -137,7 +137,7 @@ void Network::CommEvent(mEvent *msg) {
     ++commiter;
 
     // Start a new cycle
-    //thisProxy(partidx).CycleNetwork();
+    //thisProxy(prtidx).CycleNetwork();
     cyclepart.send();
   }
 }
@@ -252,7 +252,7 @@ void Network::CommStamp(mEvent *msg) {
     ++commiter;
 
     // Start a new cycle
-    //thisProxy(partidx).CycleNetwork();
+    //thisProxy(prtidx).CycleNetwork();
     cyclepart.send();
   }
 }

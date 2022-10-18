@@ -72,8 +72,8 @@ int Main::ReadDist() {
     // eventdist
     netdist[i].nevent = strtoidx(oldstr, &newstr, 10);
     oldstr = newstr;
-    // partidx
-    netdist[i].partidx = 0;
+    // prtidx
+    netdist[i].prtidx = 0;
   }
 
   // Cleanup
@@ -85,7 +85,7 @@ int Main::ReadDist() {
 
 // Write graph adjacency distribution
 //
-int Main::WriteDist() {
+int Main::WriteDist(int checkflag) {
   /* File operations */
   FILE *pDist;
   FILE *pMetis;
@@ -97,11 +97,12 @@ int Main::WriteDist() {
   idx_t nstick;
   idx_t nevent;
 
+  std::string filecheck = (checkflag ? filesave : "");
   // Open File
   CkPrintf("Writing network distribution\n");
-  sprintf(csrfile, "%s/%s%s.dist", netwkdir.c_str(), filebase.c_str(), filesave.c_str());//(check ? ".check" : filesave.c_str()));
+  sprintf(csrfile, "%s/%s%s.dist", netwkdir.c_str(), filebase.c_str(), filecheck.c_str());//(check ? ".check" : filesave.c_str()));
   pDist = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.metis", netwkdir.c_str(), filebase.c_str(), filesave.c_str());
+  sprintf(csrfile, "%s/%s%s.metis", netwkdir.c_str(), filebase.c_str(), filecheck.c_str());
   pMetis = fopen(csrfile,"w");
   if (pDist == NULL || pMetis == NULL) {
     printf("Error opening file for writing\n");
@@ -172,27 +173,27 @@ void Netdata::ReadNetwork() {
   line = new char[MAXLINE];
   
   // Open files for reading
-  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), fileidx);
+  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pCoord = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), fileidx);
+  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pAdjcy = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), fileidx);
+  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pState = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), fileidx);
+  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pEvent = fopen(csrfile,"r");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL ||
       pEvent == NULL || line == NULL) {
-    CkPrintf("Error opening graph files on %d\n", fileidx);
+    CkPrintf("Error opening graph files on %d\n", datidx);
     CkExit();
   }
 
   // Read in Parts
-  for (int k = 0; k < npart; ++k) {
-    idx_t nvtx = vtxdist[xpart+k+1] - vtxdist[xpart+k];
-    idx_t nedg = edgdist[xpart+k+1] - edgdist[xpart+k];
-    idx_t nstate = statedist[xpart+k+1] - statedist[xpart+k];
-    idx_t nstick = stickdist[xpart+k+1] - stickdist[xpart+k];
-    idx_t nevent = eventdist[xpart+k+1] - eventdist[xpart+k];
+  for (int k = 0; k < nprt; ++k) {
+    idx_t nvtx = vtxdist[xprt+k+1] - vtxdist[xprt+k];
+    idx_t nedg = edgdist[xprt+k+1] - edgdist[xprt+k];
+    idx_t nstate = statedist[xprt+k+1] - statedist[xprt+k];
+    idx_t nstick = stickdist[xprt+k+1] - stickdist[xprt+k];
+    idx_t nevent = eventdist[xprt+k+1] - eventdist[xprt+k];
 
     // Initialize partition data message
     int msgSize[MSG_Part];
@@ -218,7 +219,7 @@ void Netdata::ReadNetwork() {
     parts[k]->nstate = nstate;
     parts[k]->nstick = nstick;
     parts[k]->nevent = nevent;
-    parts[k]->partidx = xpart+k;
+    parts[k]->prtidx = xprt+k;
 
     // vtxdist
     for (int i = 0; i < netparts+1; ++i) {
@@ -364,10 +365,228 @@ void Netdata::ReadNetwork() {
   fclose(pEvent);
   delete[] line;
 }
+
+// Read network parts (reordering)
+//
+void Netdata::ReadPart() {
+  /* Bookkeeping */
+  idx_t nsizedat;
+  idx_t nstatedat;
+  idx_t nstickdat;
+  idx_t neventdat;
+  /* File operations */
+  FILE *pPart;
+  FILE *pCoord;
+  FILE *pAdjcy;
+  FILE *pState;
+  FILE *pEvent;
+  char csrfile[100];
+  char *line;
+  char *oldstr, *newstr;
+
+  // Prepare buffer
+  line = new char[MAXLINE];
+
+  // Open files for reading
+  sprintf(csrfile, "%s/%s.part.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pPart = fopen(csrfile,"r");
+  sprintf(csrfile, "%s/%s.coord.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pCoord = fopen(csrfile,"r");
+  sprintf(csrfile, "%s/%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pAdjcy = fopen(csrfile,"r");
+  sprintf(csrfile, "%s/%s.state.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pState = fopen(csrfile,"r");
+  sprintf(csrfile, "%s/%s.event.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  pEvent = fopen(csrfile,"r");
+  if (pPart == NULL || pCoord == NULL || pAdjcy == NULL ||
+      pState == NULL || pEvent == NULL) {
+    CkPrintf("Error opening files for reading\n");
+    CkExit();
+  }
+  if (line == NULL) {
+    CkPrintf("Could not allocate memory for lines\n");
+    CkExit();
+  }
+
+  // Initialize sizes
+  std::vector<idx_t> reprt(vtxmetis[datidx+1] - vtxmetis[datidx]);
+  nsizedat = 0;
+  nstatedat = 0;
+  nstickdat = 0;
+  neventdat = 0;
+
+  // Read in graph information
+  for (std::size_t i = 0; i < reprt.size(); ++i) {
+    while(fgets(line, MAXLINE, pPart) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    // reprt
+    reprt[i] = strtoidx(oldstr, &newstr, 10);
+    CkAssert(reprt[i] < netparts);
+    vtxidxreprt[reprt[i]].push_back(vtxmetis[datidx]+i);
+    adjcyreprt[reprt[i]].push_back(std::vector<idx_t>());
+
+    // Read in line (coordinates)
+    while(fgets(line, MAXLINE, pCoord) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    // xyz
+    for (idx_t j = 0; j < 3; ++j) {
+      real_t coord = strtoreal(oldstr, &newstr);
+      oldstr = newstr;
+      xyzreprt[reprt[i]].push_back(coord);
+    }
+
+    // Read line (per vertex)
+    while(fgets(line, MAXLINE, pAdjcy) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    for(;;) {
+      idx_t edg = strtoidx(oldstr, &newstr, 10);
+      // check for end of line
+      if (edg == 0 && oldstr != line)
+        break;
+      oldstr = newstr;
+      // adjcy
+      adjcyreprt[reprt[i]].back().push_back(edg);
+      ++nsizedat;
+    }
+
+    // Extract State Information
+    // Read line (vertex)
+    while(fgets(line, MAXLINE, pState) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    // extract model index from name
+    idx_t modidx = strtomodidx(oldstr, &newstr);
+    CkAssert(modidx != IDX_T_MAX);
+    oldstr = newstr;
+    // vtxmodidx
+    vtxmodidxreprt[reprt[i]].push_back(modidx);
+    statereprt[reprt[i]].push_back(std::vector<real_t>());
+    stickreprt[reprt[i]].push_back(std::vector<tick_t>());
+    CkAssert(modidx > 0);
+    for(std::size_t s = 0; s < modeldata[modidx-1].statetype.size(); ++s) {
+      real_t stt = strtoreal(oldstr, &newstr);
+      oldstr = newstr;
+      // state
+      statereprt[reprt[i]].back().push_back(stt);
+      ++nstatedat;
+    }
+    for(std::size_t s = 0; s < modeldata[modidx-1].sticktype.size(); ++s) {
+      tick_t stt = strtotick(oldstr, &newstr, 16);
+      oldstr = newstr;
+      // state
+      stickreprt[reprt[i]].back().push_back(stt);
+      ++nstickdat;
+    }
+
+    // edgmodidx
+    modidx = strtomodidx(oldstr, &newstr);
+    oldstr = newstr;
+    edgmodidxreprt[reprt[i]].push_back(std::vector<idx_t>());
+    while (modidx != IDX_T_MAX) {
+      // modidx
+      edgmodidxreprt[reprt[i]].back().push_back(modidx);
+      statereprt[reprt[i]].push_back(std::vector<real_t>());
+      stickreprt[reprt[i]].push_back(std::vector<tick_t>());
+      // only push edge state if model and not 'none'
+      if (modidx > 0) {
+        for(std::size_t s = 0; s < modeldata[modidx-1].statetype.size(); ++s) {
+          real_t stt = strtoreal(oldstr, &newstr);
+          oldstr = newstr;
+          // state
+          statereprt[reprt[i]].back().push_back(stt);
+          ++nstatedat;
+        }
+        for(std::size_t s = 0; s < modeldata[modidx-1].sticktype.size(); ++s) {
+          tick_t stt = strtotick(oldstr, &newstr, 16);
+          oldstr = newstr;
+          // state
+          stickreprt[reprt[i]].back().push_back(stt);
+          ++nstickdat;
+        }
+      }
+      modidx = strtomodidx(oldstr, &newstr);
+      oldstr = newstr;
+    }
+
+    // Extract event information
+    // Read line (per vertex)
+    while(fgets(line, MAXLINE, pEvent) && line[0] == '%');
+    oldstr = line;
+    newstr = NULL;
+    // number of events
+    idx_t jevent = strtoidx(oldstr, &newstr, 10);
+    oldstr = newstr;
+    eventreprt[reprt[i]].push_back(std::vector<event_t>());
+    event_t eventpre;
+    for (idx_t j = 0; j < jevent; ++j) {
+      // diffuse
+      eventpre.diffuse = strtotick(oldstr, &newstr, 16);
+      oldstr = newstr;
+      // type
+      idx_t type = strtoidx(oldstr, &newstr, 10);
+      oldstr = newstr;
+      eventpre.type = type;
+      // source
+      eventpre.source = strtoidx(oldstr, &newstr, 10);
+      oldstr = newstr;
+      // index
+      eventpre.index = strtoidx(oldstr, &newstr, 10);
+      oldstr = newstr;
+      // data
+      if (type == EVENT_SPIKE) {
+        eventpre.data = 0.0;
+      }
+      else {
+        eventpre.data = strtoreal(oldstr, &newstr);
+        oldstr = newstr;
+      }
+      eventreprt[reprt[i]].back().push_back(eventpre);
+    }
+    neventdat += jevent;
+    CkAssert(eventreprt[reprt[i]].back().size() == jevent);
+  }
+
+  // Cleanup
+  fclose(pPart);
+  fclose(pCoord);
+  fclose(pAdjcy);
+  fclose(pState);
+  fclose(pEvent);
+  delete[] line;
+
+  // Print out some information
+  CkPrintf("  File: %d   Vertices: %" PRIidx "   Edges: %" PRIidx "   States: %" PRIidx "   Sticks: %" PRIidx"   Events: %" PRIidx"\n",
+      datidx, reprt.size(), nsizedat, nstatedat, nstickdat, neventdat);
+
+  // Prepare for reording partitions
+  cpdat = 0;
+  cpprt = 0;
+  norderdat = 0;
+  vtxprted.resize(nprt);
+  xyzprted.resize(nprt);
+  adjcyprted.resize(nprt);
+  edgmodidxprted.resize(nprt);
+  stateprted.resize(nprt);
+  stickprted.resize(nprt);
+  eventprted.resize(nprt);
+  adjcyreord.resize(nprt);
+  edgmodidxreord.resize(nprt);
+  statereord.resize(nprt);
+  stickreord.resize(nprt);
+  norderprt.resize(nprt);
+  for (idx_t i = 0; i < nprt; ++i) {
+    norderprt[i] = 0;
+  }
+  vtxdist.resize(netfiles+1);
+  vtxdist[0] = 0;
+}
     
 // Write out network files
 //
-void Netdata::WriteNetwork() {
+void Netdata::WriteNetwork(int checkflag) {
   /* File operations */
   FILE *pCoord;
   FILE *pAdjcy;
@@ -375,28 +594,29 @@ void Netdata::WriteNetwork() {
   FILE *pEvent;
   char csrfile[100];
 
+  std::string filecheck = (checkflag ? filesave : "");
   // Open files for writing
-  CkPrintf("Writing network data files %d\n", fileidx);
-  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), fileidx);
+  CkPrintf("Writing network data files %d\n", datidx);
+  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), fileidx);
+  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), fileidx);
+  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), fileidx);
+  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pEvent = fopen(csrfile,"w");
   if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
-    CkPrintf("Error opening files for writing %d\n", fileidx);
+    CkPrintf("Error opening files for writing %d\n", datidx);
     CkExit();
   }
 
   // Initialize distributions
-  netdist.resize(npart);
+  netdist.resize(nprt);
 
   // Loop through parts
-  for (int k = 0; k < npart; ++k) {
+  for (int k = 0; k < nprt; ++k) {
     // Set up netdist
-    netdist[k].partidx = xpart + k;
+    netdist[k].prtidx = xprt + k;
     netdist[k].nvtx = parts[k]->nvtx;
     netdist[k].nedg = parts[k]->nedg;
     netdist[k].nstate = parts[k]->nstate;
@@ -470,117 +690,6 @@ void Netdata::WriteNetwork() {
 }
 
 
-// Write graph adjacency distribution
-//
-void Netdata::WriteBuild() {
-  /* Bookkeeping */
-  idx_t jvtxidx;
-  /* File operations */
-  FILE *pCoord;
-  FILE *pAdjcy;
-  FILE *pState;
-  FILE *pEvent;
-  char csrfile[100];
-
-  // Open files for writing
-  sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
-  pCoord = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
-  pAdjcy = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.state.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
-  pState = fopen(csrfile,"w");
-  sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), filesave.c_str(), datidx);
-  pEvent = fopen(csrfile,"w");
-  if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
-    CkPrintf("Error opening files for writing %d\n", datidx);
-    CkExit();
-  }
-  
-  // Set up distribution
-  netdist.resize(nprt);
-  jvtxidx = 0;
-
-  // Loop through parts
-  for (idx_t k = 0; k < nprt; ++k) {
-    netdist[k].partidx = xprt+k;
-    netdist[k].nvtx = norderprt[k];
-    netdist[k].nedg = 0;
-    netdist[k].nstate = 0;
-    netdist[k].nstick = 0;
-    netdist[k].nevent = 0;
-
-    // Graph adjacency information
-    for (idx_t i = 0; i < norderprt[k]; ++i) {
-      // vertex coordinates
-      fprintf(pCoord, " %" PRIrealfull " %" PRIrealfull " %" PRIrealfull "\n",
-          xyz[jvtxidx*3+0], xyz[jvtxidx*3+1], xyz[jvtxidx*3+2]);
-
-      // vertex state
-      fprintf(pState, " %s", modname[vtxmodidx[jvtxidx]].c_str());
-      CkAssert(vtxmodidx[jvtxidx] > 0);
-      netdist[k].nstate += state[jvtxidx][0].size();
-      netdist[k].nstick += stick[jvtxidx][0].size();
-      for (std::size_t s = 0; s < modeldata[vtxmodidx[jvtxidx]-1].statetype.size(); ++s) {
-        fprintf(pState, " %" PRIrealfull "", state[jvtxidx][0][s]);
-      }
-      for (std::size_t s = 0; s < modeldata[vtxmodidx[jvtxidx]-1].sticktype.size(); ++s) {
-        fprintf(pState, " %" PRItickhex "", stick[jvtxidx][0][s]);
-      }
-      
-      // edge state
-      netdist[k].nedg += edgmodidx[jvtxidx].size();
-      CkAssert(state[jvtxidx].size() == edgmodidx[jvtxidx].size() + 1);
-      for (std::size_t j = 0; j < edgmodidx[jvtxidx].size(); ++j) {
-        fprintf(pState, " %s", modname[edgmodidx[jvtxidx][j]].c_str());
-        netdist[k].nstate += state[jvtxidx][j+1].size();
-        netdist[k].nstick += stick[jvtxidx][j+1].size();
-        if (edgmodidx[jvtxidx][j] > 0) {
-          for (std::size_t s = 0; s < modeldata[edgmodidx[jvtxidx][j]-1].statetype.size(); ++s) {
-            fprintf(pState, " %" PRIrealfull "", state[jvtxidx][j+1][s]);
-          }
-          for (std::size_t s = 0; s < modeldata[edgmodidx[jvtxidx][j]-1].sticktype.size(); ++s) {
-            fprintf(pState, " %" PRItickhex "", stick[jvtxidx][j+1][s]);
-          }
-        }
-      }
-
-      // adjacency information
-      CkAssert(adjcy[jvtxidx].size() == edgmodidx[jvtxidx].size());
-      for (std::size_t j = 0; j < adjcy[jvtxidx].size(); ++j) {
-        fprintf(pAdjcy, " %" PRIidx "", adjcy[jvtxidx][j]);
-      }
-
-      // event information
-      netdist[k].nevent += event[jvtxidx].size();
-      fprintf(pEvent, " %d", event[jvtxidx].size());
-      for (std::size_t j = 0; j < event[jvtxidx].size(); ++j) {
-        if (event[jvtxidx][j].type == EVENT_SPIKE) {
-          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx "",
-              event[jvtxidx][j].diffuse, event[jvtxidx][j].type, event[jvtxidx][j].source, event[jvtxidx][j].index);
-        }
-        else {
-          fprintf(pEvent, " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx " %" PRIrealfull "",
-              event[jvtxidx][j].diffuse, event[jvtxidx][j].type, event[jvtxidx][j].source, event[jvtxidx][j].index, event[jvtxidx][j].data);
-        }
-      }
-
-      // one set per vertex
-      fprintf(pState, "\n");
-      fprintf(pAdjcy, "\n");
-      fprintf(pEvent, "\n");
-      ++jvtxidx;
-    }
-  }
-  CkAssert(jvtxidx == norderdat);
-
-  // Cleanup
-  fclose(pCoord);
-  fclose(pAdjcy);
-  fclose(pState);
-  fclose(pEvent);
-}
-
-
 /**************************************************************************
 * Record Information
 **************************************************************************/
@@ -596,32 +705,32 @@ void Netdata::WriteRecord() {
   // Only save when data exists
   idx_t nevtlog = 0;
   idx_t nrecord = 0;
-  for (int k = 0; k < npart; ++k) {
+  for (int k = 0; k < nprt; ++k) {
     nevtlog += records[k]->nevtlog;
     nrecord += records[k]->nrecord;
   }
 
   // Open File
   if (nevtlog) {
-    sprintf(recfile, "%s/%s/%s.evtlog.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, fileidx);
+    sprintf(recfile, "%s/%s/%s.evtlog.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, datidx);
     pEvtlog = fopen(recfile,"w");
     if (pEvtlog == NULL) {
-      CkPrintf("Error opening files for recording %d\n", fileidx);
+      CkPrintf("Error opening files for recording %d\n", datidx);
       CkExit();
     }
   }
   if (nrecord) {
-    sprintf(recfile, "%s/%s/%s.record.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, fileidx);
+    sprintf(recfile, "%s/%s/%s.record.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, datidx);
     pRecord = fopen(recfile,"w");
     if (pRecord == NULL) {
-      CkPrintf("Error opening files for recording %d\n", fileidx);
+      CkPrintf("Error opening files for recording %d\n", datidx);
       CkExit();
     }
   }
 
   // TODO: Store records indexed by time and then by type
   // Loop through parts
-  for (int k = 0; k < npart; ++k) {
+  for (int k = 0; k < nprt; ++k) {
     // Loop through events
     for (idx_t e = 0; e < records[k]->nevtlog; ++e) {
       // event types lacking data

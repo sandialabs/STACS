@@ -114,6 +114,8 @@ Main::Main(CkArgMsg *msg) {
 
   // bookkeeping for program control
   buildflag = true;
+  repartflag = true;
+  readflag = true;
   writeflag = true;
 }
 
@@ -166,8 +168,101 @@ void Main::Control() {
       CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
       netdata.ckSetReductionClient(&cbhalt);
       // Write network to disk
-      netdata.SaveBuild();
+      netdata.SaveCloseBuild();
       ++nhalt;
+    }
+  }
+
+  // Reorder an already built network
+  else if (runmode == std::string(RUNMODE_REPART)) {
+    if (readflag) {
+      CkPrintf("Reading network\n");
+      readflag = false;
+
+      // Start timer
+      wcstart = std::chrono::system_clock::now();
+
+      // Read graph distribution files
+      if (ReadDist()) {
+        CkPrintf("Error reading graph distribution...\n");
+        CkExit();
+      }
+      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+      mDist *mdist = BuildDist();
+      netdata.LoadPart(mdist);
+      netdata.ckSetReductionClient(&cbcontrol);
+    }
+    else if (repartflag) {
+      CkPrintf("Repartitioning network\n");
+      repartflag = false;
+
+      // Scatter and gather part information
+      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+      netdata.ScatterPart();
+      netdata.ckSetReductionClient(&cbcontrol);
+    }
+    else if (writeflag) {
+      CkPrintf("Writing network\n");
+      writeflag = false;
+      
+      // Stop timer
+      wcstop = std::chrono::system_clock::now();
+      // Print timing
+      std::chrono::duration<real_t> wctime = std::chrono::duration_cast<std::chrono::milliseconds>(wcstop - wcstart);
+      CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", wctime.count());
+
+      // Halting coordination
+      chalt = 0;
+      nhalt = 0;
+      // Set callback for halting (actually not needed)
+      CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
+      netdata.ckSetReductionClient(&cbhalt);
+      // Write network to disk
+      netdata.SaveCloseBuild();
+      ++nhalt;
+    }
+  }
+
+  // Build and simulate network
+  else if (runmode == std::string(RUNMODE_BUILDSIM)) {
+    if (buildflag) {
+      CkPrintf("Building network\n");
+      buildflag = false;
+
+      // Start timer
+      wcstart = std::chrono::system_clock::now();
+
+      // Build Network
+      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+      mGraph *mgraph = BuildGraph();
+      netdata.Build(mgraph);
+      netdata.ckSetReductionClient(&cbcontrol);
+    }
+    else if (writeflag) {
+      CkPrintf("Writing network\n");
+      writeflag = false;
+      
+      // Stop timer
+      wcstop = std::chrono::system_clock::now();
+      // Print timing
+      std::chrono::duration<real_t> wctime = std::chrono::duration_cast<std::chrono::milliseconds>(wcstop - wcstart);
+      CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", wctime.count());
+
+      // Initialize coordination
+      cinit = 0;
+      ninit = 0;
+      // Set callback for initialization
+      CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
+      // Write network to disk
+      netdata.SaveBuild();
+      netdata.ckSetReductionClient(&cbinit);
+      // Network chare array is used in simulation
+      ++ninit;
+      mModel *mmodel = BuildModel();
+      network = CProxy_Network::ckNew(mmodel, netparts);
+      network.ckSetReductionClient(&cbinit);
+      // Convert runmode to simulate
+      runmode = std::string(RUNMODE_SIMULATE);
     }
   }
 

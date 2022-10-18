@@ -23,7 +23,9 @@
 
 #define RUNMODE_SIMULATE  "simulate"
 #define RUNMODE_SIMGPU    "simgpu"
+#define RUNMODE_BUILDSIM  "buildsim"
 #define RUNMODE_BUILD     "build"
+#define RUNMODE_REPART    "repart"
 #define RUNMODE_FINDGROUP "findgroup"
 #define RUNMODE_ESTIMATE  "estimate"
 #define RUNMODE_EMPTY     ""
@@ -49,7 +51,7 @@
 // Network Size Distributions
 //
 struct dist_t {
-  int partidx;
+  int prtidx;
   idx_t nvtx;
   idx_t nedg;
   idx_t nstate;
@@ -57,7 +59,7 @@ struct dist_t {
   idx_t nevent;
 
   bool operator<(const dist_t& dist) const {
-    return partidx < dist.partidx;
+    return prtidx < dist.prtidx;
   }
 };
 
@@ -157,9 +159,11 @@ class Main : public CBase_Main {
     void Halt();
     
     /* Network Distribution */
+    // TODO: Consolidate the distribution writing
     void SaveDist(CkReductionMsg *msg);
+    void SaveInitDist(CkReductionMsg *msg);
     void SaveFinalDist(CkReductionMsg *msg);
-    int WriteDist();
+    int WriteDist(int checkflag=1);
 
   private:
     /* Chare Arrays */
@@ -196,6 +200,8 @@ class Main : public CBase_Main {
     int ninit, cinit;
     int nhalt, chalt;
     bool buildflag;
+    bool repartflag;
+    bool readflag;
     bool writeflag;
 #ifdef STACS_WITH_YARP
     /* YARP */
