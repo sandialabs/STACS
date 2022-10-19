@@ -604,9 +604,9 @@ mPart* Network::BuildRepart() {
   mpart->xevent[0] = 0;
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
     // reprtidx (for now keep all vertices on same partition)
-    mpart->vtxdist[i] = prtidx;
-    // vtxidx (TODO: structural plasticity should track these)
-    mpart->vtxidx[i] = vtxdist[prtidx] + i;
+    mpart->vtxdist[i] = reprtidx[i];
+    // vtxidx
+    mpart->vtxidx[i] = vtxidx[i];
     // vtxmodidx
     mpart->vtxmodidx[i] = vtxmodidx[i];
     // xyz

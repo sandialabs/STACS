@@ -251,6 +251,7 @@ void Network::LoadNetwork(mPart *msg) {
   vtxidx.resize(msg->nvtx);
   vtxmap.clear();
   vtxmodidx.resize(msg->nvtx);
+  reprtidx.resize(msg->nvtx);
   xyz.resize(msg->nvtx*3);
   adjcy.resize(msg->nvtx);
   adjmap.clear();
@@ -293,6 +294,7 @@ void Network::LoadNetwork(mPart *msg) {
     vtxidx[i] = vtxdist[prtidx] + i;
     vtxmap[vtxdist[prtidx] + i] = i;
     vtxmodidx[i] = msg->vtxmodidx[i];
+    reprtidx[i] = prtidx;
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
     xyz[i*3+2] = msg->xyz[i*3+2];
@@ -434,6 +436,7 @@ void Network::ReloadNetwork(mPart *msg) {
   vtxidx.resize(msg->nvtx);
   vtxmap.clear();
   vtxmodidx.resize(msg->nvtx);
+  reprtidx.resize(msg->nvtx);
   xyz.resize(msg->nvtx*3);
   adjcy.resize(msg->nvtx);
   adjmap.clear();
@@ -467,6 +470,7 @@ void Network::ReloadNetwork(mPart *msg) {
     vtxidx[i] = vtxdist[prtidx] + i;
     vtxmap[vtxdist[prtidx] + i] = i;
     vtxmodidx[i] = msg->vtxmodidx[i];
+    reprtidx[i] = prtidx;
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
     xyz[i*3+2] = msg->xyz[i*3+2];

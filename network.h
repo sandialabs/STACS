@@ -985,6 +985,8 @@ class Network : public CBase_Network {
     std::vector<event_t> leapevt; // set of periodic events
     std::vector<bool> leaplist; // models with periodic events
     std::vector<std::vector<std::array<idx_t, 2>>> leapidx; // indices into models
+    /* Repartitioning */
+    std::vector<idx_t> reprtidx; // partition that the vertex should move to
     /* Recording */
     std::vector<event_t> evtlog; // event logging
     std::vector<bool> evtloglist; // types of events to log
