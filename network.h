@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2015 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  */
 
 #ifndef __STACS_NETWORK_H__
@@ -249,6 +249,7 @@ class mModel : public CMessage_mModel {
     idx_t ndatafiles;    // number of datafiles (for prefix)
     bool plastic;      // toggle for plasticity
     bool episodic;     // toggle for episodic simulation
+    bool loadbal;      // toggle for periodic load balancing
 };
 
 // Network graph information
@@ -299,23 +300,26 @@ class mConn : public CMessage_mConn {
     idx_t nvtx;
 };
 
-#define MSG_Reorder 2
+#define MSG_Reorder 3
 class mReorder : public CMessage_mReorder {
   public:
+    idx_t *vtxdist;
     idx_t *vtxidxold;
     idx_t *vtxidxnew;
     idx_t datidx;
     idx_t nvtx;
+    idx_t nprt;
 };
 
 
 // Network partition data
 //
-#define MSG_Part 14
+#define MSG_Part 15
 class mPart : public CMessage_mPart {
   public:
     /* Data */
     idx_t *vtxdist;
+    idx_t *vtxidx;
     idx_t *vtxmodidx;
     real_t *xyz;
     idx_t *xadj;
@@ -886,9 +890,11 @@ class Network : public CBase_Network {
     /* Loading */
     mPart* BuildPart();
     void LoadNetwork(mPart *msg);
+    void ReloadNetwork(mPart *msg);
     
     /* Simulation */
     void InitSim(CProxy_Netdata cpdata);
+    void ContSim();
     void CycleSim();
 
     void InitSimGPU(CProxy_Netdata cpdata);
@@ -913,7 +919,7 @@ class Network : public CBase_Network {
     
     /* Saving */
     mPart* BuildRepart();
-    void Repart();
+    void RebalNetwork();
     void SaveNetwork();
     void SaveCloseNetwork();
     void CloseNetwork();
@@ -978,6 +984,8 @@ class Network : public CBase_Network {
     std::vector<event_t> leapevt; // set of periodic events
     std::vector<bool> leaplist; // models with periodic events
     std::vector<std::vector<std::array<idx_t, 2>>> leapidx; // indices into models
+    /* Repartitioning */
+    std::vector<idx_t> reprtidx; // partition that the vertex should move to
     /* Recording */
     std::vector<event_t> evtlog; // event logging
     std::vector<bool> evtloglist; // types of events to log
@@ -1004,6 +1012,7 @@ class Network : public CBase_Network {
     /* Configuration */
     bool plastic;
     bool episodic;
+    bool loadbal;
     /* Timing */
     tick_t tsim;
     tick_t teps;
@@ -1019,6 +1028,7 @@ class Network : public CBase_Network {
     idx_t dispiter;
     idx_t saveiter;
     idx_t reciter;
+    idx_t baliter;
     idx_t nadjpart;
     idx_t cadjpart[2], partiter;
 #ifdef STACS_WITH_YARP

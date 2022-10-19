@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2022 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  */
 
 #ifndef __STACS_BUILD_H__

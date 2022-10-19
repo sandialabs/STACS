@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2015 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  *
  */
 
@@ -163,6 +163,7 @@ mModel* Main::BuildModel() {
   // Configuration
   mmodel->plastic = plastic;
   mmodel->episodic = episodic;
+  mmodel->loadbal = loadbal;
 
   // Prefixes starts with zero
   mmodel->xmodname[0] = 0;

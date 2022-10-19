@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2017 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  */
 
 #include "network.h"
@@ -14,6 +14,7 @@ extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t nevtday;
 extern /*readonly*/ idx_t intdisp;
 extern /*readonly*/ idx_t intrec;
+extern /*readonly*/ idx_t intbal;
 extern /*readonly*/ idx_t intsave;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tepisode;
@@ -63,6 +64,13 @@ void Network::InitSim(CProxy_Netdata cpdata) {
       CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(prtidx)));
 }
 
+// Return after repartitioning
+//
+void Network::ContSim() {
+  netdata(datidx).LoadNetwork(prtidx,
+      CkCallback(CkIndex_Network::ReloadNetwork(NULL), thisProxy(prtidx)));
+}
+
 
 /**************************************************************************
 * Network Simulation Cycle
@@ -109,6 +117,14 @@ void Network::CycleSim() {
         cyclepart.send();
       }
     }
+  }
+  // Repartitioning / migrating vertices
+  else if (iter == baliter && loadbal) {
+    // Bookkeeping
+    baliter += intbal;
+
+    // Send part
+    thisProxy(prtidx).RebalNetwork();
   }
   // Saving
   else if (iter == saveiter) {

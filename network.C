@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2015 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  */
 
 #include "network.h"
@@ -17,6 +17,7 @@ extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t nevtday;
 extern /*readonly*/ idx_t intdisp;
 extern /*readonly*/ idx_t intrec;
+extern /*readonly*/ idx_t intbal;
 extern /*readonly*/ idx_t intsave;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ idx_t grpvtxmin;
@@ -71,6 +72,7 @@ Network::Network(mModel *msg) {
   // Simulation configuration
   plastic = msg->plastic;
   episodic = msg->episodic;
+  loadbal = msg->loadbal;
 
   // Network Models
   for (std::size_t i = 0; i < model.size(); ++i) {
@@ -249,6 +251,7 @@ void Network::LoadNetwork(mPart *msg) {
   vtxidx.resize(msg->nvtx);
   vtxmap.clear();
   vtxmodidx.resize(msg->nvtx);
+  reprtidx.resize(msg->nvtx);
   xyz.resize(msg->nvtx*3);
   adjcy.resize(msg->nvtx);
   adjmap.clear();
@@ -291,6 +294,7 @@ void Network::LoadNetwork(mPart *msg) {
     vtxidx[i] = vtxdist[prtidx] + i;
     vtxmap[vtxdist[prtidx] + i] = i;
     vtxmodidx[i] = msg->vtxmodidx[i];
+    reprtidx[i] = prtidx;
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
     xyz[i*3+2] = msg->xyz[i*3+2];
@@ -395,6 +399,7 @@ void Network::LoadNetwork(mPart *msg) {
   commiter = 0;
   dispiter = 0;
   reciter = intrec;
+  baliter = loadbal ? intbal : IDX_T_MAX;
   saveiter = plastic ? intsave : IDX_T_MAX;
   teps = episodic ? 0 : TICK_T_MAX;
   epsidx = -1;
@@ -413,6 +418,149 @@ void Network::LoadNetwork(mPart *msg) {
   contribute(0, NULL, CkReduction::nop);
 }
 
+// Receive data from Netdata chare array
+//
+void Network::ReloadNetwork(mPart *msg) {
+  /* Bookkeeping */
+  idx_t nadjcy;  // edges
+  idx_t jmodidx; // modidx
+  idx_t jstate;  // state
+  idx_t jstick;  // time state
+  idx_t nevent;  // events
+
+  // Copy over part data
+  CkAssert(msg->prtidx == prtidx);
+
+  // Setup data vectors
+  vtxdist.resize(netparts+1);
+  vtxidx.resize(msg->nvtx);
+  vtxmap.clear();
+  vtxmodidx.resize(msg->nvtx);
+  reprtidx.resize(msg->nvtx);
+  xyz.resize(msg->nvtx*3);
+  adjcy.resize(msg->nvtx);
+  adjmap.clear();
+  edgmodidx.resize(msg->nvtx);
+  state.resize(msg->nvtx);
+  stick.resize(msg->nvtx);
+  vtxaux.resize(msg->nvtx);
+  evtcal.clear();
+  evtcal.resize(msg->nvtx);
+  evtcol.clear();
+  evtcol.resize(msg->nvtx);
+  events.clear();
+  evtext.clear();
+  evtrpc.clear();
+
+  // Graph distribution information
+  for (int i = 0; i < netparts+1; ++i) {
+    // vtxdist
+    vtxdist[i] = msg->vtxdist[i];
+  }
+
+  // Initalize counters
+  nadjcy = 0;
+  jmodidx = 0;
+  jstate = 0;
+  jstick = 0;
+  nevent = 0;
+
+  // Get adjacency matrix
+  for (idx_t i = 0; i < adjcy.size(); ++i) {
+    vtxidx[i] = vtxdist[prtidx] + i;
+    vtxmap[vtxdist[prtidx] + i] = i;
+    vtxmodidx[i] = msg->vtxmodidx[i];
+    reprtidx[i] = prtidx;
+    xyz[i*3+0] = msg->xyz[i*3+0];
+    xyz[i*3+1] = msg->xyz[i*3+1];
+    xyz[i*3+2] = msg->xyz[i*3+2];
+    // preallocate sizes
+    adjcy[i].resize(msg->xadj[i+1] - msg->xadj[i]);
+    edgmodidx[i].resize(msg->xadj[i+1] - msg->xadj[i]);
+    state[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
+    stick[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
+    evtcal[i].resize(nevtday);
+    nadjcy += adjcy[i].size();
+    // copy over vertex data
+    state[i][0] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + model[vtxmodidx[i]]->getNState());
+    jstate += model[vtxmodidx[i]]->getNState();
+    stick[i][0] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + model[vtxmodidx[i]]->getNStick());
+    jstick += model[vtxmodidx[i]]->getNStick();
+    if (leaplist[vtxmodidx[i]]) {
+      leapidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
+    }
+    // copy over edge data
+    for (idx_t j = 0; j < adjcy[i].size(); ++j) {
+      adjcy[i][j] = msg->adjcy[msg->xadj[i] + j];
+      // models
+      edgmodidx[i][j] = msg->edgmodidx[jmodidx++];
+      if (edgmodidx[i][j]) {
+        // map of targets (edge model in part)
+        adjmap[adjcy[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
+      }
+      state[i][j+1] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + model[edgmodidx[i][j]]->getNState());
+      jstate += model[edgmodidx[i][j]]->getNState();
+      stick[i][j+1] = std::vector<tick_t>(msg->stick + jstick, msg->stick + jstick + model[edgmodidx[i][j]]->getNStick());
+      jstick += model[edgmodidx[i][j]]->getNStick();
+      if (leaplist[edgmodidx[i][j]]) {
+        leapidx[edgmodidx[i][j]].push_back(std::array<idx_t, 2>{{i, j+1}});
+      }
+    }
+    // set up auxiliary state
+    vtxaux[i].clear();
+    if (model[vtxmodidx[i]]->getNAux()) {
+      std::vector<std::string> auxstate = model[vtxmodidx[i]]->getAuxState();
+      std::vector<std::string> auxstick = model[vtxmodidx[i]]->getAuxStick();
+      for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+        if (edgmodidx[i][j]) {
+          vtxaux[i].push_back(auxidx_t());
+          vtxaux[i].back().index = j+1;
+          vtxaux[i].back().stateidx.resize(auxstate.size());
+          for (std::size_t s = 0; s < auxstate.size(); ++s) {
+            vtxaux[i].back().stateidx[s] = model[edgmodidx[i][j]]->getStateIdx(auxstate[s]);
+          }
+          vtxaux[i].back().stickidx.resize(auxstick.size());
+          for (std::size_t s = 0; s < auxstick.size(); ++s) {
+            vtxaux[i].back().stickidx[s] = model[edgmodidx[i][j]]->getStateIdx(auxstick[s]);
+          }
+        }
+      }
+    }
+    // copy over event data
+    event_t event;
+    for (idx_t e = msg->xevent[i]; e < msg->xevent[i+1]; ++e) {
+      event.diffuse = msg->diffuse[e];
+      event.type = msg->type[e];
+      event.source = msg->source[e];
+      event.index = msg->index[e];
+      event.data = msg->data[e];
+      // Add to event queue or spillover
+      if ((event.diffuse/tstep - iter) < nevtday) {
+        evtcal[i][(event.diffuse/tstep)%nevtday].push_back(event);
+      }
+      else {
+        evtcol[i].push_back(event);
+      }
+      ++nevent;
+    }
+  }
+  CkAssert(msg->nedg == nadjcy);
+  CkAssert(msg->nedg == jmodidx);
+  CkAssert(msg->nstate == jstate);
+  CkAssert(msg->nstick == jstick);
+  CkAssert(msg->nevent == nevent);
+
+  // Cleanup;
+  delete msg;
+
+  // Print some information
+  CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjpart: %" PRIidx "\n",
+           prtidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
+
+  // Return control to main
+  contribute(0, NULL, CkReduction::nop);
+}
+
 
 /**************************************************************************
 * Network Save Data
@@ -421,9 +569,9 @@ void Network::LoadNetwork(mPart *msg) {
 
 // Repartition from network
 //
-void Network::Repart() {
+void Network::RebalNetwork() {
   // Build network part message for saving
-  mPart *mpart = BuildPart();
+  mPart *mpart = BuildRepart();
   netdata(datidx).LoadRepart(mpart);
 }
 
@@ -566,20 +714,21 @@ mPart* Network::BuildPart() {
 
   // Initialize partition data message
   int msgSize[MSG_Part];
-  msgSize[0] = netparts+1;       // vtxdist
-  msgSize[1] = adjcy.size();  // vtxmodidx
-  msgSize[2] = adjcy.size()*3;// xyz
-  msgSize[3] = adjcy.size()+1;// xadj
-  msgSize[4] = nadjcy;        // adjcy
-  msgSize[5] = nadjcy;        // edgmodidx
-  msgSize[6] = nstate;        // state
-  msgSize[7] = nstick;        // stick
-  msgSize[8] = adjcy.size()+1;// xevent
-  msgSize[9] = nevent;        // diffuse
-  msgSize[10] = nevent;       // type
-  msgSize[11] = nevent;       // source
-  msgSize[12] = nevent;       // index
-  msgSize[13] = nevent;       // data
+  msgSize[0] = netparts+1;    // vtxdist
+  msgSize[1] = 0;             // vtxidx (implicit)
+  msgSize[2] = adjcy.size();  // vtxmodidx
+  msgSize[3] = adjcy.size()*3;// xyz
+  msgSize[4] = adjcy.size()+1;// xadj
+  msgSize[5] = nadjcy;        // adjcy
+  msgSize[6] = nadjcy;        // edgmodidx
+  msgSize[7] = nstate;        // state
+  msgSize[8] = nstick;        // stick
+  msgSize[9] = adjcy.size()+1;// xevent
+  msgSize[10] = nevent;        // diffuse
+  msgSize[11] = nevent;       // type
+  msgSize[12] = nevent;       // source
+  msgSize[13] = nevent;       // index
+  msgSize[14] = nevent;       // data
   mPart *mpart = new(msgSize, 0) mPart;
 
   // Data sizes

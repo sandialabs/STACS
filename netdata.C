@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2015 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  */
 
 #include "stacs.h"
@@ -305,6 +305,17 @@ Netdata::Netdata(mModel *msg) {
   // Preparing network build (if needed)
   connvtxreq.clear();
 
+  // Repartitioning
+  vtxidxreprt.resize(netparts);
+  vtxmodidxreprt.resize(netparts);
+  xyzreprt.resize(netparts);
+  edgmodidxreprt.resize(netparts);
+  adjcyreprt.resize(netparts);
+  statereprt.resize(netparts);
+  stickreprt.resize(netparts);
+  eventreprt.resize(netparts);
+
+
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
 }
@@ -368,8 +379,6 @@ void Netdata::LoadNetwork(int prtidx, const CkCallback &cbpart) {
 // Save data from built network
 //
 void Netdata::SaveBuild() {
-  // Build parts from file-based network information
-  BuildParts();
   // Write data
   WriteNetwork(0);
 
@@ -381,15 +390,14 @@ void Netdata::SaveBuild() {
 // Save data from built network
 //
 void Netdata::SaveCloseBuild() {
-  // Build parts from file-based network information
-  BuildParts();
   // Write data
   WriteNetwork(0);
-  
+
   // Return control to main
   contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
       CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
 }
+
 
 // Save data from network partition
 //
@@ -577,6 +585,9 @@ void Netdata::BuildParts() {
   idx_t nevent;
   idx_t xvtxidx;
 
+  //parts.clear();
+  //parts.resize(nprt);
+
   for (int k = 0; k < nprt; ++k) {
     // Get total size of adjcy
     nadjcy = 0;
@@ -595,20 +606,21 @@ void Netdata::BuildParts() {
 
     // Initialize partition data message
     int msgSize[MSG_Part];
-    msgSize[0] = netparts+1;       // vtxdist
-    msgSize[1] = norderprt[k];  // vtxmodidx
-    msgSize[2] = norderprt[k]*3;// xyz
-    msgSize[3] = norderprt[k]+1;// xadj
-    msgSize[4] = nadjcy;        // adjcy
-    msgSize[5] = nadjcy;        // edgmodidx
-    msgSize[6] = nstate;        // state
-    msgSize[7] = nstick;        // stick
-    msgSize[8] = norderprt[k]+1;// xevent
-    msgSize[9] = nevent;        // diffuse
-    msgSize[10] = nevent;       // type
-    msgSize[11] = nevent;       // source
-    msgSize[12] = nevent;       // index
-    msgSize[13] = nevent;       // data
+    msgSize[0] = netparts+1;    // vtxdist
+    msgSize[1] = 0;             // vtxidx (implicit)
+    msgSize[2] = norderprt[k];  // vtxmodidx
+    msgSize[3] = norderprt[k]*3;// xyz
+    msgSize[4] = norderprt[k]+1;// xadj
+    msgSize[5] = nadjcy;        // adjcy
+    msgSize[6] = nadjcy;        // edgmodidx
+    msgSize[7] = nstate;        // state
+    msgSize[8] = nstick;        // stick
+    msgSize[9] = norderprt[k]+1;// xevent
+    msgSize[10] = nevent;        // diffuse
+    msgSize[11] = nevent;       // type
+    msgSize[12] = nevent;       // source
+    msgSize[13] = nevent;       // index
+    msgSize[14] = nevent;       // data
     parts[k] = new(msgSize, 0) mPart;
 
     // Data sizes
@@ -685,6 +697,21 @@ void Netdata::BuildParts() {
   state.clear();
   stick.clear();
   event.clear();
+  // Clear out partitioning
+  vtxprted.clear();
+  xyzprted.clear();
+  adjcyprted.clear();
+  edgmodidxprted.clear();
+  stateprted.clear();
+  stickprted.clear();
+  eventprted.clear();
+  // also allocate for reordering
+  adjcyreord.clear();
+  edgmodidxreord.clear();
+  statereord.clear();
+  stickreord.clear();
+  eventsourcereord.clear();
+  eventindexreord.clear();
 }
 
 /**************************************************************************
@@ -692,7 +719,62 @@ void Netdata::BuildParts() {
 **************************************************************************/
 
 void Netdata::BuildRepart() {
+  // Loop through parts
   for (int k = 0; k < nprt; ++k) {
+    // TODO: instead of xvtxidx, just have mpart send the old vtxidx
+    //       this will eventually be needed for structural plasticity
+    idx_t xvtxidx = vtxdist[parts[k]->prtidx];
+    idx_t jstate = 0;
+    idx_t jstick = 0;
+    for (idx_t i = 0; i < parts[k]->nvtx; ++i) {
+      // reprt (as vtxdist)
+      idx_t reprt = parts[k]->vtxdist[i];
+      CkAssert(reprt < netparts);
+      // vtxidx (global)
+      vtxidxreprt[reprt].push_back(parts[k]->vtxidx[i]);
+      // xyz
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+0]);
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+1]);
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+2]);
+      // vtxmodidx
+      vtxmodidxreprt[reprt].push_back(parts[k]->vtxmodidx[i]);
+      // state (vertex)
+      statereprt[reprt].push_back(std::vector<real_t>());
+      stickreprt[reprt].push_back(std::vector<tick_t>());
+      for (idx_t s = 0; s < model[parts[k]->vtxmodidx[i]]->getNState(); ++s) {
+        statereprt[reprt].back().push_back(parts[k]->state[jstate++]);
+      }
+      for (idx_t s = 0; s < model[parts[k]->vtxmodidx[i]]->getNStick(); ++s) {
+        stickreprt[reprt].back().push_back(parts[k]->stick[jstick++]);
+      }
+      // adjcy
+      adjcyreprt[reprt].push_back(std::vector<idx_t>());
+      edgmodidxreprt[reprt].push_back(std::vector<idx_t>());
+      for (idx_t j = parts[k]->xadj[i]; j < parts[k]->xadj[i+1]; ++j) {
+        adjcyreprt[reprt].back().push_back(parts[k]->adjcy[j]);
+        edgmodidxreprt[reprt].back().push_back(parts[k]->edgmodidx[j]);
+        // state (edge)
+        for (idx_t s = 0; s < model[parts[k]->edgmodidx[j]]->getNState(); ++s) {
+          statereprt[reprt].back().push_back(parts[k]->state[jstate++]);
+        }
+        for (idx_t s = 0; s < model[parts[k]->edgmodidx[j]]->getNStick(); ++s) {
+          stickreprt[reprt].back().push_back(parts[k]->stick[jstick++]);
+        }
+      }
+      // event
+      eventreprt[reprt].push_back(std::vector<event_t>());
+      for (idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
+        event_t evtpre;
+        evtpre.diffuse = parts[k]->diffuse[e];
+        evtpre.type = parts[k]->type[e];
+        evtpre.source = parts[k]->source[e];
+        evtpre.index = parts[k]->index[e];
+        evtpre.data = parts[k]->data[e];
+        eventreprt[reprt].back().push_back(evtpre);
+      }
+    }
+    CkAssert(jstate == parts[k]->nstate);
+    CkAssert(jstick == parts[k]->nstick);
   }
   // Prepare for reording partitions
   cpdat = 0;
@@ -713,6 +795,11 @@ void Netdata::BuildRepart() {
   for (idx_t i = 0; i < nprt; ++i) {
     norderprt[i] = 0;
   }
-  vtxdist.resize(netfiles+1);
+  // Reset the vtxdist
+  vtxdist.clear();
+  vtxdist.resize(netparts+1);
   vtxdist[0] = 0;
+  vtxmetis.clear();
+  vtxmetis.resize(netfiles+1);
+  vtxmetis[0] = 0;
 }
