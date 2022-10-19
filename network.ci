@@ -95,10 +95,12 @@ module network {
   };
 
   message mReorder {
+    idx_t vtxdist[];
     idx_t vtxidxold[];
     idx_t vtxidxnew[];
     idx_t datidx;
     idx_t nvtx;
+    idx_t nprt;
   };
 
   message mPart {

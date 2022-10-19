@@ -446,13 +446,20 @@ void Netdata::Reorder(mReorder *msg) {
 // Reordering indices based on given ordering
 //
 void Netdata::ReordEdg(mReorder *msg) {
-  // Add to vtxdist
-  vtxdist[cpdat+1] = vtxdist[cpdat] + msg->nvtx;
+  // Add to vtxmetis
+  vtxmetis[cpdat+1] = vtxmetis[cpdat] + msg->nvtx;
+  int ndiv = netparts/netfiles;
+  int nrem = netparts%netfiles;
+  int xdatprt = cpdat*ndiv + (cpdat < nrem ? cpdat : nrem);
+  // add to vtxdist
+  for (idx_t k = 0; k < msg->nprt; ++k) {
+    vtxdist[xdatprt+k+1] = vtxdist[xdatprt+k] + msg->vtxdist[k];
+  }
 
   // create map
   std::unordered_map<idx_t, idx_t> oldtonew;
   for (idx_t i = 0; i < msg->nvtx; ++i) {
-    oldtonew[msg->vtxidxold[i]] = vtxdist[cpdat] + msg->vtxidxnew[i];
+    oldtonew[msg->vtxidxold[i]] = vtxmetis[cpdat] + msg->vtxidxnew[i];
   }
 
   // cleanup
@@ -507,18 +514,21 @@ void Netdata::ReordEdg(mReorder *msg) {
 mReorder* Netdata::BuildReorder() {
   // Initialize connection message
   int msgSize[MSG_Reorder];
-  msgSize[0] = norderdat;   // vtxidxold
-  msgSize[1] = norderdat;   // vtxidxnew
+  msgSize[0] = nprt;        // vtxdist
+  msgSize[1] = norderdat;   // vtxidxold
+  msgSize[2] = norderdat;   // vtxidxnew
   mReorder *morder = new(msgSize, 0) mReorder;
   // sizes
   morder->datidx = datidx;
   morder->nvtx = norderdat;
+  morder->nprt = nprt;
 
   // set up counters
   idx_t jvtxidx = 0;
 
   // load data
   for (idx_t jprt = 0; jprt < nprt; ++jprt) {
+    morder->vtxdist[jprt] = norderprt[jprt];
     for (idx_t i = 0; i < norderprt[jprt]; ++i) {
       morder->vtxidxold[jvtxidx] = vtxprted[jprt][i].vtxidx;
       morder->vtxidxnew[jvtxidx] = jvtxidx;

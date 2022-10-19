@@ -300,13 +300,15 @@ class mConn : public CMessage_mConn {
     idx_t nvtx;
 };
 
-#define MSG_Reorder 2
+#define MSG_Reorder 3
 class mReorder : public CMessage_mReorder {
   public:
+    idx_t *vtxdist;
     idx_t *vtxidxold;
     idx_t *vtxidxnew;
     idx_t datidx;
     idx_t nvtx;
+    idx_t nprt;
 };
 
 

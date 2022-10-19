@@ -810,6 +810,9 @@ void Netdata::BuildRepart() {
   }
   // Reset the vtxdist
   vtxdist.clear();
-  vtxdist.resize(netfiles+1);
+  vtxdist.resize(netparts+1);
   vtxdist[0] = 0;
+  vtxmetis.clear();
+  vtxmetis.resize(netfiles+1);
+  vtxmetis[0] = 0;
 }
