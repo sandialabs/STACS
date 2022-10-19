@@ -531,7 +531,7 @@ void Network::ReloadNetwork(mPart *msg) {
       event.index = msg->index[e];
       event.data = msg->data[e];
       // Add to event queue or spillover
-      if (event.diffuse/tstep < nevtday) {
+      if ((event.diffuse/tstep - iter) < nevtday) {
         evtcal[i][(event.diffuse/tstep)%nevtday].push_back(event);
       }
       else {
