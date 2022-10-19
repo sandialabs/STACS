@@ -31,6 +31,7 @@ extern /*readonly*/ tick_t tstep;
 extern /*readonly*/ idx_t nevtday;
 extern /*readonly*/ idx_t intdisp;
 extern /*readonly*/ idx_t intrec;
+extern /*readonly*/ idx_t intbal;
 extern /*readonly*/ idx_t intsave;
 extern /*readonly*/ tick_t tmax;
 extern /*readonly*/ tick_t tepisode;
@@ -100,6 +101,13 @@ int Main::ReadConfig(std::string configfile) {
   } catch (YAML::RepresentationException& e) {
     episodic = EPISODIC_DEFAULT;
     CkPrintf("  episodic not defined, defaulting to: %s\n", (episodic ? "true" : "false"));
+  }
+  // Load balancing
+  try {
+    loadbal = config["loadbal"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    loadbal = LOADBAL_DEFAULT;
+    CkPrintf("  loadbal not defined, defaulting to: %s\n", (loadbal ? "true" : "false"));
   }
 #ifdef STACS_WITH_YARP
   // RPC port
@@ -213,6 +221,14 @@ int Main::ReadConfig(std::string configfile) {
     CkPrintf("  trecord not defined, defaulting to: %.2g ms\n", trecord);
   }
   intrec = (idx_t)(((tick_t)(trecord*TICKS_PER_MS))/tstep);
+  // Time between repartitioning (in ms)
+  try {
+    tbalance = config["tbalance"].as<real_t>();
+  } catch (YAML::RepresentationException& e) {
+    tbalance = TBALANCE_DEFAULT;
+    CkPrintf("  tbalance not defined, defaulting to: %.2g ms\n", tbalance);
+  }
+  intbal = (idx_t)(((tick_t)(tbalance*TICKS_PER_MS))/tstep);
   // Time between checkpoints (in ms)
   try {
     tsave = config["tsave"].as<real_t>();

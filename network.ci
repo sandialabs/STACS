@@ -49,6 +49,7 @@ module network {
     idx_t ndatafiles;
     bool plastic;
     bool episodic;
+    bool loadbal;
   };
   
   message mGraph {
@@ -173,6 +174,7 @@ module network {
 
     entry void LoadPart(mDist *msg);
     entry void LoadRepart(mPart *msg);
+    entry void SaveRepart();
     entry void ScatterPart();
     entry void GatherPart(mPart *msg);
     entry void Reorder(mReorder *msg);
@@ -193,8 +195,10 @@ module network {
   array [1D] Network {
     entry Network(mModel *msg);
     entry void LoadNetwork(mPart *msg);
+    entry void ReloadNetwork(mPart *msg);
     
     entry void InitSim(CProxy_Netdata cpdata);
+    entry void ContSim();
     entry void CycleSim();
     
     entry void InitSimGPU(CProxy_Netdata cpdata);
@@ -212,6 +216,7 @@ module network {
     entry void SaveCloseNetwork();
     entry void CloseNetwork();
     
+    entry void RebalNetwork();
     entry void SaveRecord();
     entry void SaveFinalRecord();
     entry void SaveEstimate();

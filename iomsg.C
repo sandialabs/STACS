@@ -163,6 +163,7 @@ mModel* Main::BuildModel() {
   // Configuration
   mmodel->plastic = plastic;
   mmodel->episodic = episodic;
+  mmodel->loadbal = loadbal;
 
   // Prefixes starts with zero
   mmodel->xmodname[0] = 0;

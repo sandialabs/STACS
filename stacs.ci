@@ -16,6 +16,7 @@ mainmodule stacs {
   readonly idx_t nevtday;
   readonly idx_t intdisp;
   readonly idx_t intrec;
+  readonly idx_t intbal;
   readonly idx_t intsave;
   readonly tick_t tmax;
   readonly tick_t tepisode;
@@ -36,6 +37,8 @@ mainmodule stacs {
     entry [reductiontarget] void Control();
     entry [reductiontarget] void Init();
     entry [reductiontarget] void Start();
+    entry [reductiontarget] void Check();
+    entry [reductiontarget] void Cont();
     entry [reductiontarget] void Stop();
     entry [reductiontarget] void Halt();
     

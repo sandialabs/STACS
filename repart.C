@@ -36,16 +36,6 @@ void Netdata::LoadPart(mDist *msg) {
   // cleanup
   delete msg;
 
-  // Data
-  vtxidxreprt.resize(netparts);
-  vtxmodidxreprt.resize(netparts);
-  xyzreprt.resize(netparts);
-  edgmodidxreprt.resize(netparts);
-  adjcyreprt.resize(netparts);
-  statereprt.resize(netparts);
-  stickreprt.resize(netparts);
-  eventreprt.resize(netparts);
-
   // Read in files
   CkPrintf("Reading network data files %" PRIidx "\n", datidx);
   ReadPart();
@@ -72,8 +62,8 @@ void Netdata::LoadRepart(mPart *msg) {
       delete parts[i];
     }
 
-    // begin repartitioning
-    thisProxy(datidx).ScatterPart();
+    // Return control to main
+    contribute(0, NULL, CkReduction::nop);
   }
 }
 
@@ -298,6 +288,14 @@ void Netdata::GatherPart(mPart *msg) {
     statereprt.clear();
     stickreprt.clear();
     eventreprt.clear();
+    vtxidxreprt.resize(netparts);
+    vtxmodidxreprt.resize(netparts);
+    xyzreprt.resize(netparts);
+    edgmodidxreprt.resize(netparts);
+    adjcyreprt.resize(netparts);
+    statereprt.resize(netparts);
+    stickreprt.resize(netparts);
+    eventreprt.resize(netparts);
 
     // collect order parts
     std::string orderprts;
@@ -401,6 +399,7 @@ void Netdata::Reorder(mReorder *msg) {
 
   // Check if done reordering
   if (cpdat == netfiles) {
+    cpdat = 0;
     // reindex events
     for (idx_t i = 0; i < norderdat; ++i) {
       CkAssert(eventindexreord[i].size() == adjcy[i].size()+1);
@@ -430,6 +429,9 @@ void Netdata::Reorder(mReorder *msg) {
     }
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     */
+
+    // Build Parts
+    BuildParts();
     
     // return control to main when done
     contribute(0, NULL, CkReduction::nop);
@@ -538,6 +540,8 @@ mPart* Network::BuildRepart() {
   idx_t nevent;
   
   // Get total size of adjcy
+  // TODO: for structural plasticity, keep track of vertices/edges that
+  //       have been created or need to be purged (e.g. reprtidx = -1)
   nadjcy = 0;
   nstate = 0;
   nstick = 0;
@@ -556,7 +560,7 @@ mPart* Network::BuildRepart() {
 
   // Initialize partition data message
   int msgSize[MSG_Part];
-  msgSize[0] = netparts+1;       // vtxdist
+  msgSize[0] = adjcy.size();  // reprtidx (as vtxdist)
   msgSize[1] = adjcy.size();  // vtxmodidx
   msgSize[2] = adjcy.size()*3;// xyz
   msgSize[3] = adjcy.size()+1;// xadj
@@ -580,12 +584,6 @@ mPart* Network::BuildRepart() {
   mpart->nevent = nevent;
   mpart->prtidx = prtidx;
 
-  // Graph Information
-  for (int i = 0; i < netparts+1; ++i) {
-    // vtxdist
-    mpart->vtxdist[i] = vtxdist[i];
-  }
-
   // Vertex and Edge Information
   idx_t jstate = 0;
   idx_t jstick = 0;
@@ -593,6 +591,8 @@ mPart* Network::BuildRepart() {
   mpart->xadj[0] = 0;
   mpart->xevent[0] = 0;
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
+    // reprtidx (for now keep all vertices on same partition)
+    mpart->vtxdist[i] = prtidx;
     // vtxmodidx
     mpart->vtxmodidx[i] = vtxmodidx[i];
     // xyz
@@ -626,7 +626,7 @@ mPart* Network::BuildRepart() {
     // events
     for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
       for (std::size_t e = 0; e < evtcal[i][j].size(); ++e) {
-        mpart->diffuse[jevent] = evtcal[i][j][e].diffuse - tsim;
+        mpart->diffuse[jevent] = evtcal[i][j][e].diffuse;// - tsim;
         mpart->type[jevent] = evtcal[i][j][e].type;
         mpart->source[jevent] = evtcal[i][j][e].source;
         mpart->index[jevent] = evtcal[i][j][e].index;
@@ -635,7 +635,7 @@ mPart* Network::BuildRepart() {
     }
     // events spillover
     for (std::size_t e = 0; e < evtcol[i].size(); ++e) {
-      mpart->diffuse[jevent] = evtcol[i][e].diffuse - tsim;
+      mpart->diffuse[jevent] = evtcol[i][e].diffuse;// - tsim;
       mpart->type[jevent] = evtcol[i][e].type;
       mpart->source[jevent] = evtcol[i][e].source;
       mpart->index[jevent] = evtcol[i][e].index;

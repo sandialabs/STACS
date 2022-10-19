@@ -24,6 +24,7 @@
 /*readonly*/ idx_t nevtday;
 /*readonly*/ idx_t intdisp;
 /*readonly*/ idx_t intrec;
+/*readonly*/ idx_t intbal;
 /*readonly*/ idx_t intsave;
 /*readonly*/ tick_t tmax;
 /*readonly*/ tick_t tepisode;
@@ -117,6 +118,7 @@ Main::Main(CkArgMsg *msg) {
   repartflag = true;
   readflag = true;
   writeflag = true;
+  lbflag = true;
 }
 
 // Main migration
@@ -134,7 +136,6 @@ Main::Main(CkMigrateMessage *msg) {
 //
 void Main::Control() {
   // Determine program control based on the run mode
-  // TODO: consolidate build and simulate into a single runmode (i.e. for smaller networks)
 
   // Network needs to be built
   if (runmode == std::string(RUNMODE_BUILD)) {
@@ -218,7 +219,7 @@ void Main::Control() {
       CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
       netdata.ckSetReductionClient(&cbhalt);
       // Write network to disk
-      netdata.SaveCloseBuild();
+      netdata.SaveRepart();
       ++nhalt;
     }
   }
@@ -314,6 +315,8 @@ void Main::Init() {
     // Load data from input files to network parts
     CkCallback cbstart(CkReductionTarget(Main, Start), mainProxy);
     network.ckSetReductionClient(&cbstart);
+    CkCallback cbcont(CkReductionTarget(Main, Check), mainProxy);
+    netdata.ckSetReductionClient(&cbcont);
 
     if (runmode == RUNMODE_SIMULATE) {
       if (episodic) {
@@ -334,14 +337,16 @@ void Main::Init() {
                  "  Event Queue Length   (teventq): %" PRIrealms "ms\n"
                  "  Display Interval    (tdisplay): %" PRIrealms "ms\n"
                  "  Recording Interval   (trecord): %" PRIrealms "ms\n"
+                 "  Rebalance Interval  (tbalance): %" PRIrealms "ms\n"
                  "  Save State Interval    (tsave): %" PRIrealms "ms\n"
                  "  Max Simulation Time     (tmax): %" PRIrealms "ms\n",
                  randseed, (plastic ? "yes" : "no"),
                  ((real_t)(tstep/TICKS_PER_MS)), teventq, tdisplay,
-                 trecord, tsave, ((real_t)(tmax/TICKS_PER_MS)));
+                 trecord, tbalance, tsave, ((real_t)(tmax/TICKS_PER_MS)));
       }
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleSim(), network);
+      netcont = CkCallback(CkIndex_Network::ContSim(), network);
       network.InitSim(netdata);
     }
     else if (runmode == RUNMODE_SIMGPU) {
@@ -472,6 +477,34 @@ void Main::Start() {
 
   // Start timer
   wcstart = std::chrono::system_clock::now();
+}
+
+// Coordination of continuing simulation after repartitioning
+//
+void Main::Check() {
+  if (lbflag) {
+    lbflag = false;
+    CkPrintf("Rebalancing\n");
+
+    // Scatter and gather part information
+    netdata.ScatterPart();
+  }
+  else {
+    lbflag = true;
+    CkCallback cbcont(CkReductionTarget(Main, Cont), mainProxy);
+    network.ckSetReductionClient(&cbcont);
+
+    CkPrintf("Reloading\n");
+    netcont.send();
+  }
+}
+
+void Main::Cont() {
+  CkCallback cbstop(CkReductionTarget(Main, Stop), mainProxy);
+  network.ckSetReductionClient(&cbstop);
+
+  CkPrintf("Restarting\n");
+  netcycle.send();
 }
 
 

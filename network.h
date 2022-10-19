@@ -249,6 +249,7 @@ class mModel : public CMessage_mModel {
     idx_t ndatafiles;    // number of datafiles (for prefix)
     bool plastic;      // toggle for plasticity
     bool episodic;     // toggle for episodic simulation
+    bool loadbal;      // toggle for periodic load balancing
 };
 
 // Network graph information
@@ -608,6 +609,7 @@ class Netdata : public CBase_Netdata {
     mReorder* BuildReorder();
     void LoadRepart(mPart *msg);
     void BuildRepart();
+    void SaveRepart();
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
@@ -886,9 +888,11 @@ class Network : public CBase_Network {
     /* Loading */
     mPart* BuildPart();
     void LoadNetwork(mPart *msg);
+    void ReloadNetwork(mPart *msg);
     
     /* Simulation */
     void InitSim(CProxy_Netdata cpdata);
+    void ContSim();
     void CycleSim();
 
     void InitSimGPU(CProxy_Netdata cpdata);
@@ -913,7 +917,7 @@ class Network : public CBase_Network {
     
     /* Saving */
     mPart* BuildRepart();
-    void Repart();
+    void RebalNetwork();
     void SaveNetwork();
     void SaveCloseNetwork();
     void CloseNetwork();
@@ -1004,6 +1008,7 @@ class Network : public CBase_Network {
     /* Configuration */
     bool plastic;
     bool episodic;
+    bool loadbal;
     /* Timing */
     tick_t tsim;
     tick_t teps;
@@ -1019,6 +1024,7 @@ class Network : public CBase_Network {
     idx_t dispiter;
     idx_t saveiter;
     idx_t reciter;
+    idx_t baliter;
     idx_t nadjpart;
     idx_t cadjpart[2], partiter;
 #ifdef STACS_WITH_YARP

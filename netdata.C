@@ -305,6 +305,17 @@ Netdata::Netdata(mModel *msg) {
   // Preparing network build (if needed)
   connvtxreq.clear();
 
+  // Repartitioning
+  vtxidxreprt.resize(netparts);
+  vtxmodidxreprt.resize(netparts);
+  xyzreprt.resize(netparts);
+  edgmodidxreprt.resize(netparts);
+  adjcyreprt.resize(netparts);
+  statereprt.resize(netparts);
+  stickreprt.resize(netparts);
+  eventreprt.resize(netparts);
+
+
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
 }
@@ -383,6 +394,17 @@ void Netdata::SaveBuild() {
 void Netdata::SaveCloseBuild() {
   // Build parts from file-based network information
   BuildParts();
+  // Write data
+  WriteNetwork(0);
+
+  // Return control to main
+  contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
+      CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
+}
+
+// Save data from reparted network
+//
+void Netdata::SaveRepart() {
   // Write data
   WriteNetwork(0);
   
@@ -577,6 +599,9 @@ void Netdata::BuildParts() {
   idx_t nevent;
   idx_t xvtxidx;
 
+  //parts.clear();
+  //parts.resize(nprt);
+
   for (int k = 0; k < nprt; ++k) {
     // Get total size of adjcy
     nadjcy = 0;
@@ -685,6 +710,21 @@ void Netdata::BuildParts() {
   state.clear();
   stick.clear();
   event.clear();
+  // Clear out partitioning
+  vtxprted.clear();
+  xyzprted.clear();
+  adjcyprted.clear();
+  edgmodidxprted.clear();
+  stateprted.clear();
+  stickprted.clear();
+  eventprted.clear();
+  // also allocate for reordering
+  adjcyreord.clear();
+  edgmodidxreord.clear();
+  statereord.clear();
+  stickreord.clear();
+  eventsourcereord.clear();
+  eventindexreord.clear();
 }
 
 /**************************************************************************
@@ -692,7 +732,62 @@ void Netdata::BuildParts() {
 **************************************************************************/
 
 void Netdata::BuildRepart() {
+  // Loop through parts
   for (int k = 0; k < nprt; ++k) {
+    // TODO: instead of xvtxidx, just have mpart send the old vtxidx
+    //       this will eventually be needed for structural plasticity
+    idx_t xvtxidx = vtxdist[parts[k]->prtidx];
+    idx_t jstate = 0;
+    idx_t jstick = 0;
+    for (idx_t i = 0; i < parts[k]->nvtx; ++i) {
+      // reprt (as vtxdist)
+      idx_t reprt = parts[k]->vtxdist[i];
+      CkAssert(reprt < netparts);
+      // vtxidx (global)
+      vtxidxreprt[reprt].push_back(xvtxidx+i);
+      // xyz
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+0]);
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+1]);
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+2]);
+      // vtxmodidx
+      vtxmodidxreprt[reprt].push_back(parts[k]->vtxmodidx[i]);
+      // state (vertex)
+      statereprt[reprt].push_back(std::vector<real_t>());
+      stickreprt[reprt].push_back(std::vector<tick_t>());
+      for (idx_t s = 0; s < model[parts[k]->vtxmodidx[i]]->getNState(); ++s) {
+        statereprt[reprt].back().push_back(parts[k]->state[jstate++]);
+      }
+      for (idx_t s = 0; s < model[parts[k]->vtxmodidx[i]]->getNStick(); ++s) {
+        stickreprt[reprt].back().push_back(parts[k]->stick[jstick++]);
+      }
+      // adjcy
+      adjcyreprt[reprt].push_back(std::vector<idx_t>());
+      edgmodidxreprt[reprt].push_back(std::vector<idx_t>());
+      for (idx_t j = parts[k]->xadj[i]; j < parts[k]->xadj[i+1]; ++j) {
+        adjcyreprt[reprt].back().push_back(parts[k]->adjcy[j]);
+        edgmodidxreprt[reprt].back().push_back(parts[k]->edgmodidx[j]);
+        // state (edge)
+        for (idx_t s = 0; s < model[parts[k]->edgmodidx[j]]->getNState(); ++s) {
+          statereprt[reprt].back().push_back(parts[k]->state[jstate++]);
+        }
+        for (idx_t s = 0; s < model[parts[k]->edgmodidx[j]]->getNStick(); ++s) {
+          stickreprt[reprt].back().push_back(parts[k]->stick[jstick++]);
+        }
+      }
+      // event
+      eventreprt[reprt].push_back(std::vector<event_t>());
+      for (idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
+        event_t evtpre;
+        evtpre.diffuse = parts[k]->diffuse[e];
+        evtpre.type = parts[k]->type[e];
+        evtpre.source = parts[k]->source[e];
+        evtpre.index = parts[k]->index[e];
+        evtpre.data = parts[k]->data[e];
+        eventreprt[reprt].back().push_back(evtpre);
+      }
+    }
+    CkAssert(jstate == parts[k]->nstate);
+    CkAssert(jstick == parts[k]->nstick);
   }
   // Prepare for reording partitions
   cpdat = 0;
@@ -713,6 +808,8 @@ void Netdata::BuildRepart() {
   for (idx_t i = 0; i < nprt; ++i) {
     norderprt[i] = 0;
   }
+  // Reset the vtxdist
+  vtxdist.clear();
   vtxdist.resize(netfiles+1);
   vtxdist[0] = 0;
 }

@@ -33,6 +33,7 @@
 
 #define PLASTIC_DEFAULT  true // Plasticity on
 #define EPISODIC_DEFAULT false // Episodes off
+#define LOADBAL_DEFAULT  false // Load balancing
 #define RPCPORT_DEFAULT "/stacs/rpc"
 #define RPCPAUSE_DEFAULT true // Start paused
 
@@ -154,6 +155,8 @@ class Main : public CBase_Main {
     /* Stacs */
     void Control();
     void Init();
+    void Check();
+    void Cont();
     void Start();
     void Stop();
     void Halt();
@@ -170,6 +173,7 @@ class Main : public CBase_Main {
     CProxy_Netdata netdata;
     CProxy_Network network;
     CkCallback netcycle;
+    CkCallback netcont;
     /* Network */
     std::vector<dist_t> netdist;
     /* Model Information */
@@ -185,9 +189,11 @@ class Main : public CBase_Main {
     std::string runmode;
     bool plastic;
     bool episodic;
+    bool loadbal;
     real_t teventq;
     real_t tdisplay;
     real_t trecord;
+    real_t tbalance;
     real_t tsave;
     /* Groups */
     std::vector<std::string> grpactives;
@@ -203,6 +209,7 @@ class Main : public CBase_Main {
     bool repartflag;
     bool readflag;
     bool writeflag;
+    bool lbflag;
 #ifdef STACS_WITH_YARP
     /* YARP */
     CProxy_Stream stream;
