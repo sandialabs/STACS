@@ -710,20 +710,21 @@ mPart* Network::BuildPart() {
 
   // Initialize partition data message
   int msgSize[MSG_Part];
-  msgSize[0] = netparts+1;       // vtxdist
-  msgSize[1] = adjcy.size();  // vtxmodidx
-  msgSize[2] = adjcy.size()*3;// xyz
-  msgSize[3] = adjcy.size()+1;// xadj
-  msgSize[4] = nadjcy;        // adjcy
-  msgSize[5] = nadjcy;        // edgmodidx
-  msgSize[6] = nstate;        // state
-  msgSize[7] = nstick;        // stick
-  msgSize[8] = adjcy.size()+1;// xevent
-  msgSize[9] = nevent;        // diffuse
-  msgSize[10] = nevent;       // type
-  msgSize[11] = nevent;       // source
-  msgSize[12] = nevent;       // index
-  msgSize[13] = nevent;       // data
+  msgSize[0] = netparts+1;    // vtxdist
+  msgSize[1] = 0;             // vtxidx (implicit)
+  msgSize[2] = adjcy.size();  // vtxmodidx
+  msgSize[3] = adjcy.size()*3;// xyz
+  msgSize[4] = adjcy.size()+1;// xadj
+  msgSize[5] = nadjcy;        // adjcy
+  msgSize[6] = nadjcy;        // edgmodidx
+  msgSize[7] = nstate;        // state
+  msgSize[8] = nstick;        // stick
+  msgSize[9] = adjcy.size()+1;// xevent
+  msgSize[10] = nevent;        // diffuse
+  msgSize[11] = nevent;       // type
+  msgSize[12] = nevent;       // source
+  msgSize[13] = nevent;       // index
+  msgSize[14] = nevent;       // data
   mPart *mpart = new(msgSize, 0) mPart;
 
   // Data sizes

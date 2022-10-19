@@ -100,20 +100,21 @@ void Netdata::ScatterPart() {
 
       // Initialize connection message
       int msgSize[MSG_Part];
-      msgSize[0] = vtxidxreprt[prtidx].size();     // vtxidx
-      msgSize[1] = vtxidxreprt[prtidx].size();     // vtxmodidx
-      msgSize[2] = vtxidxreprt[prtidx].size() * 3; // xyz
-      msgSize[3] = vtxidxreprt[prtidx].size() + 1; // xadj
-      msgSize[4] = nedgidx;                       // adjcy
-      msgSize[5] = nedgidx;                       // edgmodidx
-      msgSize[6] = nstate;                        // state
-      msgSize[7] = nstick;                        // stick
-      msgSize[8] = vtxidxreprt[prtidx].size() + 1; // xevent
-      msgSize[9] = nevent;                        // diffuse
-      msgSize[10] = nevent;                       // type
-      msgSize[11] = nevent;                       // source
-      msgSize[12] = nevent;                       // index
-      msgSize[13] = nevent;                       // data
+      msgSize[0] = 0;                              // vtxdist (to be recomputed)
+      msgSize[1] = vtxidxreprt[prtidx].size();     // vtxidx
+      msgSize[2] = vtxidxreprt[prtidx].size();     // vtxmodidx
+      msgSize[3] = vtxidxreprt[prtidx].size() * 3; // xyz
+      msgSize[4] = vtxidxreprt[prtidx].size() + 1; // xadj
+      msgSize[5] = nedgidx;                       // adjcy
+      msgSize[6] = nedgidx;                       // edgmodidx
+      msgSize[7] = nstate;                        // state
+      msgSize[8] = nstick;                        // stick
+      msgSize[9] = vtxidxreprt[prtidx].size() + 1; // xevent
+      msgSize[10] = nevent;                        // diffuse
+      msgSize[11] = nevent;                       // type
+      msgSize[12] = nevent;                       // source
+      msgSize[13] = nevent;                       // index
+      msgSize[14] = nevent;                       // data
       mPart *mpart = new(msgSize, 0) mPart;
       // Sizes
       mpart->nvtx = vtxidxreprt[prtidx].size();
@@ -133,8 +134,8 @@ void Netdata::ScatterPart() {
       mpart->xevent[0] = 0;
 
       for (std::size_t i = 0; i < vtxidxreprt[prtidx].size(); ++i) {
-        // vtxidx (as vtxdist)
-        mpart->vtxdist[i] = vtxidxreprt[prtidx][i];
+        // vtxidx
+        mpart->vtxidx[i] = vtxidxreprt[prtidx][i];
         // vtxmodidx
         mpart->vtxmodidx[i] = vtxmodidxreprt[prtidx][i];
         // xyz
@@ -209,7 +210,7 @@ void Netdata::GatherPart(mPart *msg) {
   // copy part data (unsorted)
   for (idx_t i = 0; i < msg->nvtx; ++i) {
     // vtxidx
-    vtxprted[prtidx][xvtx+i].vtxidx = msg->vtxdist[i];
+    vtxprted[prtidx][xvtx+i].vtxidx = msg->vtxidx[i];
     // vtxmodidx
     vtxprted[prtidx][xvtx+i].modidx = msg->vtxmodidx[i];
     // localidx
@@ -571,19 +572,20 @@ mPart* Network::BuildRepart() {
   // Initialize partition data message
   int msgSize[MSG_Part];
   msgSize[0] = adjcy.size();  // reprtidx (as vtxdist)
-  msgSize[1] = adjcy.size();  // vtxmodidx
-  msgSize[2] = adjcy.size()*3;// xyz
-  msgSize[3] = adjcy.size()+1;// xadj
-  msgSize[4] = nadjcy;        // adjcy
-  msgSize[5] = nadjcy;        // edgmodidx
-  msgSize[6] = nstate;        // state
-  msgSize[7] = nstick;        // stick
-  msgSize[8] = adjcy.size()+1;// xevent
-  msgSize[9] = nevent;        // diffuse
-  msgSize[10] = nevent;       // type
-  msgSize[11] = nevent;       // source
-  msgSize[12] = nevent;       // index
-  msgSize[13] = nevent;       // data
+  msgSize[1] = adjcy.size();  // vtxidx (explicit)
+  msgSize[2] = adjcy.size();  // vtxmodidx
+  msgSize[3] = adjcy.size()*3;// xyz
+  msgSize[4] = adjcy.size()+1;// xadj
+  msgSize[5] = nadjcy;        // adjcy
+  msgSize[6] = nadjcy;        // edgmodidx
+  msgSize[7] = nstate;        // state
+  msgSize[8] = nstick;        // stick
+  msgSize[9] = adjcy.size()+1;// xevent
+  msgSize[10] = nevent;        // diffuse
+  msgSize[11] = nevent;       // type
+  msgSize[12] = nevent;       // source
+  msgSize[13] = nevent;       // index
+  msgSize[14] = nevent;       // data
   mPart *mpart = new(msgSize, 0) mPart;
 
   // Data sizes
@@ -603,6 +605,8 @@ mPart* Network::BuildRepart() {
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
     // reprtidx (for now keep all vertices on same partition)
     mpart->vtxdist[i] = prtidx;
+    // vtxidx (TODO: structural plasticity should track these)
+    mpart->vtxidx[i] = vtxdist[prtidx] + i;
     // vtxmodidx
     mpart->vtxmodidx[i] = vtxmodidx[i];
     // xyz

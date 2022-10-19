@@ -314,11 +314,12 @@ class mReorder : public CMessage_mReorder {
 
 // Network partition data
 //
-#define MSG_Part 14
+#define MSG_Part 15
 class mPart : public CMessage_mPart {
   public:
     /* Data */
     idx_t *vtxdist;
+    idx_t *vtxidx;
     idx_t *vtxmodidx;
     real_t *xyz;
     idx_t *xadj;
