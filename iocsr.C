@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2015 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  *
  * iocsr.C
  * Handles condensed sparse row format

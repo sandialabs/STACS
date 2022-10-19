@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2017 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  */
 
 #include "stacs.h"
@@ -43,7 +43,7 @@
 //
 Main::Main(CkArgMsg *msg) {
   // Display title
-  CkPrintf("\nSimulation Tool for Asynchrnous Cortical Streams (stacs)\n");
+  CkPrintf("\nSimulation Tool for Asynchronous Cortical Streams (stacs)\n");
 
   // Command line arguments
   // TODO: distinguish between runmode (stacs, genet) and simmode (sim, fg, est)

@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2017 Felix Wang
  *
- * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ * Simulation Tool for Asynchronous Cortical Streams (stacs)
  *
  * ioyml.C
  * Handles YAML Ain't Markup Language format
