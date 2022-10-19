@@ -177,7 +177,6 @@ module network {
 
     entry void LoadPart(mDist *msg);
     entry void LoadRepart(mPart *msg);
-    entry void SaveRepart();
     entry void ScatterPart();
     entry void GatherPart(mPart *msg);
     entry void Reorder(mReorder *msg);

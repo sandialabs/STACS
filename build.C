@@ -458,7 +458,7 @@ void Netdata::Build(mGraph *msg) {
               iprt = std::upper_bound(xpopvtxidxprt[edges[e].source-1].begin(), xpopvtxidxprt[edges[e].source-1].end(), sourceorder);
               int prt = (iprt - xpopvtxidxprt[edges[e].source-1].begin()) - 1;
               idx_t glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceorder - xpopvtxidxprt[edges[e].source-1][prt]);
-              if (glbsourceidx == glbtargetidx) {// || adjcyset[i].find(glbsourceidx) == adjcyset[i].end()) {
+              if (glbsourceidx == glbtargetidx) {
                 continue;
               } else {
                 adjcy[i].push_back(glbsourceidx);
@@ -754,6 +754,9 @@ void Netdata::ConnectEdg(mConn *msg) {
     }
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     */
+
+    // Build parts from file-based network information
+    BuildParts();
     
     // Done building all edges, return control to main
     contribute(0, NULL, CkReduction::nop);
@@ -825,11 +828,12 @@ mConn* Netdata::BuildConnEdg(idx_t reqidx) {
   nsizedat = 0;
   for (idx_t i = 0; i < norderdat; ++i) {
     adjcyconn[i].clear();
-    for (std::size_t j = 0; j < adjcyset[i].size(); ++j) {
-      // Add adjcy information between the min and max global indices on partition reqidx
-      if (xorderdat[reqidx] <= adjcy[i][j] && adjcy[i][j] < xorderdat[reqidx+1]) {
+    std::set<idx_t>::iterator jadjcy;
+    // Loop through the directed afferent edges
+    for (jadjcy = adjcyset[i].begin(); jadjcy != adjcyset[i].end(); ++jadjcy) {
+      if (xorderdat[reqidx] <= *jadjcy && *jadjcy < xorderdat[reqidx+1]) {
         // global source idx to local
-        adjcyconn[i].push_back(adjcy[i][j] - xorderdat[reqidx]);
+        adjcyconn[i].push_back(*jadjcy - xorderdat[reqidx]);
       }
     }
     // Add none connections to size

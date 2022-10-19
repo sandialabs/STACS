@@ -379,8 +379,6 @@ void Netdata::LoadNetwork(int prtidx, const CkCallback &cbpart) {
 // Save data from built network
 //
 void Netdata::SaveBuild() {
-  // Build parts from file-based network information
-  BuildParts();
   // Write data
   WriteNetwork(0);
 
@@ -392,8 +390,6 @@ void Netdata::SaveBuild() {
 // Save data from built network
 //
 void Netdata::SaveCloseBuild() {
-  // Build parts from file-based network information
-  BuildParts();
   // Write data
   WriteNetwork(0);
 
@@ -402,16 +398,6 @@ void Netdata::SaveCloseBuild() {
       CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
 }
 
-// Save data from reparted network
-//
-void Netdata::SaveRepart() {
-  // Write data
-  WriteNetwork(0);
-  
-  // Return control to main
-  contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
-      CkCallback(CkIndex_Main::SaveFinalDist(NULL), mainProxy));
-}
 
 // Save data from network partition
 //

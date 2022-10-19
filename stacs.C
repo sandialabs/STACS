@@ -219,7 +219,7 @@ void Main::Control() {
       CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
       netdata.ckSetReductionClient(&cbhalt);
       // Write network to disk
-      netdata.SaveRepart();
+      netdata.SaveCloseBuild();
       ++nhalt;
     }
   }

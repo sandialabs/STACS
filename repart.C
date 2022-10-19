@@ -431,7 +431,7 @@ void Netdata::Reorder(mReorder *msg) {
     CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     */
 
-    // Build Parts
+    // Build parts from file-based network information
     BuildParts();
     
     // return control to main when done

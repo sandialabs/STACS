@@ -612,7 +612,6 @@ class Netdata : public CBase_Netdata {
     mReorder* BuildReorder();
     void LoadRepart(mPart *msg);
     void BuildRepart();
-    void SaveRepart();
     
     /* Reading Datafiles */
     int ReadDataCSV(datafile_t &datafile);
