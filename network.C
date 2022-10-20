@@ -548,6 +548,9 @@ void Network::ReloadNetwork(mPart *msg) {
   // Cleanup;
   delete msg;
 
+  // Recreate communicator
+  CreateComm();
+
   // Print some information
   CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjpart: %" PRIidx "\n",
            prtidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
