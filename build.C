@@ -340,7 +340,6 @@ void Netdata::Build(mGraph *msg) {
       }
       else {
         CkPrintf("  error: stateinit %s is not valid for vertex\n", rngtype[modeldata[modidx].stateinit[s]].c_str());
-        // TODO: cleaner error checking here?
         CkExit();
       }
     }
@@ -366,7 +365,6 @@ void Netdata::Build(mGraph *msg) {
       }
       else {
         CkPrintf("  error: stateinit %s is not valid for vertex\n", rngtype[modeldata[modidx].stickinit[s]].c_str());
-        // TODO: cleaner error checking here?
         CkExit();
       }
     }
@@ -593,12 +591,12 @@ void Netdata::ConnectVtx(mConn *msg) {
       }
       // Evaluate connection between i and j
       else {
-        idx_t e = connmodmap[msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]];
-        real_t distance = distfunc(edges[e].distype, xyz.data()+i*3, msg->xyz+j*3, edges[e].distparam.data());
+        idx_t edgidx = connmodmap[msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]];
+        real_t distance = distfunc(edges[edgidx].distype, xyz.data()+i*3, msg->xyz+j*3, edges[edgidx].distparam.data());
         CkAssert(distance >= 0.0);
         idx_t modidx;
         // check possible connections from j (source) to i (target)
-        if ((modidx = MakeConnection(msg->vtxmodidx[j], vtxmodidx[i], msg->vtxordidx[j], vtxordidx[i], distance))) {
+        if ((modidx = MakeConnection(edgidx, msg->vtxordidx[j], vtxordidx[i], distance))) {
           adjcy[i].push_back(xorderdat[msg->datidx]+j);
           adjcyset[i].insert(xorderdat[msg->datidx]+j); // The set is useful for faster searching of edge existence
           edgmodidx[i].push_back(modidx);
@@ -881,77 +879,64 @@ mConn* Netdata::BuildConnEdg(idx_t reqidx) {
 * Connection Construction
 **************************************************************************/
 
-idx_t Netdata::MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t targetidx, real_t dist) {
-  // Go through edges to find the right connection
-  // TODO: Use an unordered map to do the connection matching
-  //       This is done outside the loop, could get rid of redundant check here
-  for (std::size_t i = 0; i < edges.size(); ++i) {
-    if (source == edges[i].source) {
-      for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
-        if (target == edges[i].target[j]) {
-          // test for cutoff
-          if (edges[i].cutoff != 0.0 && dist > edges[i].cutoff) {
-            return 0;
-          }
-          // Connection computation
-          real_t prob = 0.0;
-          idx_t mask = 0;
-          for (std::size_t k = 0; k < edges[i].conntype.size(); ++k) {
-            if (edges[i].conntype[k] == CONNTYPE_UNIF) {
-              prob += edges[i].probparam[k][0];
-            }
-            else if (edges[i].conntype[k] == CONNTYPE_SIG) {
-              prob += sigmoid(dist, edges[i].probparam[k][0],
-                        edges[i].probparam[k][1], edges[i].probparam[k][2]);
-            }
-            else if (edges[i].conntype[k] == CONNTYPE_IDX) {
-              mask += (((sourceidx * edges[i].maskparam[k][2]) + edges[i].maskparam[k][3]) == targetidx);
-            }
-            // TODO: we want to enable a weighting of the indices w.r.t. distance
-            else if (edges[i].conntype[k] == CONNTYPE_SMPL ||
-                     edges[i].conntype[k] == CONNTYPE_SMPL_NORM ||
-                     edges[i].conntype[k] == CONNTYPE_SMPL_ANORM) {
-              // sample-based edges already computed
-              return 0;
-            }
-            else if (edges[i].conntype[k] == CONNTYPE_FILE) {
-              // Check to see if it's in the file list
-              // Dimensions are stored: targetdim x sourcedim
-              // set mask to 1 if there is a non-zero entry
-              // TODO: make sure file-based connections completely override
-              //       other connection types (or make them mutually exclusive)
-              // TODO: split up files in dCSR order as well
-              if (targetidx >= datafiles[(idx_t) (edges[i].probparam[k][0])].matrix.size()) {
-                CkPrintf("  error: datafile %s does not have row for %" PRIidx "\n",
-                         datafiles[(idx_t) (edges[i].probparam[k][0])].filename.c_str(), targetidx);
-              } else if (datafiles[(idx_t) (edges[i].probparam[k][0])].matrix[targetidx].find((real_t) sourceidx) ==
-                         datafiles[(idx_t) (edges[i].probparam[k][0])].matrix[targetidx].end()) {
-                prob = 0.0;
-                mask = 0;
-              } else {
-                mask = 1;
-              }
-            }
-            else {
-              // Shouldn't reach here due to prior error checking
-              CkPrintf("  error: connection type %" PRIidx " undefined\n", edges[i].conntype[k]);
-              CkExit();
-            }
-          }
-          // Compute probability of connection
-          if ((((*unifdist)(rngine)) < prob) || mask) {
-            return edges[i].modidx;
-          }
-          else {
-            return 0;
-          }
-        }
+idx_t Netdata::MakeConnection(idx_t edgidx, idx_t sourceidx, idx_t targetidx, real_t dist) {
+  // test for cutoff
+  if (edges[edgidx].cutoff != 0.0 && dist > edges[edgidx].cutoff) {
+    return 0;
+  }
+  // Connection computation
+  real_t prob = 0.0;
+  idx_t mask = 0;
+  for (std::size_t k = 0; k < edges[edgidx].conntype.size(); ++k) {
+    if (edges[edgidx].conntype[k] == CONNTYPE_UNIF) {
+      prob += edges[edgidx].probparam[k][0];
+    }
+    else if (edges[edgidx].conntype[k] == CONNTYPE_SIG) {
+      prob += sigmoid(dist, edges[edgidx].probparam[k][0],
+          edges[edgidx].probparam[k][1], edges[edgidx].probparam[k][2]);
+    }
+    else if (edges[edgidx].conntype[k] == CONNTYPE_IDX) {
+      mask += (((sourceidx * edges[edgidx].maskparam[k][2]) + edges[edgidx].maskparam[k][3]) == targetidx);
+    }
+    // TODO: we want to enable a weighting of the indices w.r.t. distance
+    else if (edges[edgidx].conntype[k] == CONNTYPE_SMPL ||
+        edges[edgidx].conntype[k] == CONNTYPE_SMPL_NORM ||
+        edges[edgidx].conntype[k] == CONNTYPE_SMPL_ANORM) {
+      // sample-based edges already computed
+      return 0;
+    }
+    else if (edges[edgidx].conntype[k] == CONNTYPE_FILE) {
+      // Check to see if it's in the file list
+      // Dimensions are stored: targetdim x sourcedim
+      // set mask to 1 if there is a non-zero entry
+      // TODO: make sure file-based connections completely override
+      //       other connection types (or make them mutually exclusive)
+      // TODO: split up files in dCSR order as well
+      if (targetidx >= datafiles[(idx_t) (edges[edgidx].probparam[k][0])].matrix.size()) {
+        CkPrintf("  error: datafile %s does not have row for %" PRIidx "\n",
+            datafiles[(idx_t) (edges[edgidx].probparam[k][0])].filename.c_str(), targetidx);
+      } else if (datafiles[(idx_t) (edges[edgidx].probparam[k][0])].matrix[targetidx].find((real_t) sourceidx) ==
+          datafiles[(idx_t) (edges[edgidx].probparam[k][0])].matrix[targetidx].end()) {
+        prob = 0.0;
+        mask = 0;
+      } else {
+        mask = 1;
       }
     }
+    else {
+      // Shouldn't reach here due to prior error checking
+      CkPrintf("  error: connection type %" PRIidx " undefined\n", edges[edgidx].conntype[k]);
+      CkExit();
+    }
   }
-
-  // no connection found, return 'none'
-  return 0;
+  // Compute probability of connection
+  if ((((*unifdist)(rngine)) < prob) || mask) {
+    return edges[edgidx].modidx;
+  }
+  else {
+    return 0;
+  }
+  return 0; // no connection found, return 'none'
 }
 
 
@@ -1007,7 +992,6 @@ std::vector<real_t> Netdata::BuildEdgState(idx_t modidx, real_t dist, idx_t sour
     }
     else {
       CkPrintf("  error: stateinit %s is not valid for edge\n", rngtype[modeldata[modidx].stateinit[j]].c_str());
-      // TODO: cleaner error checking here?
       CkExit();
     }
   }
@@ -1063,7 +1047,6 @@ std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
     }
     else {
       CkPrintf("  error: stateinit %s is not valid for edge\n", rngtype[modeldata[modidx].stickinit[j]].c_str());
-      // TODO: cleaner error checking here?
       CkExit();
     }
   }

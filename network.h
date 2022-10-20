@@ -593,7 +593,7 @@ class Netdata : public CBase_Netdata {
     void ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick);
 
     /* Connecting */
-    idx_t MakeConnection(idx_t source, idx_t target, idx_t sourceidx, idx_t targetidx, real_t dist);
+    idx_t MakeConnection(idx_t edgidx, idx_t sourceidx, idx_t targetidx, real_t dist);
     void ConnectVtx(mConn *msg);
     void RequestConnVtx(idx_t reqidx);
     mConn* BuildConnVtx(idx_t reqidx);
