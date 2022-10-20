@@ -664,3 +664,93 @@ mPart* Network::BuildRepart() {
 
   return mpart;
 }
+
+/**************************************************************************
+* Convert built network part message to repart state
+**************************************************************************/
+
+void Netdata::BuildRepart() {
+  // Loop through parts
+  for (int k = 0; k < nprt; ++k) {
+    // TODO: instead of xvtxidx, just have mpart send the old vtxidx
+    //       this will eventually be needed for structural plasticity
+    idx_t xvtxidx = vtxdist[parts[k]->prtidx];
+    idx_t jstate = 0;
+    idx_t jstick = 0;
+    for (idx_t i = 0; i < parts[k]->nvtx; ++i) {
+      // reprt (as vtxdist)
+      idx_t reprt = parts[k]->vtxdist[i];
+      CkAssert(reprt < netparts);
+      // vtxidx (global)
+      vtxidxreprt[reprt].push_back(parts[k]->vtxidx[i]);
+      // xyz
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+0]);
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+1]);
+      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+2]);
+      // vtxmodidx
+      vtxmodidxreprt[reprt].push_back(parts[k]->vtxmodidx[i]);
+      // state (vertex)
+      statereprt[reprt].push_back(std::vector<real_t>());
+      stickreprt[reprt].push_back(std::vector<tick_t>());
+      for (idx_t s = 0; s < model[parts[k]->vtxmodidx[i]]->getNState(); ++s) {
+        statereprt[reprt].back().push_back(parts[k]->state[jstate++]);
+      }
+      for (idx_t s = 0; s < model[parts[k]->vtxmodidx[i]]->getNStick(); ++s) {
+        stickreprt[reprt].back().push_back(parts[k]->stick[jstick++]);
+      }
+      // adjcy
+      adjcyreprt[reprt].push_back(std::vector<idx_t>());
+      edgmodidxreprt[reprt].push_back(std::vector<idx_t>());
+      for (idx_t j = parts[k]->xadj[i]; j < parts[k]->xadj[i+1]; ++j) {
+        adjcyreprt[reprt].back().push_back(parts[k]->adjcy[j]);
+        edgmodidxreprt[reprt].back().push_back(parts[k]->edgmodidx[j]);
+        // state (edge)
+        for (idx_t s = 0; s < model[parts[k]->edgmodidx[j]]->getNState(); ++s) {
+          statereprt[reprt].back().push_back(parts[k]->state[jstate++]);
+        }
+        for (idx_t s = 0; s < model[parts[k]->edgmodidx[j]]->getNStick(); ++s) {
+          stickreprt[reprt].back().push_back(parts[k]->stick[jstick++]);
+        }
+      }
+      // event
+      eventreprt[reprt].push_back(std::vector<event_t>());
+      for (idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
+        event_t evtpre;
+        evtpre.diffuse = parts[k]->diffuse[e];
+        evtpre.type = parts[k]->type[e];
+        evtpre.source = parts[k]->source[e];
+        evtpre.index = parts[k]->index[e];
+        evtpre.data = parts[k]->data[e];
+        eventreprt[reprt].back().push_back(evtpre);
+      }
+    }
+    CkAssert(jstate == parts[k]->nstate);
+    CkAssert(jstick == parts[k]->nstick);
+  }
+  // Prepare for reording partitions
+  cpdat = 0;
+  cpprt = 0;
+  norderdat = 0;
+  vtxprted.resize(nprt);
+  xyzprted.resize(nprt);
+  adjcyprted.resize(nprt);
+  edgmodidxprted.resize(nprt);
+  stateprted.resize(nprt);
+  stickprted.resize(nprt);
+  eventprted.resize(nprt);
+  adjcyreord.resize(nprt);
+  edgmodidxreord.resize(nprt);
+  statereord.resize(nprt);
+  stickreord.resize(nprt);
+  norderprt.resize(nprt);
+  for (idx_t i = 0; i < nprt; ++i) {
+    norderprt[i] = 0;
+  }
+  // Reset the vtxdist
+  vtxdist.clear();
+  vtxdist.resize(netparts+1);
+  vtxdist[0] = 0;
+  vtxmetis.clear();
+  vtxmetis.resize(netfiles+1);
+  vtxmetis[0] = 0;
+}
