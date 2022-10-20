@@ -150,12 +150,12 @@ Netdata::Netdata(mModel *msg) {
       ++jstickname;
     }
     // prepare containers for parameters
-    modeldata[i].statetype.resize(modeldata[i].nstate);
+    modeldata[i].stateinit.resize(modeldata[i].nstate);
     modeldata[i].stateparam.resize(modeldata[i].nstate);
     for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
-      // statetype
-      modeldata[i].statetype[statemap[j]] = msg->statetype[msg->xstatetype[i] + j];
-      switch (modeldata[i].statetype[statemap[j]]) {
+      // stateinit
+      modeldata[i].stateinit[statemap[j]] = msg->stateinit[msg->xstateinit[i] + j];
+      switch (modeldata[i].stateinit[statemap[j]]) {
         case RNGTYPE_CONST:
           modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_CONST);
           break;
@@ -187,7 +187,7 @@ Netdata::Netdata(mModel *msg) {
           modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_FILE);
           break;
         default:
-          CkPrintf("Error: unknown statetype\n");
+          CkPrintf("Error: unknown stateinit\n");
           break;
       }
       for (std::size_t s = 0; s < modeldata[i].stateparam[statemap[j]].size(); ++s) {
@@ -195,12 +195,12 @@ Netdata::Netdata(mModel *msg) {
       }
     }
     // prepare containers
-    modeldata[i].sticktype.resize(modeldata[i].nstick);
+    modeldata[i].stickinit.resize(modeldata[i].nstick);
     modeldata[i].stickparam.resize(modeldata[i].nstick);
     for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
-      // sticktype
-      modeldata[i].sticktype[stickmap[j]] = msg->sticktype[msg->xsticktype[i] + j];
-      switch (modeldata[i].sticktype[stickmap[j]]) {
+      // stickinit
+      modeldata[i].stickinit[stickmap[j]] = msg->stickinit[msg->xstickinit[i] + j];
+      switch (modeldata[i].stickinit[stickmap[j]]) {
         case RNGTYPE_CONST:
           modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_CONST);
           break;
@@ -232,7 +232,7 @@ Netdata::Netdata(mModel *msg) {
           modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_FILE);
           break;
         default:
-          CkPrintf("Error: unknown statetype\n");
+          CkPrintf("Error: unknown stateinit\n");
           break;
       }
       for (std::size_t s = 0; s < modeldata[i].stickparam[stickmap[j]].size(); ++s) {
@@ -244,14 +244,14 @@ Netdata::Netdata(mModel *msg) {
     for (std::size_t j = 0; j < modeldata[i].nstate; ++j) {
       if (stateconfig[j]) { continue; }
       else {
-        modeldata[i].statetype[j] = model[modmap[modeldata[i].modname]]->getDefaultStateType(j);
+        modeldata[i].stateinit[j] = model[modmap[modeldata[i].modname]]->getDefaultStateType(j);
         modeldata[i].stateparam[j] = model[modmap[modeldata[i].modname]]->getDefaultStateParam(j);
       }
     }
     for (std::size_t j = 0; j < modeldata[i].nstick; ++j) {
       if (stickconfig[j]) { continue; }
       else {
-        modeldata[i].sticktype[j] = model[modmap[modeldata[i].modname]]->getDefaultStickType(j);
+        modeldata[i].stickinit[j] = model[modmap[modeldata[i].modname]]->getDefaultStickType(j);
         modeldata[i].stickparam[j] = model[modmap[modeldata[i].modname]]->getDefaultStickParam(j);
       }
     }

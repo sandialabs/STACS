@@ -58,12 +58,12 @@ mModel* Main::BuildModel() {
   idx_t nmodname;
   idx_t nstatename;
   idx_t nstatenamestrings;
-  idx_t nstatetype;
+  idx_t nstateinit;
   idx_t nstateparam;
   idx_t jstateparam;
   idx_t nstickname;
   idx_t nsticknamestrings;
-  idx_t nsticktype;
+  idx_t nstickinit;
   idx_t nstickparam;
   idx_t jstickparam;
   idx_t jstatename;
@@ -79,25 +79,25 @@ mModel* Main::BuildModel() {
   nmodname = 0;
   nstatename = 0;
   nstatenamestrings = 0;
-  nstatetype = 0;
+  nstateinit = 0;
   nstateparam = 0;
   nstickname = 0;
   nsticknamestrings = 0;
-  nsticktype = 0;
+  nstickinit = 0;
   nstickparam = 0;
   for (std::size_t i = 0; i < models.size(); ++i) {
     nmodname += models[i].modname.size();
     // TODO: consolidate these counters (many are duplicated)
     nstatename += models[i].statename.size();
     nstickname += models[i].stickname.size();
-    nstatetype += models[i].statetype.size();
-    nsticktype += models[i].sticktype.size();
-    for (std::size_t j = 0; j < models[i].statetype.size(); ++j) {
+    nstateinit += models[i].stateinit.size();
+    nstickinit += models[i].stickinit.size();
+    for (std::size_t j = 0; j < models[i].stateinit.size(); ++j) {
       // strings have an extra character for the null termination
       nstatenamestrings += models[i].statename[j].size() + 1;
       nstateparam += models[i].stateparam[j].size();
     }
-    for (std::size_t j = 0; j < models[i].sticktype.size(); ++j) {
+    for (std::size_t j = 0; j < models[i].stickinit.size(); ++j) {
       nsticknamestrings += models[i].stickname[j].size() + 1;
       nstickparam += models[i].stickparam[j].size();
     }
@@ -136,10 +136,10 @@ mModel* Main::BuildModel() {
   msgSize[8] = nstickname+1;        // xstickname
   msgSize[9] = nstatenamestrings;   // statename
   msgSize[10] = nsticknamestrings;  // stickname
-  msgSize[11] = models.size()+1;   // xstatetype
-  msgSize[12] = models.size()+1;   // xsticktype
-  msgSize[13] = nstatetype;        // statetype
-  msgSize[14] = nsticktype;        // sticktype
+  msgSize[11] = models.size()+1;   // xstateinit
+  msgSize[12] = models.size()+1;   // xstickinit
+  msgSize[13] = nstateinit;        // stateinit
+  msgSize[14] = nstickinit;        // stickinit
   msgSize[15] = nstateparam;       // stateparam
   msgSize[16] = nstickparam;       // stickparam
   msgSize[17] = nparamname+1;      // xparamname
@@ -169,8 +169,8 @@ mModel* Main::BuildModel() {
   mmodel->xmodname[0] = 0;
   mmodel->xstatename[0] = 0;
   mmodel->xstickname[0] = 0;
-  mmodel->xstatetype[0] = 0;
-  mmodel->xsticktype[0] = 0;
+  mmodel->xstateinit[0] = 0;
+  mmodel->xstickinit[0] = 0;
   mmodel->xparamname[0] = 0;
   mmodel->xparam[0] = 0;
   mmodel->xport[0] = 0;
@@ -212,11 +212,11 @@ mModel* Main::BuildModel() {
       mmodel->xstatename[jstatename+1] += models[i].statename[j].size() + 1;
       ++jstatename;
     }
-    // xstatetype
-    mmodel->xstatetype[i+1] = mmodel->xstatetype[i] + models[i].statetype.size();
-    for (std::size_t j = 0; j < models[i].statetype.size(); ++j) {
-      // statetype
-      mmodel->statetype[mmodel->xstatetype[i]+j] = models[i].statetype[j];
+    // xstateinit
+    mmodel->xstateinit[i+1] = mmodel->xstateinit[i] + models[i].stateinit.size();
+    for (std::size_t j = 0; j < models[i].stateinit.size(); ++j) {
+      // stateinit
+      mmodel->stateinit[mmodel->xstateinit[i]+j] = models[i].stateinit[j];
       for (std::size_t s = 0; s < models[i].stateparam[j].size(); ++s) {
         mmodel->stateparam[jstateparam++] = models[i].stateparam[j][s];
       }
@@ -233,11 +233,11 @@ mModel* Main::BuildModel() {
       mmodel->xstickname[jstickname+1] += models[i].stickname[j].size() + 1;
       ++jstickname;
     }
-    // xsticktype
-    mmodel->xsticktype[i+1] = mmodel->xsticktype[i] + models[i].sticktype.size();
-    for (std::size_t j = 0; j < models[i].sticktype.size(); ++j) {
-      // sticktype
-      mmodel->sticktype[mmodel->xsticktype[i]+j] = models[i].sticktype[j];
+    // xstickinit
+    mmodel->xstickinit[i+1] = mmodel->xstickinit[i] + models[i].stickinit.size();
+    for (std::size_t j = 0; j < models[i].stickinit.size(); ++j) {
+      // stickinit
+      mmodel->stickinit[mmodel->xstickinit[i]+j] = models[i].stickinit[j];
       for (std::size_t s = 0; s < models[i].stickparam[j].size(); ++s) {
         mmodel->stickparam[jstickparam++] = models[i].stickparam[j][s];
       }

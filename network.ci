@@ -25,10 +25,10 @@ module network {
     idx_t xstickname[];
     char statename[];
     char stickname[];
-    idx_t xstatetype[];
-    idx_t xsticktype[];
-    idx_t statetype[];
-    idx_t sticktype[];
+    idx_t xstateinit[];
+    idx_t xstickinit[];
+    idx_t stateinit[];
+    idx_t stickinit[];
     real_t stateparam[];
     real_t stickparam[];
     idx_t xparamname[];

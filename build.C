@@ -316,56 +316,56 @@ void Netdata::Build(mGraph *msg) {
     // Allocate space for states
     std::vector<real_t> rngstate;
     std::vector<tick_t> rngstick;
-    rngstate.resize(modeldata[modidx].statetype.size());
-    rngstick.resize(modeldata[modidx].sticktype.size());
+    rngstate.resize(modeldata[modidx].stateinit.size());
+    rngstick.resize(modeldata[modidx].stickinit.size());
     // Randomly generate state
-    for (std::size_t s = 0; s < modeldata[modidx].statetype.size(); ++s) {
-      if (modeldata[modidx].statetype[s] == RNGTYPE_CONST) {
+    for (std::size_t s = 0; s < modeldata[modidx].stateinit.size(); ++s) {
+      if (modeldata[modidx].stateinit[s] == RNGTYPE_CONST) {
         rngstate[s] = rngconst(modeldata[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].statetype[s] == RNGTYPE_UNIF) {
+      else if (modeldata[modidx].stateinit[s] == RNGTYPE_UNIF) {
         rngstate[s] = rngunif(modeldata[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].statetype[s] == RNGTYPE_UNINT) {
+      else if (modeldata[modidx].stateinit[s] == RNGTYPE_UNINT) {
         rngstate[s] = rngunint(modeldata[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].statetype[s] == RNGTYPE_NORM) {
+      else if (modeldata[modidx].stateinit[s] == RNGTYPE_NORM) {
         rngstate[s] = rngnorm(modeldata[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].statetype[s] == RNGTYPE_BNORM) {
+      else if (modeldata[modidx].stateinit[s] == RNGTYPE_BNORM) {
         rngstate[s] = rngbnorm(modeldata[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].statetype[s] == RNGTYPE_FILE) {
+      else if (modeldata[modidx].stateinit[s] == RNGTYPE_FILE) {
         rngstate[s] = rngfile(modeldata[modidx].stateparam[s].data(), 0, vtxordidx[i]);
       }
       else {
-        CkPrintf("  error: statetype %s is not valid for vertex\n", rngtype[modeldata[modidx].statetype[s]].c_str());
+        CkPrintf("  error: stateinit %s is not valid for vertex\n", rngtype[modeldata[modidx].stateinit[s]].c_str());
         // TODO: cleaner error checking here?
         CkExit();
       }
     }
     // Randomly generate stick
-    for (std::size_t s = 0; s < modeldata[modidx].sticktype.size(); ++s) {
-      if (modeldata[modidx].sticktype[s] == RNGTYPE_CONST) {
+    for (std::size_t s = 0; s < modeldata[modidx].stickinit.size(); ++s) {
+      if (modeldata[modidx].stickinit[s] == RNGTYPE_CONST) {
         rngstick[s] = (tick_t)(TICKS_PER_MS * rngconst(modeldata[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].sticktype[s] == RNGTYPE_UNIF) {
+      else if (modeldata[modidx].stickinit[s] == RNGTYPE_UNIF) {
         rngstick[s] = (tick_t)(TICKS_PER_MS * rngunif(modeldata[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].sticktype[s] == RNGTYPE_UNINT) {
+      else if (modeldata[modidx].stickinit[s] == RNGTYPE_UNINT) {
         rngstick[s] = (tick_t)(TICKS_PER_MS * rngunint(modeldata[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].sticktype[s] == RNGTYPE_NORM) {
+      else if (modeldata[modidx].stickinit[s] == RNGTYPE_NORM) {
         rngstick[s] = (tick_t)(TICKS_PER_MS * rngnorm(modeldata[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].sticktype[s] == RNGTYPE_BNORM) {
+      else if (modeldata[modidx].stickinit[s] == RNGTYPE_BNORM) {
         rngstick[s] = (tick_t)(TICKS_PER_MS * rngbnorm(modeldata[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].sticktype[s] == RNGTYPE_FILE) {
+      else if (modeldata[modidx].stickinit[s] == RNGTYPE_FILE) {
         rngstick[s] = (tick_t)(TICKS_PER_MS * rngfile(modeldata[modidx].stickparam[s].data(), 0, vtxordidx[i]));
       }
       else {
-        CkPrintf("  error: statetype %s is not valid for vertex\n", rngtype[modeldata[modidx].sticktype[s]].c_str());
+        CkPrintf("  error: stateinit %s is not valid for vertex\n", rngtype[modeldata[modidx].stickinit[s]].c_str());
         // TODO: cleaner error checking here?
         CkExit();
       }
@@ -969,44 +969,44 @@ std::vector<real_t> Netdata::BuildEdgState(idx_t modidx, real_t dist, idx_t sour
   CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
   // Allocate space for states
   std::vector<real_t> rngstate;
-  rngstate.resize(modeldata[modidx].statetype.size());
+  rngstate.resize(modeldata[modidx].stateinit.size());
   // Randomly generate state
   for (std::size_t j = 0; j < rngstate.size(); ++j) {
-    if (modeldata[modidx].statetype[j] == RNGTYPE_CONST) {
+    if (modeldata[modidx].stateinit[j] == RNGTYPE_CONST) {
       rngstate[j] = rngconst(modeldata[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_UNIF) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_UNIF) {
       rngstate[j] = rngunif(modeldata[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_UNINT) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_UNINT) {
       rngstate[j] = rngunint(modeldata[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_NORM) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_NORM) {
       rngstate[j] = rngnorm(modeldata[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_BNORM) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_BNORM) {
       rngstate[j] = rngbnorm(modeldata[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_LBNORM) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBNORM) {
       rngstate[j] = rnglbnorm(modeldata[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_LBLOGNORM) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBLOGNORM) {
       rngstate[j] = rnglblognorm(modeldata[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_LIN) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LIN) {
       rngstate[j] = rnglin(modeldata[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_LBLIN) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBLIN) {
       rngstate[j] = rnglblin(modeldata[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_BLIN) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_BLIN) {
       rngstate[j] = rngblin(modeldata[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_FILE) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_FILE) {
       rngstate[j] = rngfile(modeldata[modidx].stateparam[j].data(), sourceidx, targetidx);
     }
     else {
-      CkPrintf("  error: statetype %s is not valid for edge\n", rngtype[modeldata[modidx].statetype[j]].c_str());
+      CkPrintf("  error: stateinit %s is not valid for edge\n", rngtype[modeldata[modidx].stateinit[j]].c_str());
       // TODO: cleaner error checking here?
       CkExit();
     }
@@ -1025,44 +1025,44 @@ std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
   CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
   // Allocate space for sticks
   std::vector<tick_t> rngstick;
-  rngstick.resize(modeldata[modidx].sticktype.size());
+  rngstick.resize(modeldata[modidx].stickinit.size());
   // Randomly generate stick
   for (std::size_t j = 0; j < rngstick.size(); ++j) {
-    if (modeldata[modidx].sticktype[j] == RNGTYPE_CONST) {
+    if (modeldata[modidx].stickinit[j] == RNGTYPE_CONST) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rngconst(modeldata[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_UNIF) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_UNIF) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rngunif(modeldata[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_UNINT) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_UNINT) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rngunint(modeldata[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_NORM) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_NORM) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rngnorm(modeldata[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_BNORM) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_BNORM) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rngbnorm(modeldata[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_LBNORM) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_LBNORM) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglbnorm(modeldata[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_LBLOGNORM) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBLOGNORM) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblognorm(modeldata[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_LIN) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_LIN) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglin(modeldata[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_LBLIN) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_LBLIN) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblin(modeldata[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_BLIN) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_BLIN) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rngblin(modeldata[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_FILE) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_FILE) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rngfile(modeldata[modidx].stickparam[j].data(), sourceidx, targetidx));
     }
     else {
-      CkPrintf("  error: statetype %s is not valid for edge\n", rngtype[modeldata[modidx].sticktype[j]].c_str());
+      CkPrintf("  error: stateinit %s is not valid for edge\n", rngtype[modeldata[modidx].stickinit[j]].c_str());
       // TODO: cleaner error checking here?
       CkExit();
     }
@@ -1086,13 +1086,13 @@ void Netdata::ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rn
   CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
   // Randomly generate state
   for (std::size_t j = 0; j < rngstate.size(); ++j) {
-    if (modeldata[modidx].statetype[j] == RNGTYPE_LIN) {
+    if (modeldata[modidx].stateinit[j] == RNGTYPE_LIN) {
       rngstate[j] = rnglin(modeldata[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_LBLIN) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBLIN) {
       rngstate[j] = rnglblin(modeldata[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].statetype[j] == RNGTYPE_BLIN) {
+    else if (modeldata[modidx].stateinit[j] == RNGTYPE_BLIN) {
       rngstate[j] = rngblin(modeldata[modidx].stateparam[j].data(), dist);
     }
   }
@@ -1108,13 +1108,13 @@ void Netdata::ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rn
   CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
   // Randomly generate stick
   for (std::size_t j = 0; j < rngstick.size(); ++j) {
-    if (modeldata[modidx].sticktype[j] == RNGTYPE_LIN) {
+    if (modeldata[modidx].stickinit[j] == RNGTYPE_LIN) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglin(modeldata[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_LBLIN) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_LBLIN) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblin(modeldata[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].sticktype[j] == RNGTYPE_BLIN) {
+    else if (modeldata[modidx].stickinit[j] == RNGTYPE_BLIN) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rngblin(modeldata[modidx].stickparam[j].data(), dist));
     }
   }

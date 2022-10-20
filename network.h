@@ -224,10 +224,10 @@ class mModel : public CMessage_mModel {
     idx_t *xstickname;    // stick names prefix
     char *statename;    // state specification names
     char *stickname;    // stick specification names
-    idx_t *xstatetype;    // state generation prefix
-    idx_t *xsticktype;    // stick generation prefix
-    idx_t *statetype;     // state generation type
-    idx_t *sticktype;     // stick representation type
+    idx_t *xstateinit;    // state generation prefix
+    idx_t *xstickinit;    // stick generation prefix
+    idx_t *stateinit;     // state generation type
+    idx_t *stickinit;     // stick representation type
     real_t *stateparam;   // state generation parameters
     real_t *stickparam;   // stick generation parameters
     idx_t *xparamname;  // parameter names prefix

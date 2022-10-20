@@ -418,7 +418,8 @@ int Main::ReadModel() {
     }
 
     // Composite model (should be for vertices only?)
-    // TODO: Figure out what these are for again...
+    // TODO: These would ideally allow for the dynamics of multiple
+    // models to be combined, but its not actually implemented in build
     if (models[i].modtype == 0) {
       // Parts are their own 'node'
       YAML::Node part = modfile[i]["part"];
@@ -501,10 +502,10 @@ int Main::ReadModel() {
     
       // preallocate space for non-default parameters
       models[i].statename.resize(models[i].nstate);
-      models[i].statetype.resize(models[i].nstate);
+      models[i].stateinit.resize(models[i].nstate);
       models[i].stateparam.resize(models[i].nstate);
       models[i].stickname.resize(models[i].nstick);
-      models[i].sticktype.resize(models[i].nstick);
+      models[i].stickinit.resize(models[i].nstick);
       models[i].stickparam.resize(models[i].nstick);
       idx_t jstate = 0;
       idx_t jstick = 0;
@@ -515,9 +516,9 @@ int Main::ReadModel() {
         std::string reptype;
         try {
           // rngtype
-          rngtype = state[j]["type"].as<std::string>();
+          rngtype = state[j]["init"].as<std::string>();
         } catch (YAML::RepresentationException& e) {
-          CkPrintf("  state type: %s\n", e.what());
+          CkPrintf("  state init: %s\n", e.what());
           return 1;
         }
 
@@ -554,7 +555,7 @@ int Main::ReadModel() {
         if (rngtype == "constant") {
           if (reptype == "tick") {
             // Constant value
-            models[i].sticktype[jstick] = RNGTYPE_CONST;
+            models[i].stickinit[jstick] = RNGTYPE_CONST;
             models[i].stickparam[jstick].resize(RNGPARAM_CONST);
             try {
               // value
@@ -567,7 +568,7 @@ int Main::ReadModel() {
           }
           else {
             // Constant value
-            models[i].statetype[jstate] = RNGTYPE_CONST;
+            models[i].stateinit[jstate] = RNGTYPE_CONST;
             models[i].stateparam[jstate].resize(RNGPARAM_CONST);
             try {
               // value
@@ -582,7 +583,7 @@ int Main::ReadModel() {
         else if (rngtype == "uniform") {
           if (reptype == "tick") {
             // Uniform distribution
-            models[i].sticktype[jstick] = RNGTYPE_UNIF;
+            models[i].stickinit[jstick] = RNGTYPE_UNIF;
             models[i].stickparam[jstick].resize(RNGPARAM_UNIF);
             try {
               // min value
@@ -602,7 +603,7 @@ int Main::ReadModel() {
           }
           else {
             // Uniform distribution
-            models[i].statetype[jstate] = RNGTYPE_UNIF;
+            models[i].stateinit[jstate] = RNGTYPE_UNIF;
             models[i].stateparam[jstate].resize(RNGPARAM_UNIF);
             try {
               // min value
@@ -624,7 +625,7 @@ int Main::ReadModel() {
         else if (rngtype == "uniform interval") {
           if (reptype == "tick") {
             // Uniform distribution (intervalled)
-            models[i].sticktype[jstick] = RNGTYPE_UNINT;
+            models[i].stickinit[jstick] = RNGTYPE_UNINT;
             models[i].stickparam[jstick].resize(RNGPARAM_UNINT);
             try {
               // min value
@@ -651,7 +652,7 @@ int Main::ReadModel() {
           }
           else {
             // Uniform distribution (intervalled)
-            models[i].statetype[jstate] = RNGTYPE_UNINT;
+            models[i].stateinit[jstate] = RNGTYPE_UNINT;
             models[i].stateparam[jstate].resize(RNGPARAM_UNINT);
             try {
               // min value
@@ -680,7 +681,7 @@ int Main::ReadModel() {
         else if (rngtype == "normal") {
           if (reptype == "tick") {
             // Normal distribution
-            models[i].sticktype[jstick] = RNGTYPE_NORM;
+            models[i].stickinit[jstick] = RNGTYPE_NORM;
             models[i].stickparam[jstick].resize(RNGPARAM_NORM);
             try {
               // mean
@@ -700,7 +701,7 @@ int Main::ReadModel() {
           }
           else {
             // Normal distribution
-            models[i].statetype[jstate] = RNGTYPE_NORM;
+            models[i].stateinit[jstate] = RNGTYPE_NORM;
             models[i].stateparam[jstate].resize(RNGPARAM_NORM);
             try {
               // mean
@@ -722,7 +723,7 @@ int Main::ReadModel() {
         else if (rngtype == "bounded normal") {
           if (reptype == "tick") {
             // Normal distribution
-            models[i].sticktype[jstick] = RNGTYPE_BNORM;
+            models[i].stickinit[jstick] = RNGTYPE_BNORM;
             models[i].stickparam[jstick].resize(RNGPARAM_BNORM);
             try {
               // mean
@@ -749,7 +750,7 @@ int Main::ReadModel() {
           }
           else {
             // Normal distribution
-            models[i].statetype[jstate] = RNGTYPE_BNORM;
+            models[i].stateinit[jstate] = RNGTYPE_BNORM;
             models[i].stateparam[jstate].resize(RNGPARAM_BNORM);
             try {
               // mean
@@ -778,7 +779,7 @@ int Main::ReadModel() {
         else if (rngtype == "lower bounded normal") {
           if (reptype == "tick") {
             // Normal distribution
-            models[i].sticktype[jstick] = RNGTYPE_LBNORM;
+            models[i].stickinit[jstick] = RNGTYPE_LBNORM;
             models[i].stickparam[jstick].resize(RNGPARAM_LBNORM);
             try {
               // mean
@@ -805,7 +806,7 @@ int Main::ReadModel() {
           }
           else {
             // Normal distribution
-            models[i].statetype[jstate] = RNGTYPE_LBNORM;
+            models[i].stateinit[jstate] = RNGTYPE_LBNORM;
             models[i].stateparam[jstate].resize(RNGPARAM_LBNORM);
             try {
               // mean
@@ -834,7 +835,7 @@ int Main::ReadModel() {
         else if (rngtype == "lower bounded lognorm") {
           if (reptype == "tick") {
             // Normal distribution
-            models[i].sticktype[jstick] = RNGTYPE_LBLOGNORM;
+            models[i].stickinit[jstick] = RNGTYPE_LBLOGNORM;
             models[i].stickparam[jstick].resize(RNGPARAM_LBLOGNORM);
             try {
               // mean
@@ -868,7 +869,7 @@ int Main::ReadModel() {
           }
           else {
             // Normal distribution
-            models[i].statetype[jstate] = RNGTYPE_LBLOGNORM;
+            models[i].stateinit[jstate] = RNGTYPE_LBLOGNORM;
             models[i].stateparam[jstate].resize(RNGPARAM_LBLOGNORM);
             try {
               // mean
@@ -904,7 +905,7 @@ int Main::ReadModel() {
         else if (rngtype == "linear") {
           if (reptype == "tick") {
             // Proportional to distance
-            models[i].sticktype[jstick] = RNGTYPE_LIN;
+            models[i].stickinit[jstick] = RNGTYPE_LIN;
             models[i].stickparam[jstick].resize(RNGPARAM_LIN);
             try {
               // scale
@@ -925,7 +926,7 @@ int Main::ReadModel() {
           }
           else {
             // Proportional to distance
-            models[i].statetype[jstate] = RNGTYPE_LIN;
+            models[i].stateinit[jstate] = RNGTYPE_LIN;
             models[i].stateparam[jstate].resize(RNGPARAM_LIN);
             try {
               // scale
@@ -948,7 +949,7 @@ int Main::ReadModel() {
         else if (rngtype == "bounded linear") {
           if (reptype == "tick") {
             // Proportional to distance
-            models[i].sticktype[jstick] = RNGTYPE_BLIN;
+            models[i].stickinit[jstick] = RNGTYPE_BLIN;
             models[i].stickparam[jstick].resize(RNGPARAM_BLIN);
             try {
               // scale
@@ -983,7 +984,7 @@ int Main::ReadModel() {
           }
           else {
             // Proportional to distance
-            models[i].statetype[jstate] = RNGTYPE_BLIN;
+            models[i].stateinit[jstate] = RNGTYPE_BLIN;
             models[i].stateparam[jstate].resize(RNGPARAM_BLIN);
             try {
               // scale
@@ -1039,7 +1040,7 @@ int Main::ReadModel() {
           // Get the filename and index into the datafile list
           if (reptype == "tick") {
             // From file
-            models[i].sticktype[jstick] = RNGTYPE_FILE;
+            models[i].stickinit[jstick] = RNGTYPE_FILE;
             models[i].stickparam[jstick].resize(RNGPARAM_FILE);
             try {
               // filename
@@ -1057,7 +1058,7 @@ int Main::ReadModel() {
           }
           else {
             // From file
-            models[i].statetype[jstate] = RNGTYPE_FILE;
+            models[i].stateinit[jstate] = RNGTYPE_FILE;
             models[i].stateparam[jstate].resize(RNGPARAM_FILE);
             try {
               // filename
@@ -1071,7 +1072,7 @@ int Main::ReadModel() {
           }
         }
         else {
-          CkPrintf("  error: '%s' unknown state type\n", rngtype.c_str());
+          CkPrintf("  error: '%s' unknown state init\n", rngtype.c_str());
           return 1;
         }
       }

@@ -75,8 +75,8 @@ struct model_t {
   idx_t nparam;
   std::vector<std::string> statename;
   std::vector<std::string> stickname;
-  std::vector<idx_t> statetype;
-  std::vector<idx_t> sticktype;
+  std::vector<idx_t> stateinit;
+  std::vector<idx_t> stickinit;
   std::vector<std::vector<real_t>> stateparam;
   std::vector<std::vector<real_t>> stickparam;
   std::vector<std::string> paramname;
