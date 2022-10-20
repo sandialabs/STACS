@@ -443,7 +443,7 @@ void Netdata::Build(mGraph *msg) {
             std::vector<real_t> sampleprb;
             std::vector<real_t>::iterator iwgt;
             for (iwgt = samplewgt.begin(); iwgt != samplewgt.end(); ++iwgt) {
-              sampleprb.push_back(std::pow(sampleunifdist(rngsample), 1. / (*iter)));
+              sampleprb.push_back(std::pow(sampleunifdist(rngsample), 1. / (*iwgt)));
             }
             // Sorting vals, but retain the indices. 
             // There is unfortunately no easy way to do this with STL.
