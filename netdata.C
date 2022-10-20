@@ -54,8 +54,7 @@ Netdata::Netdata(mModel *msg) {
   nprt = ndiv + (datidx < nrem);
   xprt = datidx*ndiv + (datidx < nrem ? datidx : nrem);
 
-  // Models (implemented)
-  // TODO: set up models the same way as network?
+  // Models (simplified)
   for (std::size_t i = 0; i < model.size(); ++i) {
     delete model[i];
   }
@@ -73,8 +72,6 @@ Netdata::Netdata(mModel *msg) {
     modname[i] = std::string(msg->modname + msg->xmodname[i-1], msg->modname + msg->xmodname[i]);
     modmap[modname[i]] = i;
   }
-
-  // Models (user configured information)
 
   // Set up random number generator
   rngine.seed(randseed+datidx);

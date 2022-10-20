@@ -100,7 +100,7 @@ int Main::WriteDist(int checkflag) {
   std::string filecheck = (checkflag ? filesave : "");
   // Open File
   CkPrintf("Writing network distribution\n");
-  sprintf(csrfile, "%s/%s%s.dist", netwkdir.c_str(), filebase.c_str(), filecheck.c_str());//(check ? ".check" : filesave.c_str()));
+  sprintf(csrfile, "%s/%s%s.dist", netwkdir.c_str(), filebase.c_str(), filecheck.c_str());
   pDist = fopen(csrfile,"w");
   sprintf(csrfile, "%s/%s%s.metis", netwkdir.c_str(), filebase.c_str(), filecheck.c_str());
   pMetis = fopen(csrfile,"w");

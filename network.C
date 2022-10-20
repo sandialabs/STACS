@@ -93,11 +93,6 @@ Network::Network(mModel *msg) {
   for (idx_t i = 1; i < msg->nmodel+1; ++i) {
     // Create model object
     model.push_back(ModelFactory::newModel()->Create(msg->modtype[i-1]));
-    // TODO: these asserts will no longer work when models are underspecified
-    //CkAssert(model[i]->getNState() == msg->nstate[i-1]);
-    //CkAssert(model[i]->getNStick() == msg->nstick[i-1]);
-    //CkAssert(model[i]->getNParam() == msg->xparam[i] - msg->xparam[i-1]);
-    //model[i]->setParam(msg->param + msg->xparam[i-1]);
     model[i]->setPort(msg->port + msg->xport[i-1]);
     model[i]->setRandom(unifdist, &rngine);
     model[i]->setActive(msg->grpactive[i-1]);

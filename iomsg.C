@@ -410,17 +410,19 @@ mGraph* Main::BuildGraph() {
     mgraph->edgcutoff[i] = edges[i].cutoff;
     mgraph->edgdistype[i] = edges[i].distype;
 
-    // TODO: figure out why some of these use prefixes and others not
+    // Targets are provided as a list
     mgraph->xedgtarget[i+1] = mgraph->xedgtarget[i] + edges[i].target.size();
     for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
       mgraph->edgtarget[jedgtarget++] = edges[i].target[j];
     }
 
+    // Distance-based calculation params
     mgraph->medgdistparam[i] = edges[i].distparam.size();
     for (std::size_t j = 0; j < edges[i].distparam.size(); ++j) {
       mgraph->edgdistparam[jedgdistparam++] = edges[i].distparam[j];
     }
 
+    // Connection parameters
     mgraph->xedgconntype[i+1] = mgraph->xedgconntype[i] + edges[i].conntype.size();
     for (std::size_t j = 0; j < edges[i].conntype.size(); ++j) {
       mgraph->edgconntype[jedgconntype] = edges[i].conntype[j];

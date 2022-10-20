@@ -805,7 +805,7 @@ class Netdata : public CBase_Netdata {
     std::vector<idx_t> eventdist;
     CkCallback maindist;
     /* Network Model */
-    std::vector<NetModel*> model;      // collection of model objects (empty)
+    std::vector<NetModel*> model;      // collection of model objects
     std::vector<model_t> modeldata;    // model information from config and implementation defaults
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
