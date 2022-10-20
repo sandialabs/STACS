@@ -388,7 +388,7 @@ void Netdata::SaveBuild() {
 //
 void Netdata::SaveCloseBuild() {
   // Write data
-  WriteNetwork(0);
+  WriteNetwork();
 
   // Return control to main
   contribute(nprt*sizeof(dist_t), netdist.data(), net_dist,
