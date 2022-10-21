@@ -122,9 +122,24 @@ void Netdata::Build(mGraph *msg) {
 
   // Create mapping from pairs of vertices (source, target) to edge index
   connmodmap.clear();
+  // Create mapping from vertices to sample-based edge sources
+  connsampleset.resize(vertices.size()+1);
+  for (std::size_t t = 0; t < vertices.size(); ++t) {
+    connsampleset[t].clear();
+  }
+  // populate connection maps
   for (std::size_t e = 0; e < edges.size(); ++e) {
     for (std::size_t t = 0; t < edges[e].target.size(); ++t) {
+      // general connections
       connmodmap[edges[e].source*edges.size() + edges[e].target[t]] = (idx_t) e;
+      // sample-based connections
+      for (std::size_t k = 0; k < edges[e].conntype.size(); ++k) {
+        if (edges[e].conntype[k] == CONNTYPE_SMPL ||
+            edges[e].conntype[k] == CONNTYPE_SMPL_NORM ||
+            edges[e].conntype[k] == CONNTYPE_SMPL_ANORM) {
+          connsampleset[edges[e].target[t]].insert((idx_t) e);
+        }
+      }
     }
   }
 
@@ -377,152 +392,108 @@ void Netdata::Build(mGraph *msg) {
 
   // Any index-based sample connectivity occurs first
   // for each vertex
+  std::set<idx_t>::iterator jedg;
   for (idx_t i = 0; i < norderdat; ++i) {
     idx_t glbtargetidx = xorderdat[datidx] + i;
-    // for each edge population
-    for (std::size_t e = 0; e < edges.size(); ++e) {
-      // Sample types should only have one target at the moment
-      if (vtxmodidx[i] == edges[e].target[0]) {
-        // But they're still structured to have multiple connection types
-        for (std::size_t k = 0; k < edges[e].conntype.size(); ++k) {
-          if (edges[e].conntype[k] == CONNTYPE_SMPL) {
-            // Sample sourceidx from the source vertex population order
-            // generate the sample cache (once per target vertex per connection type)
-            // TODO: this should be the same size as vertices[edges[e].source-1].order
-            // TODO: consolidate the sample types to compute weights first, and then use the same assignment
-            std::vector<idx_t> sourceordix(edges[e].maskparam[k][0]);
-            std::iota(sourceordix.begin(), sourceordix.end(), 0);
-            // pick the seed based on the targetidx so it is consistent across cores
-            // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
-            unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(e*32768));
-            std::shuffle(sourceordix.begin(), sourceordix.end(), std::mt19937{sampleseed});
-            // want to make sure sample number is less than source order
-            CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
-            // copy over the shuffled indices for the sampling
-            for (idx_t j = 0; j < edges[e].maskparam[k][1]; ++j) {
-              // Convert from population index to global index
-              std::vector<idx_t>::iterator iprt;
-              iprt = std::upper_bound(xpopvtxidxprt[edges[e].source-1].begin(), xpopvtxidxprt[edges[e].source-1].end(), sourceordix[j]);
-              int prt = (iprt - xpopvtxidxprt[edges[e].source-1].begin()) - 1;
-              idx_t glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceordix[j] - xpopvtxidxprt[edges[e].source-1][prt]);
-              // Check for self connections
-              if (glbsourceidx == glbtargetidx) {
-                continue;
-              }
-              // this is just to check on memory usage
+    for (jedg = connsampleset[vtxmodidx[i]].begin(); jedg != connsampleset[vtxmodidx[i]].end(); ++jedg) {
+      idx_t edg = *jedg;
+      for (std::size_t k = 0; k < edges[edg].conntype.size(); ++k) {
+        // Uniform weights is easier to compute
+        if (edges[edg].conntype[k] == CONNTYPE_SMPL) {
+          // Compute samples w.r.t. source population order
+          CkAssert(vertices[edges[edg].source-1].order == edges[edg].maskparam[k][0]);
+          std::vector<idx_t> sourceordix(edges[edg].maskparam[k][0]);
+          std::iota(sourceordix.begin(), sourceordix.end(), 0);
+          // pick the seed based on the targetidx so it is consistent across cores
+          // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
+          unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(edg*32768));
+          std::shuffle(sourceordix.begin(), sourceordix.end(), std::mt19937{sampleseed});
+          // want to make sure sample number is less than source order
+          CkAssert(edges[edg].maskparam[k][0] >= edges[edg].maskparam[k][1]);
+          // copy over the shuffled indices for the sampling
+          for (idx_t j = 0; j < edges[edg].maskparam[k][1]; ++j) {
+            // Convert from population index to global index
+            std::vector<idx_t>::iterator iprt;
+            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source-1].begin(), xpopvtxidxprt[edges[edg].source-1].end(), sourceordix[j]);
+            int prt = (iprt - xpopvtxidxprt[edges[edg].source-1].begin()) - 1;
+            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source-1][prt] + (sourceordix[j] - xpopvtxidxprt[edges[edg].source-1][prt]);
+            // Check for self connections
+            if (glbsourceidx == glbtargetidx) {
+              continue;
+            } else {
               adjcy[i].push_back(glbsourceidx);
               adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
-              edgmodidx[i].push_back(edges[e].modidx);
+              edgmodidx[i].push_back(edges[edg].modidx);
               // The state/stick will need to be reparameterized with correct distance information later
-              state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceordix[j], vtxordidx[i]));
-              stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceordix[j], vtxordidx[i]));
+              state[i].push_back(BuildEdgState(edges[edg].modidx, 0.0, sourceordix[j], vtxordidx[i]));
+              stick[i].push_back(BuildEdgStick(edges[edg].modidx, 0.0, sourceordix[j], vtxordidx[i]));
             }
           }
-          else if (edges[e].conntype[k] == CONNTYPE_SMPL_NORM) {
-            // Sample sourceidx from the source vertex population order
-            // generate the sample cache (once per target vertex per connection type)
-            std::vector<real_t> samplewgt(edges[e].maskparam[k][0]);
-            for (idx_t j = 0; j < edges[e].maskparam[k][0]; ++j) {
+        }
+        // non-uniform weights need some additional helper structures
+        else if (edges[edg].conntype[k] == CONNTYPE_SMPL_NORM ||
+                 edges[edg].conntype[k] == CONNTYPE_SMPL_ANORM) {
+          // Compute samples w.r.t. source population order
+          CkAssert(vertices[edges[edg].source-1].order == edges[edg].maskparam[k][0]);
+          std::vector<real_t> samplewgt(edges[edg].maskparam[k][0]);
+          if (edges[edg].conntype[k] == CONNTYPE_SMPL_NORM) {
+            for (idx_t j = 0; j < edges[edg].maskparam[k][0]; ++j) {
               // (x_i - x_j)^2 / var(x_ij)
-              //real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
-              CkAssert(vertices[edges[e].source-1].order == edges[e].maskparam[k][0]);
               real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxmodidx[i]-1].param[0]/vertices[vtxmodidx[i]-1].order)
-                  - (((real_t) j)*vertices[edges[e].source-1].param[0]/vertices[edges[e].source-1].order));
-              samplewgt[j] = std::exp(-(x_ij*x_ij)/(2*edges[e].probparam[k][0])); // Don't worry about normalizing
-            }
-            // pick the seed based on the targetidx so it is consistent across cores
-            // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
-            unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(e*32768));
-            std::mt19937 rngsample(sampleseed);
-            std::uniform_real_distribution<real_t> sampleunifdist;
-            // want to make sure sample number is less than source order
-            CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
-            // From: https://stackoverflow.com/questions/53632441/c-sampling-from-discrete-distribution-without-replacement
-            std::vector<real_t> sampleprb;
-            std::vector<real_t>::iterator iwgt;
-            for (iwgt = samplewgt.begin(); iwgt != samplewgt.end(); ++iwgt) {
-              sampleprb.push_back(std::pow(sampleunifdist(rngsample), 1. / (*iwgt)));
-            }
-            // Sorting vals, but retain the indices. 
-            // There is unfortunately no easy way to do this with STL.
-            std::vector<std::pair<idx_t, real_t>> sampleprbidx;
-            for (std::size_t iter = 0; iter < sampleprb.size(); iter++) {
-              sampleprbidx.emplace_back(iter, sampleprb[iter]);
-            }
-            std::sort(sampleprbidx.begin(), sampleprbidx.end(), [](std::pair<idx_t,real_t> x, std::pair<idx_t,real_t> y) {return x.second > y.second; });
-            for (idx_t iter = 0; iter < edges[e].maskparam[k][1]; iter++) {
-              idx_t sourceordix = sampleprbidx[iter].first;
-              // Convert from population index to global index
-              std::vector<idx_t>::iterator iprt;
-              iprt = std::upper_bound(xpopvtxidxprt[edges[e].source-1].begin(), xpopvtxidxprt[edges[e].source-1].end(), sourceordix);
-              int prt = (iprt - xpopvtxidxprt[edges[e].source-1].begin()) - 1;
-              idx_t glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceordix - xpopvtxidxprt[edges[e].source-1][prt]);
-              if (glbsourceidx == glbtargetidx) {
-                continue;
-              } else {
-                adjcy[i].push_back(glbsourceidx);
-                adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
-                edgmodidx[i].push_back(edges[e].modidx);
-                // The state/stick will need to be reparameterized with correct distance information later
-                state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceordix, vtxordidx[i]));
-                stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceordix, vtxordidx[i]));
-              }
+                  - (((real_t) j)*vertices[edges[edg].source-1].param[0]/vertices[edges[edg].source-1].order));
+              samplewgt[j] = std::exp(-(x_ij*x_ij)/(2*edges[edg].probparam[k][0])); // Don't worry about normalizing
             }
           }
-          else if (edges[e].conntype[k] == CONNTYPE_SMPL_ANORM) {
-            // Sample sourceidx from the source vertex population order
-            // generate the sample cache (once per target vertex per connection type)
-            std::vector<real_t> samplewgt(edges[e].maskparam[k][0]);
-            for (idx_t j = 0; j < edges[e].maskparam[k][0]; ++j) {
+          else if (edges[edg].conntype[k] == CONNTYPE_SMPL_ANORM) {
+            for (idx_t j = 0; j < edges[edg].maskparam[k][0]; ++j) {
               // ((x_i - x_j)^2 / var(x_ij)) - ((x_i - x_j)^2 / var(x_ij)/2)
               // Not using variance-y for this for now (needs additional information)
-              //real_t x_ij = ((((real_t) vtxordidx[i])/vertices[vtxmodidx[i]-1].order)-(((real_t) j)/edges[e].maskparam[k][0]));
-              CkAssert(vertices[edges[e].source-1].order == edges[e].maskparam[k][0]);
               real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxmodidx[i]-1].param[0]/vertices[vtxmodidx[i]-1].order)
-                  - (((real_t) j)*vertices[edges[e].source-1].param[0]/vertices[edges[e].source-1].order));
-              real_t var = edges[e].probparam[k][0];
+                  - (((real_t) j)*vertices[edges[edg].source-1].param[0]/vertices[edges[edg].source-1].order));
+              real_t var = edges[edg].probparam[k][0];
               // Normalizing a bit more important here
               real_t wgt = std::exp(-(x_ij*x_ij)/(2*var))/std::sqrt(var) *
                 (std::exp(-(x_ij*x_ij)/(2*var))/std::sqrt(var) - std::exp(-(x_ij*x_ij)/(var))/std::sqrt(var/2));
               samplewgt[j] = std::max(0.0, wgt);
             }
-            // pick the seed based on the targetidx so it is consistent across cores
-            // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
-            unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(e*32768));
-            std::mt19937 rngsample(sampleseed);
-            std::uniform_real_distribution<real_t> sampleunifdist;
-            // want to make sure sample number is less than source order
-            CkAssert(edges[e].maskparam[k][0] >= edges[e].maskparam[k][1]);
-            // From: https://stackoverflow.com/questions/53632441/c-sampling-from-discrete-distribution-without-replacement
-            std::vector<real_t> sampleprb;
-            std::vector<real_t>::iterator iwgt;
-            for (iwgt = samplewgt.begin(); iwgt != samplewgt.end(); ++iwgt) {
-              sampleprb.push_back(std::pow(sampleunifdist(rngsample), 1.0 / (*iwgt)));
-            }
-            // Sorting vals, but retain the indices. 
-            // There is unfortunately no easy way to do this with STL.
-            std::vector<std::pair<idx_t, real_t>> sampleprbidx;
-            for (std::size_t iter = 0; iter < sampleprb.size(); iter++) {
-              sampleprbidx.emplace_back(iter, sampleprb[iter]);
-            }
-            std::sort(sampleprbidx.begin(), sampleprbidx.end(), [](std::pair<idx_t,real_t> x, std::pair<idx_t,real_t> y) {return x.second > y.second; });
-            for (idx_t iter = 0; iter < edges[e].maskparam[k][1]; iter++) {
-              idx_t sourceordix = sampleprbidx[iter].first;
-              // Convert from population index to global index
-              std::vector<idx_t>::iterator iprt;
-              iprt = std::upper_bound(xpopvtxidxprt[edges[e].source-1].begin(), xpopvtxidxprt[edges[e].source-1].end(), sourceordix);
-              int prt = (iprt - xpopvtxidxprt[edges[e].source-1].begin()) - 1;
-              idx_t glbsourceidx = xglbvtxidxprt[edges[e].source-1][prt] + (sourceordix - xpopvtxidxprt[edges[e].source-1][prt]);
-              if (glbsourceidx == glbtargetidx) {
-                continue;
-              } else {
-                adjcy[i].push_back(glbsourceidx);
-                adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
-                edgmodidx[i].push_back(edges[e].modidx);
-                // The state/stick will need to be reparameterized with correct distance information later
-                state[i].push_back(BuildEdgState(edges[e].modidx, 0.0, sourceordix, vtxordidx[i]));
-                stick[i].push_back(BuildEdgStick(edges[e].modidx, 0.0, sourceordix, vtxordidx[i]));
-              }
+          }
+          // pick the seed based on the targetidx so it is consistent across cores
+          // The 32768 is 2^15, is just a reasonably large number to not get repeating seeds
+          unsigned sampleseed = (randseed + (unsigned)(vtxordidx[i])) ^ ((unsigned)(edg*32768));
+          std::mt19937 rngsample(sampleseed);
+          std::uniform_real_distribution<real_t> sampleunifdist;
+          // want to make sure sample number is less than source order
+          CkAssert(edges[edg].maskparam[k][0] >= edges[edg].maskparam[k][1]);
+          // From: https://stackoverflow.com/questions/53632441/c-sampling-from-discrete-distribution-without-replacement
+          std::vector<real_t> sampleprb;
+          std::vector<real_t>::iterator iwgt;
+          for (iwgt = samplewgt.begin(); iwgt != samplewgt.end(); ++iwgt) {
+            sampleprb.push_back(std::pow(sampleunifdist(rngsample), 1.0 / (*iwgt)));
+          }
+          // Sorting vals, but retain the indices. 
+          // There is unfortunately no easy way to do this with STL.
+          std::vector<std::pair<idx_t, real_t>> sampleprbidx;
+          for (std::size_t iter = 0; iter < sampleprb.size(); iter++) {
+            sampleprbidx.emplace_back(iter, sampleprb[iter]);
+          }
+          std::sort(sampleprbidx.begin(), sampleprbidx.end(), [](std::pair<idx_t,real_t> x, std::pair<idx_t,real_t> y) {return x.second > y.second; });
+          // Place samples into adjcy after shuffling
+          for (idx_t iter = 0; iter < edges[edg].maskparam[k][1]; iter++) {
+            idx_t sourceordix = sampleprbidx[iter].first;
+            // Convert from population index to global index
+            std::vector<idx_t>::iterator iprt;
+            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source-1].begin(), xpopvtxidxprt[edges[edg].source-1].end(), sourceordix);
+            int prt = (iprt - xpopvtxidxprt[edges[edg].source-1].begin()) - 1;
+            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source-1][prt] + (sourceordix - xpopvtxidxprt[edges[edg].source-1][prt]);
+            if (glbsourceidx == glbtargetidx) {
+              continue;
+            } else {
+              adjcy[i].push_back(glbsourceidx);
+              adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
+              edgmodidx[i].push_back(edges[edg].modidx);
+              // The state/stick will need to be reparameterized with correct distance information later
+              state[i].push_back(BuildEdgState(edges[edg].modidx, 0.0, sourceordix, vtxordidx[i]));
+              stick[i].push_back(BuildEdgStick(edges[edg].modidx, 0.0, sourceordix, vtxordidx[i]));
             }
           }
         }
@@ -568,9 +539,9 @@ void Netdata::ConnectVtx(mConn *msg) {
       if (xorderdat[msg->datidx] <= adjcy[i][j] && adjcy[i][j] < xorderdat[msg->datidx+1]) {
         // Reparameterize with information
         idx_t locsourceidx = adjcy[i][j] - xorderdat[msg->datidx];
-        idx_t e = connmodmap[msg->vtxmodidx[locsourceidx]*edges.size()+vtxmodidx[i]];
-        //CkPrintf("%" PRIidx ", %" PRIidx ": %" PRIidx ", %" PRIidx"\n", i, adjcy[i][j], locsourceidx, e);
-        real_t distance = distfunc(edges[e].distype, xyz.data()+i*3, msg->xyz+locsourceidx*3, edges[e].distparam.data());
+        idx_t edg = connmodmap[msg->vtxmodidx[locsourceidx]*edges.size()+vtxmodidx[i]];
+        //CkPrintf("%" PRIidx ", %" PRIidx ": %" PRIidx ", %" PRIidx"\n", i, adjcy[i][j], locsourceidx, edg);
+        real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+locsourceidx*3, edges[edg].distparam.data());
         ReBuildEdgState(edgmodidx[i][j], distance, state[i][j+1]);
         ReBuildEdgStick(edgmodidx[i][j], distance, stick[i][j+1]);
       }
@@ -591,12 +562,12 @@ void Netdata::ConnectVtx(mConn *msg) {
       }
       // Evaluate connection between i and j
       else {
-        idx_t edgidx = connmodmap[msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]];
-        real_t distance = distfunc(edges[edgidx].distype, xyz.data()+i*3, msg->xyz+j*3, edges[edgidx].distparam.data());
+        idx_t edg = connmodmap[msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]];
+        real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+j*3, edges[edg].distparam.data());
         CkAssert(distance >= 0.0);
         idx_t modidx;
         // check possible connections from j (source) to i (target)
-        if ((modidx = MakeConnection(edgidx, msg->vtxordidx[j], vtxordidx[i], distance))) {
+        if ((modidx = MakeConnection(edg, msg->vtxordidx[j], vtxordidx[i], distance))) {
           adjcy[i].push_back(xorderdat[msg->datidx]+j);
           adjcyset[i].insert(xorderdat[msg->datidx]+j); // The set is useful for faster searching of edge existence
           edgmodidx[i].push_back(modidx);
@@ -879,44 +850,44 @@ mConn* Netdata::BuildConnEdg(idx_t reqidx) {
 * Connection Construction
 **************************************************************************/
 
-idx_t Netdata::MakeConnection(idx_t edgidx, idx_t sourceidx, idx_t targetidx, real_t dist) {
+idx_t Netdata::MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_t dist) {
   // test for cutoff
-  if (edges[edgidx].cutoff != 0.0 && dist > edges[edgidx].cutoff) {
+  if (edges[edg].cutoff != 0.0 && dist > edges[edg].cutoff) {
     return 0;
   }
   // Connection computation
   real_t prob = 0.0;
   idx_t mask = 0;
-  for (std::size_t k = 0; k < edges[edgidx].conntype.size(); ++k) {
-    if (edges[edgidx].conntype[k] == CONNTYPE_UNIF) {
-      prob += edges[edgidx].probparam[k][0];
+  for (std::size_t k = 0; k < edges[edg].conntype.size(); ++k) {
+    if (edges[edg].conntype[k] == CONNTYPE_UNIF) {
+      prob += edges[edg].probparam[k][0];
     }
-    else if (edges[edgidx].conntype[k] == CONNTYPE_SIG) {
-      prob += sigmoid(dist, edges[edgidx].probparam[k][0],
-          edges[edgidx].probparam[k][1], edges[edgidx].probparam[k][2]);
+    else if (edges[edg].conntype[k] == CONNTYPE_SIG) {
+      prob += sigmoid(dist, edges[edg].probparam[k][0],
+          edges[edg].probparam[k][1], edges[edg].probparam[k][2]);
     }
-    else if (edges[edgidx].conntype[k] == CONNTYPE_IDX) {
-      mask += (((sourceidx * edges[edgidx].maskparam[k][2]) + edges[edgidx].maskparam[k][3]) == targetidx);
+    else if (edges[edg].conntype[k] == CONNTYPE_IDX) {
+      mask += (((sourceidx * edges[edg].maskparam[k][2]) + edges[edg].maskparam[k][3]) == targetidx);
     }
     // TODO: we want to enable a weighting of the indices w.r.t. distance
-    else if (edges[edgidx].conntype[k] == CONNTYPE_SMPL ||
-        edges[edgidx].conntype[k] == CONNTYPE_SMPL_NORM ||
-        edges[edgidx].conntype[k] == CONNTYPE_SMPL_ANORM) {
+    else if (edges[edg].conntype[k] == CONNTYPE_SMPL ||
+        edges[edg].conntype[k] == CONNTYPE_SMPL_NORM ||
+        edges[edg].conntype[k] == CONNTYPE_SMPL_ANORM) {
       // sample-based edges already computed
       return 0;
     }
-    else if (edges[edgidx].conntype[k] == CONNTYPE_FILE) {
+    else if (edges[edg].conntype[k] == CONNTYPE_FILE) {
       // Check to see if it's in the file list
       // Dimensions are stored: targetdim x sourcedim
       // set mask to 1 if there is a non-zero entry
       // TODO: make sure file-based connections completely override
       //       other connection types (or make them mutually exclusive)
       // TODO: split up files in dCSR order as well
-      if (targetidx >= datafiles[(idx_t) (edges[edgidx].probparam[k][0])].matrix.size()) {
+      if (targetidx >= datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix.size()) {
         CkPrintf("  error: datafile %s does not have row for %" PRIidx "\n",
-            datafiles[(idx_t) (edges[edgidx].probparam[k][0])].filename.c_str(), targetidx);
-      } else if (datafiles[(idx_t) (edges[edgidx].probparam[k][0])].matrix[targetidx].find((real_t) sourceidx) ==
-          datafiles[(idx_t) (edges[edgidx].probparam[k][0])].matrix[targetidx].end()) {
+            datafiles[(idx_t) (edges[edg].probparam[k][0])].filename.c_str(), targetidx);
+      } else if (datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidx].find((real_t) sourceidx) ==
+          datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidx].end()) {
         prob = 0.0;
         mask = 0;
       } else {
@@ -925,13 +896,13 @@ idx_t Netdata::MakeConnection(idx_t edgidx, idx_t sourceidx, idx_t targetidx, re
     }
     else {
       // Shouldn't reach here due to prior error checking
-      CkPrintf("  error: connection type %" PRIidx " undefined\n", edges[edgidx].conntype[k]);
+      CkPrintf("  error: connection type %" PRIidx " undefined\n", edges[edg].conntype[k]);
       CkExit();
     }
   }
   // Compute probability of connection
   if ((((*unifdist)(rngine)) < prob) || mask) {
-    return edges[edgidx].modidx;
+    return edges[edg].modidx;
   }
   else {
     return 0;

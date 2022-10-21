@@ -593,7 +593,7 @@ class Netdata : public CBase_Netdata {
     void ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick);
 
     /* Connecting */
-    idx_t MakeConnection(idx_t edgidx, idx_t sourceidx, idx_t targetidx, real_t dist);
+    idx_t MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_t dist);
     void ConnectVtx(mConn *msg);
     void RequestConnVtx(idx_t reqidx);
     mConn* BuildConnVtx(idx_t reqidx);
@@ -832,6 +832,7 @@ class Netdata : public CBase_Netdata {
     std::vector<std::vector<event_t>> event;
     /* Connecting */
     std::unordered_map<idx_t,idx_t> connmodmap; // (source*edges.size + target) to edge
+    std::vector<std::set<idx_t>> connsampleset; // target to edges that are sample-based for it
     std::vector<std::set<idx_t>> adjcyset; // set of directed afferent edges
     std::vector<idx_t> nadjcysample; // counts of number of adjcy for index-based connections
     std::list<idx_t> connvtxreq; // parts that are requesting their vertex into
