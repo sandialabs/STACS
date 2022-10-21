@@ -75,7 +75,7 @@ tick_t DGInputObject::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
     //CkPrintf("  updated location: %" PRIreal ", %" PRIreal "\n", x, y);
     event_t event;
     event.diffuse = tdrift + tdiff;
-    event.type = EVENT_CHGRATE;
+    event.type = EVENT_RATE;
     event.source = REMOTE_EDGE;
 
     // Figure out which object is going to be attended to (nearest object)

@@ -49,7 +49,7 @@ tick_t DGSynChangeRate::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& s
 //
 void DGSynChangeRate::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   // External change baseline firing rate event
-  if (event.type == EVENT_CHGRATE && event.source >= 0) {
+  if (event.type == EVENT_RATE && event.source >= 0) {
     // Change the rate on target neuron
     state[0][auxidx[0].stateidx[0]] = event.data;
   }
