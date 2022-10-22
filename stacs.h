@@ -177,11 +177,12 @@ class Main : public CBase_Main {
     /* Network */
     std::vector<dist_t> netdist;
     /* Model Information */
-    // TODO: rename to modelconfig and combine edges/vertices into a graphconfig variable
-    std::vector<model_t> models;
+    std::vector<model_t> modelconf;
     std::unordered_map<std::string, std::size_t> modmap; // maps model name to object index
     std::vector<std::string> datafiles;
     std::vector<idx_t> datatypes;
+    /* Recording */
+    std::vector<idx_t> evtloglist;
     /* Graph information */
     std::vector<vertex_t> vertices;
     std::vector<edge_t> edges;

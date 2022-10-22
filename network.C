@@ -146,17 +146,19 @@ Network::Network(mModel *msg) {
     */
   }
 
-  // Recording
+  // Logging events
   evtlog.clear();
   evtloglist.resize(EVENT_TOTAL);
+  // Always log spikes?
+  evtloglist[EVENT_SPIKE] = true;
+  for (idx_t i = 0; i < msg->nevtlog; ++i) {
+    evtloglist[msg->evtloglist[i]] = true;
+  }
+  // Recording values
   record.clear();
   recordlist.clear();
-  // TODO: Put this in the yml config file
-  // TODO: Actually, fold this into a recording model
-  //       that combines into a multi-vertex thing
-  // Record spikes
-  evtloglist[EVENT_SPIKE] = true;
-  evtloglist[EVENT_RATE] = true;
+  for (idx_t i = 0; i < msg->nrecord; ++i) {
+  }
 
   delete msg;
 

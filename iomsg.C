@@ -85,21 +85,21 @@ mModel* Main::BuildModel() {
   nsticknamestrings = 0;
   nstickinit = 0;
   nstickparam = 0;
-  for (std::size_t i = 0; i < models.size(); ++i) {
-    nmodname += models[i].modname.size();
+  for (std::size_t i = 0; i < modelconf.size(); ++i) {
+    nmodname += modelconf[i].modname.size();
     // TODO: consolidate these counters (many are duplicated)
-    nstatename += models[i].statename.size();
-    nstickname += models[i].stickname.size();
-    nstateinit += models[i].stateinit.size();
-    nstickinit += models[i].stickinit.size();
-    for (std::size_t j = 0; j < models[i].stateinit.size(); ++j) {
+    nstatename += modelconf[i].statename.size();
+    nstickname += modelconf[i].stickname.size();
+    nstateinit += modelconf[i].stateinit.size();
+    nstickinit += modelconf[i].stickinit.size();
+    for (std::size_t j = 0; j < modelconf[i].stateinit.size(); ++j) {
       // strings have an extra character for the null termination
-      nstatenamestrings += models[i].statename[j].size() + 1;
-      nstateparam += models[i].stateparam[j].size();
+      nstatenamestrings += modelconf[i].statename[j].size() + 1;
+      nstateparam += modelconf[i].stateparam[j].size();
     }
-    for (std::size_t j = 0; j < models[i].stickinit.size(); ++j) {
-      nsticknamestrings += models[i].stickname[j].size() + 1;
-      nstickparam += models[i].stickparam[j].size();
+    for (std::size_t j = 0; j < modelconf[i].stickinit.size(); ++j) {
+      nsticknamestrings += modelconf[i].stickname[j].size() + 1;
+      nstickparam += modelconf[i].stickparam[j].size();
     }
   }
   // Get total size of param
@@ -107,14 +107,14 @@ mModel* Main::BuildModel() {
   nparamnamestrings = 0;
   nparam = 0;
   nport = 0;
-  for (std::size_t i = 0; i < models.size(); ++i) {
-    nparam += models[i].param.size();
-    nparamname += models[i].paramname.size();
-    for (std::size_t j = 0; j < models[i].paramname.size(); ++j) {
-      nparamnamestrings += models[i].paramname[j].size() + 1;
+  for (std::size_t i = 0; i < modelconf.size(); ++i) {
+    nparam += modelconf[i].param.size();
+    nparamname += modelconf[i].paramname.size();
+    for (std::size_t j = 0; j < modelconf[i].paramname.size(); ++j) {
+      nparamnamestrings += modelconf[i].paramname[j].size() + 1;
     }
-    for (std::size_t j = 0; j < models[i].port.size(); ++j) {
-      nport += models[i].port[j].size() + 1;
+    for (std::size_t j = 0; j < modelconf[i].port.size(); ++j) {
+      nport += modelconf[i].port[j].size() + 1;
     }
   }
   // Get size of datafiles
@@ -125,41 +125,45 @@ mModel* Main::BuildModel() {
 
   // Initialize model message
   int msgSize[MSG_Model];
-  msgSize[0] = models.size();     // modtype
-  msgSize[1] = models.size();     // graphtype
-  msgSize[2] = models.size()+1;   // xmodname
+  msgSize[0] = modelconf.size();     // modtype
+  msgSize[1] = modelconf.size();     // graphtype
+  msgSize[2] = modelconf.size()+1;   // xmodname
   msgSize[3] = nmodname;          // modname
-  msgSize[4] = models.size();     // state
-  msgSize[5] = models.size();     // stick
-  msgSize[6] = models.size();     // param
+  msgSize[4] = modelconf.size();     // state
+  msgSize[5] = modelconf.size();     // stick
+  msgSize[6] = modelconf.size();     // param
   msgSize[7] = nstatename+1;        // xstatename
   msgSize[8] = nstickname+1;        // xstickname
   msgSize[9] = nstatenamestrings;   // statename
   msgSize[10] = nsticknamestrings;  // stickname
-  msgSize[11] = models.size()+1;   // xstateinit
-  msgSize[12] = models.size()+1;   // xstickinit
+  msgSize[11] = modelconf.size()+1;   // xstateinit
+  msgSize[12] = modelconf.size()+1;   // xstickinit
   msgSize[13] = nstateinit;        // stateinit
   msgSize[14] = nstickinit;        // stickinit
   msgSize[15] = nstateparam;       // stateparam
   msgSize[16] = nstickparam;       // stickparam
   msgSize[17] = nparamname+1;      // xparamname
   msgSize[18] = nparamnamestrings; // paramname
-  msgSize[19] = models.size()+1;   // xparam
+  msgSize[19] = modelconf.size()+1;   // xparam
   msgSize[20] = nparam;            // param
-  msgSize[21] = models.size()+1;   // xport
+  msgSize[21] = modelconf.size()+1;   // xport
   msgSize[22] = nport;             // port
   msgSize[23] = datafiles.size()+1;  // xdatafiles
   msgSize[24] = ndatafile;           // datafiles
   msgSize[25] = ndatafile;           // datatypes
-  msgSize[26] = models.size();     // grpactive
-  msgSize[27] = models.size();     // grpmother
-  msgSize[28] = models.size();     // grpanchor
+  msgSize[26] = evtloglist.size();   // evtlog
+  msgSize[26] = modelconf.size();     // grpactive
+  msgSize[27] = modelconf.size();     // grpmother
+  msgSize[28] = modelconf.size();     // grpanchor
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
-  mmodel->nmodel = models.size();
+  mmodel->nmodel = modelconf.size();
   mmodel->nstateparam = nstateparam;
   mmodel->nstickparam = nstickparam;
   mmodel->ndatafiles = datafiles.size();
+  // Recording
+  mmodel->nevtlog = evtloglist.size();
+  mmodel->nrecord = 0;
   // Configuration
   mmodel->plastic = plastic;
   mmodel->episodic = episodic;
@@ -184,99 +188,99 @@ mModel* Main::BuildModel() {
   jparamname = 0;
 
   // Copy over model information
-  for (std::size_t i = 0; i < models.size(); ++i) {
+  for (std::size_t i = 0; i < modelconf.size(); ++i) {
     // modtype
-    mmodel->modtype[i] = models[i].modtype;
+    mmodel->modtype[i] = modelconf[i].modtype;
     // graphtype
-    mmodel->graphtype[i] = models[i].graphtype;
+    mmodel->graphtype[i] = modelconf[i].graphtype;
     // xmodname
-    mmodel->xmodname[i+1] = mmodel->xmodname[i] + models[i].modname.size();
-    for (std::size_t j = 0; j < models[i].modname.size(); ++j) {
-      mmodel->modname[mmodel->xmodname[i] + j] = models[i].modname[j];
+    mmodel->xmodname[i+1] = mmodel->xmodname[i] + modelconf[i].modname.size();
+    for (std::size_t j = 0; j < modelconf[i].modname.size(); ++j) {
+      mmodel->modname[mmodel->xmodname[i] + j] = modelconf[i].modname[j];
     }
     // nstate
-    mmodel->nstate[i] = models[i].nstate;
+    mmodel->nstate[i] = modelconf[i].nstate;
     // nstick
-    mmodel->nstick[i] = models[i].nstick;
+    mmodel->nstick[i] = modelconf[i].nstick;
     // nparam
-    mmodel->nparam[i] = models[i].nparam;
+    mmodel->nparam[i] = modelconf[i].nparam;
     // xstatename
-    for (std::size_t j = 0; j < models[i].statename.size(); ++j) {
+    for (std::size_t j = 0; j < modelconf[i].statename.size(); ++j) {
       mmodel->xstatename[jstatename+1] = mmodel->xstatename[jstatename];
       // statename
-      for (std::size_t c = 0; c < models[i].statename[j].size(); ++c) {
-        mmodel->statename[mmodel->xstatename[jstatename]+c] = models[i].statename[j][c];
+      for (std::size_t c = 0; c < modelconf[i].statename[j].size(); ++c) {
+        mmodel->statename[mmodel->xstatename[jstatename]+c] = modelconf[i].statename[j][c];
       }
-      mmodel->statename[mmodel->xstatename[jstatename]+models[i].statename[j].size()] = '\0';
+      mmodel->statename[mmodel->xstatename[jstatename]+modelconf[i].statename[j].size()] = '\0';
       // xstatename update
-      mmodel->xstatename[jstatename+1] += models[i].statename[j].size() + 1;
+      mmodel->xstatename[jstatename+1] += modelconf[i].statename[j].size() + 1;
       ++jstatename;
     }
     // xstateinit
-    mmodel->xstateinit[i+1] = mmodel->xstateinit[i] + models[i].stateinit.size();
-    for (std::size_t j = 0; j < models[i].stateinit.size(); ++j) {
+    mmodel->xstateinit[i+1] = mmodel->xstateinit[i] + modelconf[i].stateinit.size();
+    for (std::size_t j = 0; j < modelconf[i].stateinit.size(); ++j) {
       // stateinit
-      mmodel->stateinit[mmodel->xstateinit[i]+j] = models[i].stateinit[j];
-      for (std::size_t s = 0; s < models[i].stateparam[j].size(); ++s) {
-        mmodel->stateparam[jstateparam++] = models[i].stateparam[j][s];
+      mmodel->stateinit[mmodel->xstateinit[i]+j] = modelconf[i].stateinit[j];
+      for (std::size_t s = 0; s < modelconf[i].stateparam[j].size(); ++s) {
+        mmodel->stateparam[jstateparam++] = modelconf[i].stateparam[j][s];
       }
     }
     // xstickname
-    for (std::size_t j = 0; j < models[i].stickname.size(); ++j) {
+    for (std::size_t j = 0; j < modelconf[i].stickname.size(); ++j) {
       mmodel->xstickname[jstickname+1] = mmodel->xstickname[jstickname];
       // stickname
-      for (std::size_t c = 0; c < models[i].stickname[j].size(); ++c) {
-        mmodel->stickname[mmodel->xstickname[jstickname]+c] = models[i].stickname[j][c];
+      for (std::size_t c = 0; c < modelconf[i].stickname[j].size(); ++c) {
+        mmodel->stickname[mmodel->xstickname[jstickname]+c] = modelconf[i].stickname[j][c];
       }
-      mmodel->stickname[mmodel->xstickname[jstickname]+models[i].stickname[j].size()] = '\0';
+      mmodel->stickname[mmodel->xstickname[jstickname]+modelconf[i].stickname[j].size()] = '\0';
       // xstickname update
-      mmodel->xstickname[jstickname+1] += models[i].stickname[j].size() + 1;
+      mmodel->xstickname[jstickname+1] += modelconf[i].stickname[j].size() + 1;
       ++jstickname;
     }
     // xstickinit
-    mmodel->xstickinit[i+1] = mmodel->xstickinit[i] + models[i].stickinit.size();
-    for (std::size_t j = 0; j < models[i].stickinit.size(); ++j) {
+    mmodel->xstickinit[i+1] = mmodel->xstickinit[i] + modelconf[i].stickinit.size();
+    for (std::size_t j = 0; j < modelconf[i].stickinit.size(); ++j) {
       // stickinit
-      mmodel->stickinit[mmodel->xstickinit[i]+j] = models[i].stickinit[j];
-      for (std::size_t s = 0; s < models[i].stickparam[j].size(); ++s) {
-        mmodel->stickparam[jstickparam++] = models[i].stickparam[j][s];
+      mmodel->stickinit[mmodel->xstickinit[i]+j] = modelconf[i].stickinit[j];
+      for (std::size_t s = 0; s < modelconf[i].stickparam[j].size(); ++s) {
+        mmodel->stickparam[jstickparam++] = modelconf[i].stickparam[j][s];
       }
     }
     // xparamname
-    for (std::size_t j = 0; j < models[i].paramname.size(); ++j) {
+    for (std::size_t j = 0; j < modelconf[i].paramname.size(); ++j) {
       mmodel->xparamname[jparamname+1] = mmodel->xparamname[jparamname];
       // paramname
-      for (std::size_t c = 0; c < models[i].paramname[j].size(); ++c) {
-        mmodel->paramname[mmodel->xparamname[jparamname]+c] = models[i].paramname[j][c];
+      for (std::size_t c = 0; c < modelconf[i].paramname[j].size(); ++c) {
+        mmodel->paramname[mmodel->xparamname[jparamname]+c] = modelconf[i].paramname[j][c];
       }
-      mmodel->paramname[mmodel->xparamname[jparamname]+models[i].paramname[j].size()] = '\0';
+      mmodel->paramname[mmodel->xparamname[jparamname]+modelconf[i].paramname[j].size()] = '\0';
       // xparamname update
-      mmodel->xparamname[jparamname+1] += models[i].paramname[j].size() + 1;
+      mmodel->xparamname[jparamname+1] += modelconf[i].paramname[j].size() + 1;
       ++jparamname;
     }
     // xparam
-    mmodel->xparam[i+1] = mmodel->xparam[i] + models[i].param.size();
-    for (std::size_t j = 0; j < models[i].param.size(); ++j) {
+    mmodel->xparam[i+1] = mmodel->xparam[i] + modelconf[i].param.size();
+    for (std::size_t j = 0; j < modelconf[i].param.size(); ++j) {
       // param
-      mmodel->param[mmodel->xparam[i]+j] = models[i].param[j];
+      mmodel->param[mmodel->xparam[i]+j] = modelconf[i].param[j];
     }
     // xport
     mmodel->xport[i+1] = mmodel->xport[i];
-    for (std::size_t j = 0; j < models[i].port.size(); ++j) {
+    for (std::size_t j = 0; j < modelconf[i].port.size(); ++j) {
       // port
-      for (std::size_t c = 0; c < models[i].port[j].size(); ++c) {
-        mmodel->port[mmodel->xport[i+1]+c] = models[i].port[j][c];
+      for (std::size_t c = 0; c < modelconf[i].port[j].size(); ++c) {
+        mmodel->port[mmodel->xport[i+1]+c] = modelconf[i].port[j][c];
       }
-      mmodel->port[mmodel->xport[i+1]+models[i].port[j].size()] = '\0';
+      mmodel->port[mmodel->xport[i+1]+modelconf[i].port[j].size()] = '\0';
       // xport
-      mmodel->xport[i+1] += models[i].port[j].size() + 1;
+      mmodel->xport[i+1] += modelconf[i].port[j].size() + 1;
     }
     // grpactive
-    mmodel->grpactive[i] = models[i].grpactive;
+    mmodel->grpactive[i] = modelconf[i].grpactive;
     // grpmother
-    mmodel->grpmother[i] = models[i].grpmother;
+    mmodel->grpmother[i] = modelconf[i].grpmother;
     // grpanchor
-    mmodel->grpanchor[i] = models[i].grpanchor;
+    mmodel->grpanchor[i] = modelconf[i].grpanchor;
   }
   CkAssert(jstatename == nstatename);
   CkAssert(jstickname == nstickname);
@@ -294,6 +298,11 @@ mModel* Main::BuildModel() {
     }
     // datatypes
     mmodel->datatypes[i] = datatypes[i];
+  }
+
+  // Recording
+  for (std::size_t i = 0; i < evtloglist.size(); ++i) {
+    mmodel->evtloglist[i] = evtloglist[i];
   }
 
   // Return model

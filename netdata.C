@@ -99,160 +99,160 @@ Netdata::Netdata(mModel *msg) {
   idx_t jstickname = 0;
 
   // Read in models
-  modeldata.resize(msg->nmodel);
-  for (std::size_t i = 0; i < modeldata.size(); ++i) {
+  modelconf.resize(msg->nmodel);
+  for (std::size_t i = 0; i < modelconf.size(); ++i) {
     // modname
-    modeldata[i].modname = std::string(msg->modname + msg->xmodname[i], msg->modname + msg->xmodname[i+1]);
+    modelconf[i].modname = std::string(msg->modname + msg->xmodname[i], msg->modname + msg->xmodname[i+1]);
     // graph type
-    modeldata[i].graphtype = msg->graphtype[i];
+    modelconf[i].graphtype = msg->graphtype[i];
     // states and param sizes (user specified)
-    modeldata[i].nstate = model[modmap[modeldata[i].modname]]->getNState();
-    modeldata[i].nstick = model[modmap[modeldata[i].modname]]->getNStick();
-    modeldata[i].nparam = model[modmap[modeldata[i].modname]]->getNParam();
+    modelconf[i].nstate = model[modmap[modelconf[i].modname]]->getNState();
+    modelconf[i].nstick = model[modmap[modelconf[i].modname]]->getNStick();
+    modelconf[i].nparam = model[modmap[modelconf[i].modname]]->getNParam();
     // names (may be in a different order than implemented model)
     // Find the mapping from user-provided state names to the implemented state names
     // Find which states were not specified (and will need model-supplied defaults)
     std::vector<idx_t> statemap;
     statemap.resize(msg->nstate[i]);
     std::vector<bool> stateconfig;
-    stateconfig.resize(modeldata[i].nstate, false);
-    modeldata[i].statename.resize(modeldata[i].nstate);
-    modeldata[i].statename = model[modmap[modeldata[i].modname]]->getStateList();
+    stateconfig.resize(modelconf[i].nstate, false);
+    modelconf[i].statename.resize(modelconf[i].nstate);
+    modelconf[i].statename = model[modmap[modelconf[i].modname]]->getStateList();
     for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
       std::string statename = std::string(msg->statename + msg->xstatename[jstatename], msg->statename + msg->xstatename[jstatename+1]);
-      statemap[j] = model[modmap[modeldata[i].modname]]->getStateIdx(statename.c_str());
+      statemap[j] = model[modmap[modelconf[i].modname]]->getStateIdx(statename.c_str());
       // some basic error checking
       if (statemap[j] == -1) {
-        CkPrintf("  state name: %s is invalid for model: %s\n", statename.c_str(), modeldata[i].modname.c_str());
+        CkPrintf("  state name: %s is invalid for model: %s\n", statename.c_str(), modelconf[i].modname.c_str());
         CkExit();
       }
       // TODO: We had set the statename earlier, so change this to error checking instead
-      modeldata[i].statename[statemap[j]] = statename;
+      modelconf[i].statename[statemap[j]] = statename;
       stateconfig[statemap[j]] = true;
       ++jstatename;
     }
     std::vector<idx_t> stickmap;
     stickmap.resize(msg->nstick[i]);
     std::vector<bool> stickconfig;
-    stickconfig.resize(modeldata[i].nstick, false);
-    modeldata[i].stickname.resize(modeldata[i].nstick);
-    modeldata[i].stickname = model[modmap[modeldata[i].modname]]->getStickList();
+    stickconfig.resize(modelconf[i].nstick, false);
+    modelconf[i].stickname.resize(modelconf[i].nstick);
+    modelconf[i].stickname = model[modmap[modelconf[i].modname]]->getStickList();
     for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
       std::string stickname = std::string(msg->stickname + msg->xstickname[jstickname], msg->stickname + msg->xstickname[jstickname+1]);
-      stickmap[j] = model[modmap[modeldata[i].modname]]->getStickIdx(stickname.c_str());
+      stickmap[j] = model[modmap[modelconf[i].modname]]->getStickIdx(stickname.c_str());
       // some basic error checking
       if (stickmap[j] == -1) {
-        CkPrintf("  state name: %s is invalid for model: %s\n", stickname.c_str(), modeldata[i].modname.c_str());
+        CkPrintf("  state name: %s is invalid for model: %s\n", stickname.c_str(), modelconf[i].modname.c_str());
         CkExit();
       }
-      modeldata[i].stickname[stickmap[j]] = stickname;
+      modelconf[i].stickname[stickmap[j]] = stickname;
       stickconfig[stickmap[j]] = true;
       ++jstickname;
     }
     // prepare containers for parameters
-    modeldata[i].stateinit.resize(modeldata[i].nstate);
-    modeldata[i].stateparam.resize(modeldata[i].nstate);
+    modelconf[i].stateinit.resize(modelconf[i].nstate);
+    modelconf[i].stateparam.resize(modelconf[i].nstate);
     for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
       // stateinit
-      modeldata[i].stateinit[statemap[j]] = msg->stateinit[msg->xstateinit[i] + j];
-      switch (modeldata[i].stateinit[statemap[j]]) {
+      modelconf[i].stateinit[statemap[j]] = msg->stateinit[msg->xstateinit[i] + j];
+      switch (modelconf[i].stateinit[statemap[j]]) {
         case RNGTYPE_CONST:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_CONST);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_CONST);
           break;
         case RNGTYPE_UNIF:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_UNIF);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_UNIF);
           break;
         case RNGTYPE_UNINT:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_UNINT);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_UNINT);
           break;
         case RNGTYPE_NORM:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_NORM);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_NORM);
           break;
         case RNGTYPE_BNORM:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_BNORM);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_BNORM);
           break;
         case RNGTYPE_LBNORM:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_LBNORM);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_LBNORM);
           break;
         case RNGTYPE_LBLOGNORM:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_LBLOGNORM);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_LBLOGNORM);
           break;
         case RNGTYPE_LIN:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_LIN);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_LIN);
           break;
         case RNGTYPE_BLIN:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_BLIN);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_BLIN);
           break;
         case RNGTYPE_FILE:
-          modeldata[i].stateparam[statemap[j]].resize(RNGPARAM_FILE);
+          modelconf[i].stateparam[statemap[j]].resize(RNGPARAM_FILE);
           break;
         default:
           CkPrintf("Error: unknown stateinit\n");
           break;
       }
-      for (std::size_t s = 0; s < modeldata[i].stateparam[statemap[j]].size(); ++s) {
-        modeldata[i].stateparam[statemap[j]][s] = msg->stateparam[jstateparam++];
+      for (std::size_t s = 0; s < modelconf[i].stateparam[statemap[j]].size(); ++s) {
+        modelconf[i].stateparam[statemap[j]][s] = msg->stateparam[jstateparam++];
       }
     }
     // prepare containers
-    modeldata[i].stickinit.resize(modeldata[i].nstick);
-    modeldata[i].stickparam.resize(modeldata[i].nstick);
+    modelconf[i].stickinit.resize(modelconf[i].nstick);
+    modelconf[i].stickparam.resize(modelconf[i].nstick);
     for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
       // stickinit
-      modeldata[i].stickinit[stickmap[j]] = msg->stickinit[msg->xstickinit[i] + j];
-      switch (modeldata[i].stickinit[stickmap[j]]) {
+      modelconf[i].stickinit[stickmap[j]] = msg->stickinit[msg->xstickinit[i] + j];
+      switch (modelconf[i].stickinit[stickmap[j]]) {
         case RNGTYPE_CONST:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_CONST);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_CONST);
           break;
         case RNGTYPE_UNIF:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_UNIF);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_UNIF);
           break;
         case RNGTYPE_UNINT:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_UNINT);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_UNINT);
           break;
         case RNGTYPE_NORM:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_NORM);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_NORM);
           break;
         case RNGTYPE_BNORM:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_BNORM);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_BNORM);
           break;
         case RNGTYPE_LBNORM:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_LBNORM);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_LBNORM);
           break;
         case RNGTYPE_LBLOGNORM:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_LBLOGNORM);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_LBLOGNORM);
           break;
         case RNGTYPE_LIN:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_LIN);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_LIN);
           break;
         case RNGTYPE_BLIN:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_BLIN);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_BLIN);
           break;
         case RNGTYPE_FILE:
-          modeldata[i].stickparam[stickmap[j]].resize(RNGPARAM_FILE);
+          modelconf[i].stickparam[stickmap[j]].resize(RNGPARAM_FILE);
           break;
         default:
           CkPrintf("Error: unknown stateinit\n");
           break;
       }
-      for (std::size_t s = 0; s < modeldata[i].stickparam[stickmap[j]].size(); ++s) {
-        modeldata[i].stickparam[stickmap[j]][s] = msg->stickparam[jstickparam++];
+      for (std::size_t s = 0; s < modelconf[i].stickparam[stickmap[j]].size(); ++s) {
+        modelconf[i].stickparam[stickmap[j]][s] = msg->stickparam[jstickparam++];
       }
     }
     // Now go through the states that weren't defined by the model config
     // These are the false entries in stateconfig
-    for (std::size_t j = 0; j < modeldata[i].nstate; ++j) {
+    for (std::size_t j = 0; j < modelconf[i].nstate; ++j) {
       if (stateconfig[j]) { continue; }
       else {
-        modeldata[i].stateinit[j] = model[modmap[modeldata[i].modname]]->getDefaultStateType(j);
-        modeldata[i].stateparam[j] = model[modmap[modeldata[i].modname]]->getDefaultStateParam(j);
+        modelconf[i].stateinit[j] = model[modmap[modelconf[i].modname]]->getDefaultStateType(j);
+        modelconf[i].stateparam[j] = model[modmap[modelconf[i].modname]]->getDefaultStateParam(j);
       }
     }
-    for (std::size_t j = 0; j < modeldata[i].nstick; ++j) {
+    for (std::size_t j = 0; j < modelconf[i].nstick; ++j) {
       if (stickconfig[j]) { continue; }
       else {
-        modeldata[i].stickinit[j] = model[modmap[modeldata[i].modname]]->getDefaultStickType(j);
-        modeldata[i].stickparam[j] = model[modmap[modeldata[i].modname]]->getDefaultStickParam(j);
+        modelconf[i].stickinit[j] = model[modmap[modelconf[i].modname]]->getDefaultStickType(j);
+        modelconf[i].stickparam[j] = model[modmap[modelconf[i].modname]]->getDefaultStickParam(j);
       }
     }
   }

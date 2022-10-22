@@ -210,7 +210,7 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 29
+#define MSG_Model 30
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;     // model index identifier
@@ -239,6 +239,7 @@ class mModel : public CMessage_mModel {
     idx_t *xdatafiles;  // prefix sum for filenames
     char *datafiles;    // filenames (concatenated)
     idx_t *datatypes;   // data filetypes
+    idx_t *evtloglist;  // event types for logging
     // TODO: remove polychron from base sim/model and create separate header/files for it
     bool *grpactive;   // polychronization (active)
     bool *grpmother;   // polychronization (mother)
@@ -247,6 +248,8 @@ class mModel : public CMessage_mModel {
     idx_t nstateparam;   // number of state generation parameters (for prefix)
     idx_t nstickparam;   // number of stick generation parameters (for prefix)
     idx_t ndatafiles;    // number of datafiles (for prefix)
+    idx_t nevtlog;      // number of events to log
+    idx_t nrecord;      // number of records to track
     bool plastic;      // toggle for plasticity
     bool episodic;     // toggle for episodic simulation
     bool loadbal;      // toggle for periodic load balancing
@@ -806,7 +809,7 @@ class Netdata : public CBase_Netdata {
     CkCallback maindist;
     /* Network Model */
     std::vector<NetModel*> model;      // collection of model objects
-    std::vector<model_t> modeldata;    // model information from config and implementation defaults
+    std::vector<model_t> modelconf;    // model information from config and implementation defaults
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     std::vector<std::string> rngtype; // rng types in order of definitions

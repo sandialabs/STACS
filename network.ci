@@ -40,6 +40,7 @@ module network {
     idx_t xdatafiles[];
     char datafiles[];
     idx_t datatypes[];
+    idx_t evtloglist[];
     bool grpactive[];
     bool grpmother[];
     bool grpanchor[];
@@ -47,6 +48,8 @@ module network {
     idx_t nstateparam;
     idx_t nstickparam;
     idx_t ndatafiles;
+    idx_t nevtlog;
+    idx_t nrecord;
     bool plastic;
     bool episodic;
     bool loadbal;
