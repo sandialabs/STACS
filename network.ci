@@ -41,6 +41,10 @@ module network {
     char datafiles[];
     idx_t datatypes[];
     idx_t evtloglist[];
+    idx_t recmodidx[];
+    tick_t rectfreq[];
+    idx_t xrecstate[];
+    char recstate[];
     bool grpactive[];
     bool grpmother[];
     bool grpanchor[];

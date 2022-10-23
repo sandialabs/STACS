@@ -111,6 +111,14 @@ struct edge_t {
   std::vector<std::vector<idx_t>> maskparam;
 };
 
+// Records
+//
+struct probe_t {
+  idx_t modidx;
+  tick_t tfreq;
+  std::string statename;
+};
+
 /**************************************************************************
 * Charm++ Messages
 **************************************************************************/
@@ -183,6 +191,7 @@ class Main : public CBase_Main {
     std::vector<idx_t> datatypes;
     /* Recording */
     std::vector<idx_t> evtloglist;
+    std::vector<probe_t> recordlist;
     /* Graph information */
     std::vector<vertex_t> vertices;
     std::vector<edge_t> edges;

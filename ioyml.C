@@ -421,40 +421,6 @@ int Main::ReadModel() {
       modelconf[jmod].graphtype = GRAPHTYPE_EDG;
     }
     else if (graphtype == "record") {
-      std::vector<std::string> evtlogstring;
-      // Events to log are presented as a list of strings
-      try {
-        evtlogstring = modfile[i]["events"].as<std::vector<std::string>>();
-      } catch (YAML::RepresentationException& e) {
-        CkPrintf("  warning: event logging not defined, defaulting to spikes only\n");
-        evtlogstring.clear();
-        evtlogstring.push_back(std::string("spike"));
-      }
-      // populate event log list
-      evtloglist.resize(evtlogstring.size());
-      for (std::size_t j = 0; j < evtlogstring.size(); ++j) {
-        if (evtlogstring[j] == "spike") {
-          evtloglist[j] = EVENT_SPIKE;
-        }
-        else if (evtlogstring[j] == "stim") {
-          evtloglist[j] = EVENT_STIM;
-        }
-        else if (evtlogstring[j] == "current") {
-          evtloglist[j] = EVENT_CURRENT;
-        }
-        else if (evtlogstring[j] == "count") {
-          evtloglist[j] = EVENT_COUNT;
-        }
-        else if (evtlogstring[j] == "clamp") {
-          evtloglist[j] = EVENT_CLAMP;
-        }
-        else if (evtlogstring[j] == "set rate") {
-          evtloglist[j] = EVENT_RATE;
-        }
-        else {
-          CkPrintf("  event type '%s' not supported for logging\n", evtlogstring[j].c_str());
-        }
-      }
       // don't add records to models
       continue;
     }
@@ -1216,6 +1182,100 @@ int Main::ReadModel() {
       CkPrintf("  Model: %d   Name: %s   Type: %d   States: %u   Params: %u   Ports:%s\n",
           i+1, modelconf[i].modname.c_str(), modelconf[i].modtype, modelconf[i].nstate + modelconf[i].nstick,
           modelconf[i].param.size(), (modelports == "") ? " None" : modelports.c_str());
+    }
+  }
+
+  // Loop through modfile again to collect metamodels (e.g. records)
+  idx_t jrec = 0;
+  evtloglist.clear();
+  recordlist.clear();
+  for (std::size_t i = 0; i < modfile.size(); ++i) {
+    // graph type
+    std::string graphtype;
+    try {
+      // type
+      graphtype = modfile[i]["type"].as<std::string>();
+    } catch (YAML::RepresentationException& e) {
+      CkPrintf("  type: %s\n", e.what());
+      return 1;
+    }
+    if (graphtype == "record") {
+      std::vector<std::string> evtlogstring;
+      // Events to log are presented as a list of strings
+      try {
+        evtlogstring = modfile[i]["events"].as<std::vector<std::string>>();
+      } catch (YAML::RepresentationException& e) {
+        // Do nothing
+      }
+      if (evtlogstring.size()) {
+        // check if already defined
+        if (evtloglist.size()) {
+          CkPrintf("  warning: event logging already defined\n");
+        }
+        // TODO: allow these to be recorded w.r.t. modname too
+        // populate event log list
+        evtloglist.resize(evtlogstring.size());
+        for (std::size_t j = 0; j < evtlogstring.size(); ++j) {
+          if (evtlogstring[j] == "spike") {
+            evtloglist[j] = EVENT_SPIKE;
+          }
+          else if (evtlogstring[j] == "stim") {
+            evtloglist[j] = EVENT_STIM;
+          }
+          else if (evtlogstring[j] == "current") {
+            evtloglist[j] = EVENT_CURRENT;
+          }
+          else if (evtlogstring[j] == "count") {
+            evtloglist[j] = EVENT_COUNT;
+          }
+          else if (evtlogstring[j] == "clamp") {
+            evtloglist[j] = EVENT_CLAMP;
+          }
+          else if (evtlogstring[j] == "set rate") {
+            evtloglist[j] = EVENT_RATE;
+          }
+          else {
+            CkPrintf("  event type '%s' not supported for logging\n", evtlogstring[j].c_str());
+          }
+        }
+      }
+      // Record tracking (state, stick, coord) w.r.t. modname
+      YAML::Node probe = modfile[i]["probes"];
+      for (std::size_t j = 0; j < probe.size(); ++j) {
+        recordlist.push_back(probe_t());
+        // recording interval
+        real_t treal;
+        try {
+          treal= probe[j]["tfreq"].as<real_t>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  recording interval (tfreq): %s\n", e.what());
+          return 1;
+        }
+        recordlist[jrec].tfreq = (tick_t)(treal*TICKS_PER_MS);
+        // modname
+        std::string name;
+        try {
+          name = probe[j]["modname"].as<std::string>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  recording model name: %s\n", e.what());
+          return 1;
+        }
+        // convert modname to modidx
+        if (modmap.find(name) == modmap.end()) {
+          CkPrintf("  error: model %s not defined\n", name.c_str());
+          return 1;
+        } else {
+          recordlist[jrec].modidx = modmap[name];
+        }
+        // states to track
+        try {
+          recordlist[jrec].statename = probe[j]["state"].as<std::string>();
+        } catch (YAML::RepresentationException& e) {
+          CkPrintf("  recording model state: %s\n", e.what());
+          return 1;
+        }
+        ++jrec;
+      }
     }
   }
 

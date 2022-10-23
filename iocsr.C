@@ -754,11 +754,11 @@ void Netdata::WriteRecord() {
           (records[k]->xdata[r+1] - records[k]->xdata[r]),
           (records[k]->xdiffuse[r+1] - records[k]->xdiffuse[r]),
           (records[k]->xindex[r+1] - records[k]->xindex[r]));
-      // real data
+      // real data (states)
       for (idx_t s = records[k]->xdata[r]; s < records[k]->xdata[r+1]; ++s) {
         fprintf(pRecord, " %" PRIrealfull "", records[k]->data[s]);
       }
-      // tick data
+      // tick data (sticks)
       for (idx_t s = records[k]->xdiffuse[r]; s < records[k]->xdiffuse[r+1]; ++s) {
         fprintf(pRecord, " %" PRItickhex "", records[k]->diffuse[s]);
       }

@@ -74,6 +74,7 @@ mModel* Main::BuildModel() {
   idx_t nparam;
   idx_t nport;
   idx_t ndatafile;
+  idx_t nrecstatestrings;
 
   // Get total name sizes
   nmodname = 0;
@@ -122,6 +123,11 @@ mModel* Main::BuildModel() {
   for (std::size_t i = 0; i < datafiles.size(); ++i) {
     ndatafile += datafiles[i].size();
   }
+  // Get size of records
+  nrecstatestrings = 0;
+  for (std::size_t i = 0; i < recordlist.size(); ++i) {
+    nrecstatestrings += recordlist[i].statename.size();
+  }
 
   // Initialize model message
   int msgSize[MSG_Model];
@@ -152,9 +158,13 @@ mModel* Main::BuildModel() {
   msgSize[24] = ndatafile;           // datafiles
   msgSize[25] = ndatafile;           // datatypes
   msgSize[26] = evtloglist.size();   // evtlog
-  msgSize[26] = modelconf.size();     // grpactive
-  msgSize[27] = modelconf.size();     // grpmother
-  msgSize[28] = modelconf.size();     // grpanchor
+  msgSize[27] = recordlist.size();   // recmodidx
+  msgSize[28] = recordlist.size();   // rectfreq
+  msgSize[29] = recordlist.size()+1; // xrecstate
+  msgSize[30] = nrecstatestrings;    // recstate
+  msgSize[31] = modelconf.size();     // grpactive
+  msgSize[32] = modelconf.size();     // grpmother
+  msgSize[33] = modelconf.size();     // grpanchor
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = modelconf.size();
@@ -163,7 +173,7 @@ mModel* Main::BuildModel() {
   mmodel->ndatafiles = datafiles.size();
   // Recording
   mmodel->nevtlog = evtloglist.size();
-  mmodel->nrecord = 0;
+  mmodel->nrecord = recordlist.size();
   // Configuration
   mmodel->plastic = plastic;
   mmodel->episodic = episodic;
@@ -179,6 +189,7 @@ mModel* Main::BuildModel() {
   mmodel->xparam[0] = 0;
   mmodel->xport[0] = 0;
   mmodel->xdatafiles[0] = 0;
+  mmodel->xrecstate[0] = 0;
 
   // Set up counters
   jstateparam = 0;
@@ -303,6 +314,14 @@ mModel* Main::BuildModel() {
   // Recording
   for (std::size_t i = 0; i < evtloglist.size(); ++i) {
     mmodel->evtloglist[i] = evtloglist[i];
+  }
+  for (std::size_t i = 0; i < recordlist.size(); ++i) {
+    mmodel->recmodidx[i] = recordlist[i].modidx;
+    mmodel->rectfreq[i] = recordlist[i].tfreq;
+    mmodel->xrecstate[i+1] = mmodel->xrecstate[i] + recordlist[i].statename.size();
+    for (std::size_t j = 0; j < recordlist[i].statename.size(); ++j) {
+      mmodel->recstate[mmodel->xrecstate[i] + j] = recordlist[i].statename[j];
+    }
   }
 
   // Return model

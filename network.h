@@ -100,10 +100,10 @@ struct event_t {
 // Records
 //
 struct record_t {
-  tick_t drift;
-  idx_t type;
-  std::vector<real_t> data;
-  std::vector<tick_t> diffuse;
+  idx_t recidx;
+  tick_t trec;
+  std::vector<real_t> state;
+  std::vector<tick_t> stick;
   std::vector<idx_t> index;
 };
 
@@ -112,10 +112,11 @@ struct record_t {
 struct track_t {
   tick_t trec;
   tick_t tfreq;
-  std::vector<idx_t> type;
-  std::vector<idx_t> index;
-  std::vector<idx_t> model;
-  std::vector<idx_t> value;
+  idx_t rectype;
+  idx_t recsttidx;
+  // indices of where tracked state is
+  std::vector<idx_t> recvtxidx;
+  std::vector<std::vector<idx_t>> recedgidx;
 };
 
 // Spike-timing events (for Groups)
@@ -210,7 +211,7 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 30
+#define MSG_Model 34
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;     // model index identifier
@@ -240,6 +241,10 @@ class mModel : public CMessage_mModel {
     char *datafiles;    // filenames (concatenated)
     idx_t *datatypes;   // data filetypes
     idx_t *evtloglist;  // event types for logging
+    idx_t *recmodidx;    // model to record from
+    tick_t *rectfreq;    // record interval
+    idx_t *xrecstate;    // state names prefix
+    char *recstate;      // state names of model to record
     // TODO: remove polychron from base sim/model and create separate header/files for it
     bool *grpactive;   // polychronization (active)
     bool *grpmother;   // polychronization (mother)
