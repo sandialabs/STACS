@@ -33,15 +33,15 @@ void Network::AddRecord() {
       // add data accordingly
       if (recordlist[r].rectype == RECORD_STATE) {
         for (std::size_t i = 0; i < recordlist[r].recvtxidx.size(); ++i) {
-          for (std::size_t j = 0; j < recordlist[r].recedgidx[i].size(); ++j) {
-            record.back().state.push_back(state[recordlist[r].recvtxidx[i]][recordlist[r].recedgidx[i][j]][recordlist[r].recsttidx]);
+          for (std::size_t j = 0; j < recordlist[r].recedgidx[recordlist[r].recvtxidx[i]].size(); ++j) {
+            record.back().state.push_back(state[recordlist[r].recvtxidx[i]][recordlist[r].recedgidx[recordlist[r].recvtxidx[i]][j]][recordlist[r].recsttidx]);
           }
         }
       }
-      else if (recordlist[r].rectype == RECORD_STATE) {
+      else if (recordlist[r].rectype == RECORD_STICK) {
         for (std::size_t i = 0; i < recordlist[r].recvtxidx.size(); ++i) {
-          for (std::size_t j = 0; j < recordlist[r].recedgidx[i].size(); ++j) {
-            record.back().stick.push_back(stick[recordlist[r].recvtxidx[i]][recordlist[r].recedgidx[i][j]][recordlist[r].recsttidx]);
+          for (std::size_t j = 0; j < recordlist[r].recedgidx[recordlist[r].recvtxidx[i]].size(); ++j) {
+            record.back().stick.push_back(stick[recordlist[r].recvtxidx[i]][recordlist[r].recedgidx[recordlist[r].recvtxidx[i]][j]][recordlist[r].recsttidx]);
           }
         }
       }

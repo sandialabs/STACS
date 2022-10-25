@@ -113,6 +113,7 @@ struct track_t {
   tick_t trec;
   tick_t tfreq;
   idx_t rectype;
+  idx_t recmodidx;
   idx_t recsttidx;
   // indices of where tracked state is
   std::vector<idx_t> recvtxidx;
@@ -1000,6 +1001,7 @@ class Network : public CBase_Network {
     std::vector<bool> evtloglist; // types of events to log
     std::vector<record_t> record; // record keeping
     std::vector<track_t> recordlist; // what to record
+    std::vector<std::set<idx_t>> recordmodset;
     /* Polychronization */
     std::vector<std::vector<std::vector<stamp_t>>> grpstamps; // Groups per vertex (as mother)
     std::vector<std::vector<tick_t>> grpdur; // Group duration per vertex (as mother)
