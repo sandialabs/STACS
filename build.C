@@ -327,59 +327,59 @@ void Netdata::Build(mGraph *msg) {
     // 0 is reserved for 'none' edge type
     CkAssert(vtxmodidx[i] > 0);
     idx_t modidx = vtxmodidx[i] - 1;
-    CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_VTX || modeldata[modidx].graphtype == GRAPHTYPE_STR);
+    CkAssert(modelconf[modidx].graphtype == GRAPHTYPE_VTX || modelconf[modidx].graphtype == GRAPHTYPE_STR);
     // Allocate space for states
     std::vector<real_t> rngstate;
     std::vector<tick_t> rngstick;
-    rngstate.resize(modeldata[modidx].stateinit.size());
-    rngstick.resize(modeldata[modidx].stickinit.size());
+    rngstate.resize(modelconf[modidx].stateinit.size());
+    rngstick.resize(modelconf[modidx].stickinit.size());
     // Randomly generate state
-    for (std::size_t s = 0; s < modeldata[modidx].stateinit.size(); ++s) {
-      if (modeldata[modidx].stateinit[s] == RNGTYPE_CONST) {
-        rngstate[s] = rngconst(modeldata[modidx].stateparam[s].data());
+    for (std::size_t s = 0; s < modelconf[modidx].stateinit.size(); ++s) {
+      if (modelconf[modidx].stateinit[s] == RNGTYPE_CONST) {
+        rngstate[s] = rngconst(modelconf[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].stateinit[s] == RNGTYPE_UNIF) {
-        rngstate[s] = rngunif(modeldata[modidx].stateparam[s].data());
+      else if (modelconf[modidx].stateinit[s] == RNGTYPE_UNIF) {
+        rngstate[s] = rngunif(modelconf[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].stateinit[s] == RNGTYPE_UNINT) {
-        rngstate[s] = rngunint(modeldata[modidx].stateparam[s].data());
+      else if (modelconf[modidx].stateinit[s] == RNGTYPE_UNINT) {
+        rngstate[s] = rngunint(modelconf[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].stateinit[s] == RNGTYPE_NORM) {
-        rngstate[s] = rngnorm(modeldata[modidx].stateparam[s].data());
+      else if (modelconf[modidx].stateinit[s] == RNGTYPE_NORM) {
+        rngstate[s] = rngnorm(modelconf[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].stateinit[s] == RNGTYPE_BNORM) {
-        rngstate[s] = rngbnorm(modeldata[modidx].stateparam[s].data());
+      else if (modelconf[modidx].stateinit[s] == RNGTYPE_BNORM) {
+        rngstate[s] = rngbnorm(modelconf[modidx].stateparam[s].data());
       }
-      else if (modeldata[modidx].stateinit[s] == RNGTYPE_FILE) {
-        rngstate[s] = rngfile(modeldata[modidx].stateparam[s].data(), 0, vtxordidx[i]);
+      else if (modelconf[modidx].stateinit[s] == RNGTYPE_FILE) {
+        rngstate[s] = rngfile(modelconf[modidx].stateparam[s].data(), 0, vtxordidx[i]);
       }
       else {
-        CkPrintf("  error: stateinit %s is not valid for vertex\n", rngtype[modeldata[modidx].stateinit[s]].c_str());
+        CkPrintf("  error: stateinit %s is not valid for vertex\n", rngtype[modelconf[modidx].stateinit[s]].c_str());
         CkExit();
       }
     }
     // Randomly generate stick
-    for (std::size_t s = 0; s < modeldata[modidx].stickinit.size(); ++s) {
-      if (modeldata[modidx].stickinit[s] == RNGTYPE_CONST) {
-        rngstick[s] = (tick_t)(TICKS_PER_MS * rngconst(modeldata[modidx].stickparam[s].data()));
+    for (std::size_t s = 0; s < modelconf[modidx].stickinit.size(); ++s) {
+      if (modelconf[modidx].stickinit[s] == RNGTYPE_CONST) {
+        rngstick[s] = (tick_t)(TICKS_PER_MS * rngconst(modelconf[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].stickinit[s] == RNGTYPE_UNIF) {
-        rngstick[s] = (tick_t)(TICKS_PER_MS * rngunif(modeldata[modidx].stickparam[s].data()));
+      else if (modelconf[modidx].stickinit[s] == RNGTYPE_UNIF) {
+        rngstick[s] = (tick_t)(TICKS_PER_MS * rngunif(modelconf[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].stickinit[s] == RNGTYPE_UNINT) {
-        rngstick[s] = (tick_t)(TICKS_PER_MS * rngunint(modeldata[modidx].stickparam[s].data()));
+      else if (modelconf[modidx].stickinit[s] == RNGTYPE_UNINT) {
+        rngstick[s] = (tick_t)(TICKS_PER_MS * rngunint(modelconf[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].stickinit[s] == RNGTYPE_NORM) {
-        rngstick[s] = (tick_t)(TICKS_PER_MS * rngnorm(modeldata[modidx].stickparam[s].data()));
+      else if (modelconf[modidx].stickinit[s] == RNGTYPE_NORM) {
+        rngstick[s] = (tick_t)(TICKS_PER_MS * rngnorm(modelconf[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].stickinit[s] == RNGTYPE_BNORM) {
-        rngstick[s] = (tick_t)(TICKS_PER_MS * rngbnorm(modeldata[modidx].stickparam[s].data()));
+      else if (modelconf[modidx].stickinit[s] == RNGTYPE_BNORM) {
+        rngstick[s] = (tick_t)(TICKS_PER_MS * rngbnorm(modelconf[modidx].stickparam[s].data()));
       }
-      else if (modeldata[modidx].stickinit[s] == RNGTYPE_FILE) {
-        rngstick[s] = (tick_t)(TICKS_PER_MS * rngfile(modeldata[modidx].stickparam[s].data(), 0, vtxordidx[i]));
+      else if (modelconf[modidx].stickinit[s] == RNGTYPE_FILE) {
+        rngstick[s] = (tick_t)(TICKS_PER_MS * rngfile(modelconf[modidx].stickparam[s].data(), 0, vtxordidx[i]));
       }
       else {
-        CkPrintf("  error: stateinit %s is not valid for vertex\n", rngtype[modeldata[modidx].stickinit[s]].c_str());
+        CkPrintf("  error: stateinit %s is not valid for vertex\n", rngtype[modelconf[modidx].stickinit[s]].c_str());
         CkExit();
       }
     }
@@ -922,47 +922,47 @@ std::vector<real_t> Netdata::BuildEdgState(idx_t modidx, real_t dist, idx_t sour
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
   --modidx;
-  CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
+  CkAssert(modelconf[modidx].graphtype == GRAPHTYPE_EDG);
   // Allocate space for states
   std::vector<real_t> rngstate;
-  rngstate.resize(modeldata[modidx].stateinit.size());
+  rngstate.resize(modelconf[modidx].stateinit.size());
   // Randomly generate state
   for (std::size_t j = 0; j < rngstate.size(); ++j) {
-    if (modeldata[modidx].stateinit[j] == RNGTYPE_CONST) {
-      rngstate[j] = rngconst(modeldata[modidx].stateparam[j].data());
+    if (modelconf[modidx].stateinit[j] == RNGTYPE_CONST) {
+      rngstate[j] = rngconst(modelconf[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_UNIF) {
-      rngstate[j] = rngunif(modeldata[modidx].stateparam[j].data());
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_UNIF) {
+      rngstate[j] = rngunif(modelconf[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_UNINT) {
-      rngstate[j] = rngunint(modeldata[modidx].stateparam[j].data());
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_UNINT) {
+      rngstate[j] = rngunint(modelconf[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_NORM) {
-      rngstate[j] = rngnorm(modeldata[modidx].stateparam[j].data());
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_NORM) {
+      rngstate[j] = rngnorm(modelconf[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_BNORM) {
-      rngstate[j] = rngbnorm(modeldata[modidx].stateparam[j].data());
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_BNORM) {
+      rngstate[j] = rngbnorm(modelconf[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBNORM) {
-      rngstate[j] = rnglbnorm(modeldata[modidx].stateparam[j].data());
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_LBNORM) {
+      rngstate[j] = rnglbnorm(modelconf[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBLOGNORM) {
-      rngstate[j] = rnglblognorm(modeldata[modidx].stateparam[j].data());
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_LBLOGNORM) {
+      rngstate[j] = rnglblognorm(modelconf[modidx].stateparam[j].data());
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LIN) {
-      rngstate[j] = rnglin(modeldata[modidx].stateparam[j].data(), dist);
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_LIN) {
+      rngstate[j] = rnglin(modelconf[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBLIN) {
-      rngstate[j] = rnglblin(modeldata[modidx].stateparam[j].data(), dist);
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_LBLIN) {
+      rngstate[j] = rnglblin(modelconf[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_BLIN) {
-      rngstate[j] = rngblin(modeldata[modidx].stateparam[j].data(), dist);
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_BLIN) {
+      rngstate[j] = rngblin(modelconf[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_FILE) {
-      rngstate[j] = rngfile(modeldata[modidx].stateparam[j].data(), sourceidx, targetidx);
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_FILE) {
+      rngstate[j] = rngfile(modelconf[modidx].stateparam[j].data(), sourceidx, targetidx);
     }
     else {
-      CkPrintf("  error: stateinit %s is not valid for edge\n", rngtype[modeldata[modidx].stateinit[j]].c_str());
+      CkPrintf("  error: stateinit %s is not valid for edge\n", rngtype[modelconf[modidx].stateinit[j]].c_str());
       CkExit();
     }
   }
@@ -977,47 +977,47 @@ std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
   --modidx;
-  CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
+  CkAssert(modelconf[modidx].graphtype == GRAPHTYPE_EDG);
   // Allocate space for sticks
   std::vector<tick_t> rngstick;
-  rngstick.resize(modeldata[modidx].stickinit.size());
+  rngstick.resize(modelconf[modidx].stickinit.size());
   // Randomly generate stick
   for (std::size_t j = 0; j < rngstick.size(); ++j) {
-    if (modeldata[modidx].stickinit[j] == RNGTYPE_CONST) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rngconst(modeldata[modidx].stickparam[j].data()));
+    if (modelconf[modidx].stickinit[j] == RNGTYPE_CONST) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngconst(modelconf[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_UNIF) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rngunif(modeldata[modidx].stickparam[j].data()));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_UNIF) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngunif(modelconf[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_UNINT) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rngunint(modeldata[modidx].stickparam[j].data()));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_UNINT) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngunint(modelconf[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_NORM) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rngnorm(modeldata[modidx].stickparam[j].data()));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_NORM) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngnorm(modelconf[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_BNORM) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rngbnorm(modeldata[modidx].stickparam[j].data()));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_BNORM) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngbnorm(modelconf[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_LBNORM) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglbnorm(modeldata[modidx].stickparam[j].data()));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_LBNORM) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglbnorm(modelconf[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBLOGNORM) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblognorm(modeldata[modidx].stickparam[j].data()));
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_LBLOGNORM) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblognorm(modelconf[modidx].stickparam[j].data()));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_LIN) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglin(modeldata[modidx].stickparam[j].data(), dist));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_LIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglin(modelconf[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_LBLIN) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblin(modeldata[modidx].stickparam[j].data(), dist));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_LBLIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblin(modelconf[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_BLIN) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rngblin(modeldata[modidx].stickparam[j].data(), dist));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_BLIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngblin(modelconf[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_FILE) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rngfile(modeldata[modidx].stickparam[j].data(), sourceidx, targetidx));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_FILE) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngfile(modelconf[modidx].stickparam[j].data(), sourceidx, targetidx));
     }
     else {
-      CkPrintf("  error: stateinit %s is not valid for edge\n", rngtype[modeldata[modidx].stickinit[j]].c_str());
+      CkPrintf("  error: stateinit %s is not valid for edge\n", rngtype[modelconf[modidx].stickinit[j]].c_str());
       CkExit();
     }
   }
@@ -1037,17 +1037,17 @@ void Netdata::ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rn
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
   --modidx;
-  CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
+  CkAssert(modelconf[modidx].graphtype == GRAPHTYPE_EDG);
   // Randomly generate state
   for (std::size_t j = 0; j < rngstate.size(); ++j) {
-    if (modeldata[modidx].stateinit[j] == RNGTYPE_LIN) {
-      rngstate[j] = rnglin(modeldata[modidx].stateparam[j].data(), dist);
+    if (modelconf[modidx].stateinit[j] == RNGTYPE_LIN) {
+      rngstate[j] = rnglin(modelconf[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_LBLIN) {
-      rngstate[j] = rnglblin(modeldata[modidx].stateparam[j].data(), dist);
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_LBLIN) {
+      rngstate[j] = rnglblin(modelconf[modidx].stateparam[j].data(), dist);
     }
-    else if (modeldata[modidx].stateinit[j] == RNGTYPE_BLIN) {
-      rngstate[j] = rngblin(modeldata[modidx].stateparam[j].data(), dist);
+    else if (modelconf[modidx].stateinit[j] == RNGTYPE_BLIN) {
+      rngstate[j] = rngblin(modelconf[modidx].stateparam[j].data(), dist);
     }
   }
 }
@@ -1059,17 +1059,17 @@ void Netdata::ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rn
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
   --modidx;
-  CkAssert(modeldata[modidx].graphtype == GRAPHTYPE_EDG);
+  CkAssert(modelconf[modidx].graphtype == GRAPHTYPE_EDG);
   // Randomly generate stick
   for (std::size_t j = 0; j < rngstick.size(); ++j) {
-    if (modeldata[modidx].stickinit[j] == RNGTYPE_LIN) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglin(modeldata[modidx].stickparam[j].data(), dist));
+    if (modelconf[modidx].stickinit[j] == RNGTYPE_LIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglin(modelconf[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_LBLIN) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblin(modeldata[modidx].stickparam[j].data(), dist));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_LBLIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblin(modelconf[modidx].stickparam[j].data(), dist));
     }
-    else if (modeldata[modidx].stickinit[j] == RNGTYPE_BLIN) {
-      rngstick[j] = (tick_t)(TICKS_PER_MS * rngblin(modeldata[modidx].stickparam[j].data(), dist));
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_BLIN) {
+      rngstick[j] = (tick_t)(TICKS_PER_MS * rngblin(modelconf[modidx].stickparam[j].data(), dist));
     }
   }
 }

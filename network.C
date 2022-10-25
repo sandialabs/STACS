@@ -146,17 +146,45 @@ Network::Network(mModel *msg) {
     */
   }
 
-  // Recording
+  // Logging events
   evtlog.clear();
   evtloglist.resize(EVENT_TOTAL);
+  // Always log spikes?
+  evtloglist[EVENT_SPIKE] = true;
+  for (idx_t i = 0; i < msg->nevtlog; ++i) {
+    evtloglist[msg->evtloglist[i]] = true;
+  }
+  // Recording values
   record.clear();
   recordlist.clear();
-  // TODO: Put this in the yml config file
-  // TODO: Actually, fold this into a recording model
-  //       that combines into a multi-vertex thing
-  // Record spikes
-  evtloglist[EVENT_SPIKE] = true;
-  evtloglist[EVENT_RATE] = true;
+  recordmodset.resize(model.size());
+  for (idx_t i = 0; i < model.size(); ++i) {
+    recordmodset[i].clear();
+  }
+  for (idx_t r = 0; r < msg->nrecord; ++r) {
+    recordlist.push_back(track_t());
+    recordlist[r].trec = 0;
+    recordlist[r].tfreq = msg->rectfreq[r];
+    recordlist[r].recmodidx = msg->recmodidx[r];
+    recordmodset[msg->recmodidx[r]].insert(r);
+    // Get the state/stick indices
+    std::string statename = std::string(msg->recstate + msg->xrecstate[r], msg->xrecstate[r+1] - msg->xrecstate[r]);
+    idx_t sttidx = model[msg->recmodidx[r]]->getStateIdx(statename);
+    if (sttidx >= 0) {
+      recordlist[r].rectype = RECORD_STATE;
+      recordlist[r].recsttidx = sttidx;
+    } else {
+      sttidx = model[msg->recmodidx[r]]->getStickIdx(statename);
+      if (sttidx >= 0) {
+        recordlist[r].rectype = RECORD_STICK;
+        recordlist[r].recsttidx = sttidx;
+      } else {
+        CkPrintf("  error: state name %s not valid for model %" PRIidx "\n", statename.c_str(), msg->recmodidx[r]);
+        CkExit();
+      }
+    }
+    // determining vertices will have to wait until models are loaded
+  }
 
   delete msg;
 
@@ -388,6 +416,44 @@ void Network::LoadNetwork(mPart *msg) {
   CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjpart: %" PRIidx "\n",
            prtidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
 
+  // Set up recording
+  // Header information (vtx/edg corresponding to data)
+  for (idx_t r = 0; r < recordlist.size(); ++r) {
+    record.push_back(record_t());
+    record.back().recidx = r;
+    record.back().trec = 0;
+    record.back().state.clear();
+    record.back().stick.clear();
+    record.back().index.clear();
+    recordlist[r].recvtxidx.clear();
+    recordlist[r].recedgidx.resize(vtxmodidx.size());
+    for (idx_t i = 0; i < vtxmodidx.size(); ++i) {
+      recordlist[r].recedgidx[i].clear();
+    }
+  }
+  // Populate recording indices
+  std::set<idx_t>::iterator jrec;
+  for (idx_t i = 0; i < vtxmodidx.size(); ++i) {
+    // vertices
+    for (jrec = recordmodset[vtxmodidx[i]].begin(); jrec != recordmodset[vtxmodidx[i]].end(); ++jrec) {
+      recordlist[*jrec].recvtxidx.push_back(i);
+      recordlist[*jrec].recedgidx[i].push_back(0);
+      record[*jrec].index.push_back(i);
+      record[*jrec].index.push_back(0);
+    }
+    // edges
+    for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+      for (jrec = recordmodset[edgmodidx[i][j]].begin(); jrec != recordmodset[edgmodidx[i][j]].end(); ++jrec) {
+        if (recordlist[*jrec].recvtxidx.size() == 0 || recordlist[*jrec].recvtxidx.back() != i) {
+          recordlist[*jrec].recvtxidx.push_back(i);
+        }
+        recordlist[*jrec].recedgidx[i].push_back(j+1);
+        record[*jrec].index.push_back(i);
+        record[*jrec].index.push_back(j+1);
+      }
+    }
+  }
+
   // Set up timing
   tsim = 0;
   iter = 0;
@@ -554,6 +620,44 @@ void Network::ReloadNetwork(mPart *msg) {
   // Print some information
   CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjpart: %" PRIidx "\n",
            prtidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
+  
+  // Re-set up recording
+  // Header information (vtx/edg corresponding to data)
+  for (idx_t r = 0; r < recordlist.size(); ++r) {
+    record.push_back(record_t());
+    record.back().recidx = r;
+    record.back().trec = 0;
+    record.back().state.clear();
+    record.back().stick.clear();
+    record.back().index.clear();
+    recordlist[r].recvtxidx.clear();
+    recordlist[r].recedgidx.resize(vtxmodidx.size());
+    for (idx_t i = 0; i < vtxmodidx.size(); ++i) {
+      recordlist[r].recedgidx[i].clear();
+    }
+  }
+  // Populate recording indices
+  std::set<idx_t>::iterator jrec;
+  for (idx_t i = 0; i < vtxmodidx.size(); ++i) {
+    // vertices
+    for (jrec = recordmodset[vtxmodidx[i]].begin(); jrec != recordmodset[vtxmodidx[i]].end(); ++jrec) {
+      recordlist[*jrec].recvtxidx.push_back(i);
+      recordlist[*jrec].recedgidx[i].push_back(0);
+      record[*jrec].index.push_back(i);
+      record[*jrec].index.push_back(0);
+    }
+    // edges
+    for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+      for (jrec = recordmodset[edgmodidx[i][j]].begin(); jrec != recordmodset[edgmodidx[i][j]].end(); ++jrec) {
+        if (recordlist[*jrec].recvtxidx.size() == 0 || recordlist[*jrec].recvtxidx.back() != i) {
+          recordlist[*jrec].recvtxidx.push_back(i);
+        }
+        recordlist[*jrec].recedgidx[i].push_back(j+1);
+        record[*jrec].index.push_back(i);
+        record[*jrec].index.push_back(j+1);
+      }
+    }
+  }
 
   // Return control to main
   contribute(0, NULL, CkReduction::nop);

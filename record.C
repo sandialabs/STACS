@@ -25,23 +25,33 @@ void Network::AddRecord() {
       recordlist[r].trec = tsim + recordlist[r].tfreq;
       // record time
       record.push_back(record_t());
-      record.back().drift = tsim;
-      // TODO: better record tracking options and through configuration file
-      record.back().type = r;
+      record.back().recidx = r;
+      record.back().trec = tsim;
+      record.back().state.clear();
+      record.back().stick.clear();
+      record.back().index.clear();
       // add data accordingly
-      for (std::size_t i = 0; i < recordlist[r].index.size(); ++i) {
-        if (recordlist[r].type[i] == RECORD_STATE) {
-          record.back().data.push_back(state[recordlist[r].index[i]][recordlist[r].model[i]][recordlist[r].value[i]]);
-        }
-        else if (recordlist[r].type[i] == RECORD_STICK) {
-          record.back().diffuse.push_back(stick[recordlist[r].index[i]][recordlist[r].model[i]][recordlist[r].value[i]]);
-        }
-        else if (recordlist[r].type[i] == RECORD_COORD) {
-          record.back().data.push_back(xyz[recordlist[r].index[i]*3+0]);
-          record.back().data.push_back(xyz[recordlist[r].index[i]*3+1]);
-          record.back().data.push_back(xyz[recordlist[r].index[i]*3+2]);
+      if (recordlist[r].rectype == RECORD_STATE) {
+        for (std::size_t i = 0; i < recordlist[r].recvtxidx.size(); ++i) {
+          for (std::size_t j = 0; j < recordlist[r].recedgidx[recordlist[r].recvtxidx[i]].size(); ++j) {
+            record.back().state.push_back(state[recordlist[r].recvtxidx[i]][recordlist[r].recedgidx[recordlist[r].recvtxidx[i]][j]][recordlist[r].recsttidx]);
+          }
         }
       }
+      else if (recordlist[r].rectype == RECORD_STICK) {
+        for (std::size_t i = 0; i < recordlist[r].recvtxidx.size(); ++i) {
+          for (std::size_t j = 0; j < recordlist[r].recedgidx[recordlist[r].recvtxidx[i]].size(); ++j) {
+            record.back().stick.push_back(stick[recordlist[r].recvtxidx[i]][recordlist[r].recedgidx[recordlist[r].recvtxidx[i]][j]][recordlist[r].recsttidx]);
+          }
+        }
+      }
+      /*
+      else if (recordlist[r].rectype == RECORD_COORD) {
+        record.back().data.push_back(xyz[recordlist[r].index[i]*3+0]);
+        record.back().data.push_back(xyz[recordlist[r].index[i]*3+1]);
+        record.back().data.push_back(xyz[recordlist[r].index[i]*3+2]);
+      }
+      */
     }
   }
 }
@@ -130,8 +140,8 @@ mRecord* Network::BuildRecord() {
 
   // Count data points
   for (std::size_t i = 0; i < record.size(); ++i) {
-    ndata += record[i].data.size();
-    ndiffuse += record[i].diffuse.size();
+    ndata += record[i].state.size();
+    ndiffuse += record[i].stick.size();
     nindex += record[i].index.size();
   }
 
@@ -173,17 +183,17 @@ mRecord* Network::BuildRecord() {
 
   // Pack record information
   for (std::size_t i = 0; i < record.size(); ++i) {
-    mrecord->drift[i] = record[i].drift;
-    mrecord->type[evtlog.size()+i] = record[i].type;
+    mrecord->drift[i] = record[i].trec;
+    mrecord->type[evtlog.size()+i] = record[i].recidx;
     // data
-    mrecord->xdata[i+1] = mrecord->xdata[i] + record[i].data.size();
-    for (std::size_t j = 0; j < record[i].data.size(); ++j) {
-      mrecord->data[jdata++] = record[i].data[j];
+    mrecord->xdata[i+1] = mrecord->xdata[i] + record[i].state.size();
+    for (std::size_t j = 0; j < record[i].state.size(); ++j) {
+      mrecord->data[jdata++] = record[i].state[j];
     }
     // diffuse
-    mrecord->xdiffuse[i+1] = mrecord->xdiffuse[i] + record[i].diffuse.size();
-    for (std::size_t j = 0; j < record[i].diffuse.size(); ++j) {
-      mrecord->diffuse[jdiffuse++] = record[i].diffuse[j];
+    mrecord->xdiffuse[i+1] = mrecord->xdiffuse[i] + record[i].stick.size();
+    for (std::size_t j = 0; j < record[i].stick.size(); ++j) {
+      mrecord->diffuse[jdiffuse++] = record[i].stick[j];
     }
     // index
     mrecord->xindex[i+1] = mrecord->xindex[i] + record[i].index.size();

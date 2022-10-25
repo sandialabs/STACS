@@ -223,8 +223,8 @@ void Netdata::GatherPart(mPart *msg) {
     stateprted[prtidx][xvtx+i].push_back(std::vector<real_t>());
     stickprted[prtidx][xvtx+i].push_back(std::vector<tick_t>());
     CkAssert(vtxprted[prtidx][xvtx+i].modidx > 0);
-    stateprted[prtidx][xvtx+i][0].resize(modeldata[vtxprted[prtidx][xvtx+i].modidx-1].nstate);
-    stickprted[prtidx][xvtx+i][0].resize(modeldata[vtxprted[prtidx][xvtx+i].modidx-1].nstick);
+    stateprted[prtidx][xvtx+i][0].resize(modelconf[vtxprted[prtidx][xvtx+i].modidx-1].nstate);
+    stickprted[prtidx][xvtx+i][0].resize(modelconf[vtxprted[prtidx][xvtx+i].modidx-1].nstick);
     for(std::size_t s = 0; s < stateprted[prtidx][xvtx+i][0].size(); ++s) {
       stateprted[prtidx][xvtx+i][0][s] = msg->state[jstate++];
     }
@@ -246,8 +246,8 @@ void Netdata::GatherPart(mPart *msg) {
       stickprted[prtidx][xvtx+i].push_back(std::vector<tick_t>());
       // only push edge state if model and not 'none'
       if (edgmodidxprted[prtidx][xvtx+i][xedg+j] > 0) {
-        stateprted[prtidx][xvtx+i][xedg+j+1].resize(modeldata[edgmodidxprted[prtidx][xvtx+i][xedg+j]-1].nstate);
-        stickprted[prtidx][xvtx+i][xedg+j+1].resize(modeldata[edgmodidxprted[prtidx][xvtx+i][xedg+j]-1].nstick);
+        stateprted[prtidx][xvtx+i][xedg+j+1].resize(modelconf[edgmodidxprted[prtidx][xvtx+i][xedg+j]-1].nstate);
+        stickprted[prtidx][xvtx+i][xedg+j+1].resize(modelconf[edgmodidxprted[prtidx][xvtx+i][xedg+j]-1].nstick);
         for(std::size_t s = 0; s < stateprted[prtidx][xvtx+i][xedg+j+1].size(); ++s) {
           stateprted[prtidx][xvtx+i][xedg+j+1][s] = msg->state[jstate++];
         }

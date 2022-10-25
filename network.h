@@ -100,10 +100,10 @@ struct event_t {
 // Records
 //
 struct record_t {
-  tick_t drift;
-  idx_t type;
-  std::vector<real_t> data;
-  std::vector<tick_t> diffuse;
+  idx_t recidx;
+  tick_t trec;
+  std::vector<real_t> state;
+  std::vector<tick_t> stick;
   std::vector<idx_t> index;
 };
 
@@ -112,10 +112,12 @@ struct record_t {
 struct track_t {
   tick_t trec;
   tick_t tfreq;
-  std::vector<idx_t> type;
-  std::vector<idx_t> index;
-  std::vector<idx_t> model;
-  std::vector<idx_t> value;
+  idx_t rectype;
+  idx_t recmodidx;
+  idx_t recsttidx;
+  // indices of where tracked state is
+  std::vector<idx_t> recvtxidx;
+  std::vector<std::vector<idx_t>> recedgidx;
 };
 
 // Spike-timing events (for Groups)
@@ -210,7 +212,7 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 29
+#define MSG_Model 34
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;     // model index identifier
@@ -239,6 +241,11 @@ class mModel : public CMessage_mModel {
     idx_t *xdatafiles;  // prefix sum for filenames
     char *datafiles;    // filenames (concatenated)
     idx_t *datatypes;   // data filetypes
+    idx_t *evtloglist;  // event types for logging
+    idx_t *recmodidx;    // model to record from
+    tick_t *rectfreq;    // record interval
+    idx_t *xrecstate;    // state names prefix
+    char *recstate;      // state names of model to record
     // TODO: remove polychron from base sim/model and create separate header/files for it
     bool *grpactive;   // polychronization (active)
     bool *grpmother;   // polychronization (mother)
@@ -247,6 +254,8 @@ class mModel : public CMessage_mModel {
     idx_t nstateparam;   // number of state generation parameters (for prefix)
     idx_t nstickparam;   // number of stick generation parameters (for prefix)
     idx_t ndatafiles;    // number of datafiles (for prefix)
+    idx_t nevtlog;      // number of events to log
+    idx_t nrecord;      // number of records to track
     bool plastic;      // toggle for plasticity
     bool episodic;     // toggle for episodic simulation
     bool loadbal;      // toggle for periodic load balancing
@@ -806,7 +815,7 @@ class Netdata : public CBase_Netdata {
     CkCallback maindist;
     /* Network Model */
     std::vector<NetModel*> model;      // collection of model objects
-    std::vector<model_t> modeldata;    // model information from config and implementation defaults
+    std::vector<model_t> modelconf;    // model information from config and implementation defaults
     std::vector<std::string> modname;     // model names in order of of object index
     std::unordered_map<std::string, idx_t> modmap; // maps model name to object index
     std::vector<std::string> rngtype; // rng types in order of definitions
@@ -992,6 +1001,7 @@ class Network : public CBase_Network {
     std::vector<bool> evtloglist; // types of events to log
     std::vector<record_t> record; // record keeping
     std::vector<track_t> recordlist; // what to record
+    std::vector<std::set<idx_t>> recordmodset;
     /* Polychronization */
     std::vector<std::vector<std::vector<stamp_t>>> grpstamps; // Groups per vertex (as mother)
     std::vector<std::vector<tick_t>> grpdur; // Group duration per vertex (as mother)

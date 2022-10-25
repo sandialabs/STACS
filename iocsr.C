@@ -467,14 +467,14 @@ void Netdata::ReadPart() {
     statereprt[reprt[i]].push_back(std::vector<real_t>());
     stickreprt[reprt[i]].push_back(std::vector<tick_t>());
     CkAssert(modidx > 0);
-    for(std::size_t s = 0; s < modeldata[modidx-1].stateinit.size(); ++s) {
+    for(std::size_t s = 0; s < modelconf[modidx-1].stateinit.size(); ++s) {
       real_t stt = strtoreal(oldstr, &newstr);
       oldstr = newstr;
       // state
       statereprt[reprt[i]].back().push_back(stt);
       ++nstatedat;
     }
-    for(std::size_t s = 0; s < modeldata[modidx-1].stickinit.size(); ++s) {
+    for(std::size_t s = 0; s < modelconf[modidx-1].stickinit.size(); ++s) {
       tick_t stt = strtotick(oldstr, &newstr, 16);
       oldstr = newstr;
       // state
@@ -493,14 +493,14 @@ void Netdata::ReadPart() {
       stickreprt[reprt[i]].push_back(std::vector<tick_t>());
       // only push edge state if model and not 'none'
       if (modidx > 0) {
-        for(std::size_t s = 0; s < modeldata[modidx-1].stateinit.size(); ++s) {
+        for(std::size_t s = 0; s < modelconf[modidx-1].stateinit.size(); ++s) {
           real_t stt = strtoreal(oldstr, &newstr);
           oldstr = newstr;
           // state
           statereprt[reprt[i]].back().push_back(stt);
           ++nstatedat;
         }
-        for(std::size_t s = 0; s < modeldata[modidx-1].stickinit.size(); ++s) {
+        for(std::size_t s = 0; s < modelconf[modidx-1].stickinit.size(); ++s) {
           tick_t stt = strtotick(oldstr, &newstr, 16);
           oldstr = newstr;
           // state
@@ -754,11 +754,11 @@ void Netdata::WriteRecord() {
           (records[k]->xdata[r+1] - records[k]->xdata[r]),
           (records[k]->xdiffuse[r+1] - records[k]->xdiffuse[r]),
           (records[k]->xindex[r+1] - records[k]->xindex[r]));
-      // real data
+      // real data (states)
       for (idx_t s = records[k]->xdata[r]; s < records[k]->xdata[r+1]; ++s) {
         fprintf(pRecord, " %" PRIrealfull "", records[k]->data[s]);
       }
-      // tick data
+      // tick data (sticks)
       for (idx_t s = records[k]->xdiffuse[r]; s < records[k]->xdiffuse[r+1]; ++s) {
         fprintf(pRecord, " %" PRItickhex "", records[k]->diffuse[s]);
       }
