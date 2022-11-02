@@ -212,7 +212,6 @@ Network::Network(mModel *msg) {
   // set up periodic events
   leapevt.clear();
   leaplist.resize(model.size(), false);
-  leapidx.resize(model.size());
   events.clear();
   for (std::size_t n = 1; n < model.size(); ++n) {
     model[n]->getLeap(events);
@@ -287,6 +286,8 @@ void Network::LoadNetwork(mPart *msg) {
   events.clear();
   evtext.clear();
   evtrpc.clear();
+  leapidx.clear();
+  leapidx.resize(model.size());
   // Polychronization
   grpstamps.resize(msg->nvtx);
   grpdur.resize(msg->nvtx);
@@ -512,6 +513,8 @@ void Network::ReloadNetwork(mPart *msg) {
   events.clear();
   evtext.clear();
   evtrpc.clear();
+  leapidx.clear();
+  leapidx.resize(model.size());
 
   // Graph distribution information
   for (int i = 0; i < netparts+1; ++i) {
