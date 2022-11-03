@@ -1,6 +1,8 @@
 # STACS
 
-As a framework for embodiment and external feedback in simulated neural networks, STACS is composed of two main components. First is the neural network [simulator](https://github.com/fywang/stacs/docs/simulator.md) developed using the [Charm++ parallel programming framework](http://charmplusplus.org/). Second is the [interface](https://github.com/fywang/stacs/docs/interface.md) of this simulator to external devices using the [YARP protocol](http://www.yarp.it/). Although these two components interact, neural network simulation may proceed standalone when no external feedback is needed.
+## Simulation Tool for Asynchronous Cortical Streams
+
+As a framework for embodiment and external feedback in simulated neural networks, STACS is composed of two main components. First is the neural network [simulator](/docs/simulator.md) developed using the [Charm++ parallel programming framework](http://charmplusplus.org/). Second is the [interface](/docs/interface.md) of this simulator to external devices using the [YARP protocol](http://www.yarp.it/). Although these two components interact, neural network simulation may proceed standalone when no external feedback is needed. Additional documentation in [docs](/docs/)
 
 ## Charm++
 
