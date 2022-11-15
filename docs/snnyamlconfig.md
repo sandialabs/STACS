@@ -96,7 +96,7 @@ The model specifications follow the same general format regardless of whether or
 - `modtype` provides a reference to the underlying model dynamics that the model uses. Different models (with different `modname`) can reference to the same `modtype` (e.g. this is useful if you have the same type of neuron model that is used in multiple populations).
 - `param` specifies model-specific parameters (as implemented by the `modtype` reference) that influence the model dynamics. These parameters are shared across all instances of `modname`, and are defined with of `name` and `value` pairs.
 - `state` specifies instantiation details for model-specific state (as implemented by the `modtype` reference) that are either unique per model instantiation and/or are mutable throughout network simulation.
-	- These are defined using a `name` as well as the `type` of initialization:
+	- These are defined using a `name` as well as the `init` type for initialization:
 		- `constant` takes a `value` that all instantiations are initialized with.
 		- `uniform` and `normal` and its variants (e.g. over an interval) draw values from a specified probability distribution 
 		- `linear` is proportional to distance

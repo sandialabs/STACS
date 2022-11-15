@@ -35,16 +35,16 @@ param:
     value: 8
 state:
   - name: v
-    type: constant
+    init: constant
     value: -65.0
   - name: u
-    type: constant
+    init: constant
     value: -13.0
   - name: I
-    type: constant
+    init: constant
     value: 0.0
   - name: I_app
-    type: constant
+    init: constant
     value: 0.0
 ...
 
@@ -63,16 +63,16 @@ param:
     value: 2
 state:
   - name: v
-    type: constant
+    init: constant
     value: -65.0
   - name: u
-    type: constant
+    init: constant
     value: -13.0
   - name: I
-    type: constant
+    init: constant
     value: 0.0
   - name: I_app
-    type: constant
+    init: constant
     value: 0.0
 ...
 
@@ -91,16 +91,16 @@ param:
     value: 8
 state:
   - name: v
-    type: constant
+    init: constant
     value: -65.0
   - name: u
-    type: constant
+    init: constant
     value: -13.0
   - name: I
-    type: constant
+    init: constant
     value: 0.0
   - name: I_app
-    type: constant
+    init: constant
     value: 0.0
 ...
 
@@ -117,29 +117,29 @@ param:
     value: 1000
 state:
   - name: delay
-    type: uniform interval
+    init: uniform interval
     rep: tick
     min: 1.0
     max: 20.0
     int: 1.0
   - name: weight
-    type: constant
+    init: constant
     value: 6.0
   - name: wdelta
-    type: constant
+    init: constant
     value: 0.0
   - name: ptrace
-    type: constant
+    init: constant
     value: 0.0
   - name: ntrace
-    type: constant
+    init: constant
     value: 0.0
   - name: ptlast
-    type: constant
+    init: constant
     rep: tick
     value: 0.0
   - name: ntlast
-    type: constant
+    init: constant
     rep: tick
     value: 0.0
 ...
@@ -151,11 +151,11 @@ modtype: 13
 param:
 state:
   - name: delay
-    type: constant
+    init: constant
     rep: tick
     value: 1.0
   - name: weight
-    type: constant
+    init: constant
     value: -5.0
 ...
 
@@ -165,11 +165,11 @@ modname: exinput
 modtype: 13
 state:
   - name: delay
-    type: constant
+    init: constant
     rep: tick
     value: 1.0
   - name: weight
-    type: constant
+    init: constant
     value: 24.0
 ...
 
@@ -180,7 +180,7 @@ modtype: 11
 param:
 state:
   - name: delay
-    type: constant
+    init: constant
     rep: tick
     value: 1.0
 ...
@@ -192,7 +192,7 @@ modtype: 11
 param:
 state:
   - name: delay
-    type: constant
+    init: constant
     rep: tick
     value: 1.0
 ...

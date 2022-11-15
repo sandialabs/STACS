@@ -19,10 +19,10 @@ param:
     value: 3.1
 state:
   - name: v
-    type: constant
+    init: constant
     value: -65.0
   - name: u
-    type: constant
+    init: constant
     value: -13.0
 ...
 
@@ -35,10 +35,10 @@ param:
     value: 2.4
 state:
   - name: v
-    type: constant
+    init: constant
     value: -70.0
   - name: u
-    type: constant
+    init: constant
     value: -9.0
 ...
 
@@ -53,17 +53,17 @@ param:
     value: 6.6
 state:
   - name: delay
-    type: bounded linear
+    init: bounded linear
     rep: tick
     scale: 0.5 
     offset: 1.0
     min: 1.0
     max: 20.0
   - name: weight
-    type: uniform
+    init: uniform
     min: 0.9
     max: 1.1
   - name: trace
-    type: constant
+    init: constant
     value: 0.0
 ...

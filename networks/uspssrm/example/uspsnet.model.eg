@@ -27,13 +27,13 @@ param:
     value: 7.0
 state:
   - name: v_app
-    type: constant
+    init: constant
     value: 0.0
   - name: v
-    type: constant
+    init: constant
     value: 0.0
   - name: tlast
-    type: constant
+    init: constant
     rep: tick
     value: 0.0
 ...
@@ -53,13 +53,13 @@ param:
     value: 7.0
 state:
   - name: v_app
-    type: constant
+    init: constant
     value: 0.0
   - name: v
-    type: constant
+    init: constant
     value: 0.0
   - name: tlast
-    type: constant
+    init: constant
     rep: tick
     value: 0.0
 ...
@@ -79,13 +79,13 @@ param:
     value: 7.0
 state:
   - name: v_app
-    type: constant
+    init: constant
     value: 0.0
   - name: v
-    type: constant
+    init: constant
     value: 0.0
   - name: tlast
-    type: constant
+    init: constant
     rep: tick
     value: 0.0
 ...
@@ -109,16 +109,16 @@ param:
     value: 100.0
 state:
   - name: delay
-    type: uniform interval
+    init: uniform interval
     rep: tick
     min: 1.0
     max: 20.0
     int: 1.0
   - name: weight
-    type: constant
+    init: constant
     value: 0.5
   - name: tlast
-    type: constant
+    init: constant
     rep: tick
     value: 0.0
 ...
@@ -140,16 +140,16 @@ param:
     value: 0.25
 state:
   - name: delay
-    type: uniform interval
+    init: uniform interval
     rep: tick
     min: 1.0
     max: 20.0
     int: 1.0
   - name: weight
-    type: constant
+    init: constant
     value: -0.5
   - name: tlast
-    type: constant
+    init: constant
     rep: tick
     value: 0.0
 ...
@@ -163,7 +163,7 @@ param:
     value: 3.0
 state:
   - name: delay
-    type: constant
+    init: constant
     rep: tick
     value: 1.0
 ...
@@ -175,7 +175,7 @@ modtype: 24
 param:
 state:
   - name: delay
-    type: constant
+    init: constant
     rep: tick
     value: 1.0
 ...
