@@ -126,7 +126,7 @@ mModel* Main::BuildModel() {
   // Get size of records
   nrecstatestrings = 0;
   for (std::size_t i = 0; i < recordlist.size(); ++i) {
-    nrecstatestrings += recordlist[i].statename.size();
+    nrecstatestrings += recordlist[i].statename.size() + 1;
   }
 
   // Initialize model message
@@ -318,11 +318,13 @@ mModel* Main::BuildModel() {
   for (std::size_t i = 0; i < recordlist.size(); ++i) {
     mmodel->recmodidx[i] = recordlist[i].modidx;
     mmodel->rectfreq[i] = recordlist[i].tfreq;
-    mmodel->xrecstate[i+1] = mmodel->xrecstate[i] + recordlist[i].statename.size();
+    mmodel->xrecstate[i+1] = mmodel->xrecstate[i] + recordlist[i].statename.size() + 1;
     for (std::size_t j = 0; j < recordlist[i].statename.size(); ++j) {
       mmodel->recstate[mmodel->xrecstate[i] + j] = recordlist[i].statename[j];
     }
+    mmodel->recstate[mmodel->xrecstate[i] + recordlist[i].statename.size()] = '\0';
   }
+  CkAssert(mmodel->xrecstate[recordlist.size()] == nrecstatestrings);
 
   // Return model
   return mmodel;

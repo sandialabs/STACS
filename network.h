@@ -882,7 +882,6 @@ class Netdata : public CBase_Netdata {
     int cprt, rprt;
     int nprt, xprt;
     int cpdat, cphnd, cpprt;
-    bool firsthand;
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;

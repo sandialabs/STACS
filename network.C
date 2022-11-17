@@ -168,7 +168,7 @@ Network::Network(mModel *msg) {
     recordlist[r].recmodidx = msg->recmodidx[r];
     recordmodset[msg->recmodidx[r]].insert(r);
     // Get the state/stick indices
-    std::string statename = std::string(msg->recstate + msg->xrecstate[r], msg->xrecstate[r+1] - msg->xrecstate[r]);
+    std::string statename = std::string(msg->recstate + msg->xrecstate[r], msg->recstate + msg->xrecstate[r+1]);
     idx_t sttidx = model[msg->recmodidx[r]]->getStateIdx(statename);
     if (sttidx >= 0) {
       recordlist[r].rectype = RECORD_STATE;

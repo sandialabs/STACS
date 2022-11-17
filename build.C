@@ -506,11 +506,8 @@ void Netdata::Build(mGraph *msg) {
   // Prepare for connection
   cpdat = 0;
 
-  thisProxy.ConnectHandover();
-
   // Sample-based connectivity w.r.t. the source (without distance information) is done
   // TODO: still need sample-based w.r.t. the target
-  /*
   // Connect to this part
   if (cpdat == datidx) {
     mConn *mconn = BuildConnVtx(datidx);
@@ -520,7 +517,6 @@ void Netdata::Build(mGraph *msg) {
   else {
     thisProxy(cpdat).RequestConnVtx(datidx);
   }
-  */
 }
 
 
@@ -642,29 +638,13 @@ void Netdata::ConnectHandover() {
     }
     CkPrintf("File: %d, directed edges: %" PRIidx "\n", datidx, nadjcy);
     */
-    if (firsthand) {
-      firsthand = false;
-      //CkPrintf("Build Handover 1\n");
-      // Connect to this part
-      if (cpdat == datidx) {
-        mConn *mconn = BuildConnVtx(datidx);
-        thisProxy(cpdat).ConnectVtx(mconn);
-      }
-      // Request data from remote part
-      else {
-        thisProxy(cpdat).RequestConnVtx(datidx);
-      }
+    if (cpdat == datidx) {
+      mConn *mconn = BuildConnEdg(datidx);
+      thisProxy(cpdat).ConnectEdg(mconn);
     }
+    // Work on connecting none edges now
     else {
-      //CkPrintf("Build Handover 2\n");
-      if (cpdat == datidx) {
-        mConn *mconn = BuildConnEdg(datidx);
-        thisProxy(cpdat).ConnectEdg(mconn);
-      }
-      // Work on connecting none edges now
-      else {
-        thisProxy(cpdat).RequestConnEdg(datidx);
-      }
+      thisProxy(cpdat).RequestConnEdg(datidx);
     }
   }
 }

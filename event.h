@@ -7,7 +7,7 @@
 #ifndef __STACS_EVENT_H__
 #define __STACS_EVENT_H__
 
-#define EVENT_TOTAL         7
+#define EVENT_TOTAL         8
 #define EVENT_SPIKE         0
 #define EVENT_STIM          1
 #define EVENT_SYNUP         2

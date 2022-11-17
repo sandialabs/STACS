@@ -296,7 +296,6 @@ Netdata::Netdata(mModel *msg) {
   records.resize(nprt);
   cpprt = 0;
   cphnd = 0;
-  firsthand = true;
 
   // Network distribution
   maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
