@@ -74,7 +74,7 @@ mModel* Main::BuildModel() {
   idx_t nparam;
   idx_t nport;
   idx_t ndatafile;
-  idx_t nrecstatestrings;
+  idx_t nrecstate;
 
   // Get total name sizes
   nmodname = 0;
@@ -124,9 +124,9 @@ mModel* Main::BuildModel() {
     ndatafile += datafiles[i].size();
   }
   // Get size of records
-  nrecstatestrings = 0;
+  nrecstate = 0;
   for (std::size_t i = 0; i < recordlist.size(); ++i) {
-    nrecstatestrings += recordlist[i].statename.size();
+    nrecstate += recordlist[i].statename.size();
   }
 
   // Initialize model message
@@ -161,7 +161,7 @@ mModel* Main::BuildModel() {
   msgSize[27] = recordlist.size();   // recmodidx
   msgSize[28] = recordlist.size();   // rectfreq
   msgSize[29] = recordlist.size()+1; // xrecstate
-  msgSize[30] = nrecstatestrings;    // recstate
+  msgSize[30] = nrecstate;    // recstate
   msgSize[31] = modelconf.size();     // grpactive
   msgSize[32] = modelconf.size();     // grpmother
   msgSize[33] = modelconf.size();     // grpanchor
@@ -324,7 +324,7 @@ mModel* Main::BuildModel() {
       mmodel->recstate[mmodel->xrecstate[i] + j] = recordlist[i].statename[j];
     }
   }
-  CkAssert(mmodel->xrecstate[recordlist.size()] == nrecstatestrings);
+  CkAssert(mmodel->xrecstate[recordlist.size()] == nrecstate);
 
   // Return model
   return mmodel;
