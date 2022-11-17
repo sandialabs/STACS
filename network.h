@@ -212,7 +212,9 @@ class mDist : public CMessage_mDist {
 
 // Network model information
 //
-#define MSG_Model 34
+// TODO: The number of uniquely named variable arrays appears to be
+//       limited to 32... not sure if its an MPI or Charm++ restriction
+#define MSG_Model 31
 class mModel : public CMessage_mModel {
   public:
     idx_t *modtype;     // model index identifier
@@ -238,6 +240,10 @@ class mModel : public CMessage_mModel {
     real_t *param;      // network model parameters
     idx_t *xport;       // network port prefix
     char *port;        // network port name
+    // TODO: remove polychron from base sim/model and create separate header/files for it
+    //bool *grpactive;   // polychronization (active)
+    //bool *grpmother;   // polychronization (mother)
+    //bool *grpanchor;   // polychronization (anchor)
     idx_t *xdatafiles;  // prefix sum for filenames
     char *datafiles;    // filenames (concatenated)
     idx_t *datatypes;   // data filetypes
@@ -246,10 +252,6 @@ class mModel : public CMessage_mModel {
     tick_t *rectfreq;    // record interval
     idx_t *xrecstate;    // state names prefix
     char *recstate;      // state names of model to record
-    // TODO: remove polychron from base sim/model and create separate header/files for it
-    bool *grpactive;   // polychronization (active)
-    bool *grpmother;   // polychronization (mother)
-    bool *grpanchor;   // polychronization (anchor)
     idx_t nmodel;      // number of models
     idx_t nstateparam;   // number of state generation parameters (for prefix)
     idx_t nstickparam;   // number of stick generation parameters (for prefix)

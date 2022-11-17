@@ -45,9 +45,6 @@ module network {
     tick_t rectfreq[];
     idx_t xrecstate[];
     char recstate[];
-    bool grpactive[];
-    bool grpmother[];
-    bool grpanchor[];
     idx_t nmodel;
     idx_t nstateparam;
     idx_t nstickparam;

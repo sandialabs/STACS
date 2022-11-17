@@ -154,6 +154,9 @@ mModel* Main::BuildModel() {
   msgSize[20] = nparam;            // param
   msgSize[21] = modelconf.size()+1;   // xport
   msgSize[22] = nport;             // port
+  //msgSize[23] = modelconf.size();     // grpactive
+  //msgSize[24] = modelconf.size();     // grpmother
+  //msgSize[25] = modelconf.size();     // grpanchor
   msgSize[23] = datafiles.size()+1;  // xdatafiles
   msgSize[24] = ndatafile;           // datafiles
   msgSize[25] = datafiles.size();    // datatypes
@@ -161,10 +164,7 @@ mModel* Main::BuildModel() {
   msgSize[27] = recordlist.size();   // recmodidx
   msgSize[28] = recordlist.size();   // rectfreq
   msgSize[29] = recordlist.size()+1; // xrecstate
-  msgSize[30] = nrecstate;    // recstate
-  msgSize[31] = modelconf.size();     // grpactive
-  msgSize[32] = modelconf.size();     // grpmother
-  msgSize[33] = modelconf.size();     // grpanchor
+  msgSize[30] = nrecstate;           // recstate
   mModel *mmodel = new(msgSize, 0) mModel;
   // Sizes
   mmodel->nmodel = modelconf.size();
@@ -286,12 +286,14 @@ mModel* Main::BuildModel() {
       // xport
       mmodel->xport[i+1] += modelconf[i].port[j].size() + 1;
     }
+    /*
     // grpactive
     mmodel->grpactive[i] = modelconf[i].grpactive;
     // grpmother
     mmodel->grpmother[i] = modelconf[i].grpmother;
     // grpanchor
     mmodel->grpanchor[i] = modelconf[i].grpanchor;
+    */
   }
   CkAssert(jstatename == nstatename);
   CkAssert(jstickname == nstickname);

@@ -95,9 +95,12 @@ Network::Network(mModel *msg) {
     model.push_back(ModelFactory::newModel()->Create(msg->modtype[i-1]));
     model[i]->setPort(msg->port + msg->xport[i-1]);
     model[i]->setRandom(unifdist, &rngine);
-    model[i]->setActive(msg->grpactive[i-1]);
-    model[i]->setMother(msg->grpmother[i-1]);
-    model[i]->setAnchor(msg->grpanchor[i-1]);
+    //model[i]->setActive(msg->grpactive[i-1]);
+    //model[i]->setMother(msg->grpmother[i-1]);
+    //model[i]->setAnchor(msg->grpanchor[i-1]);
+    model[i]->setActive(false);
+    model[i]->setMother(false);
+    model[i]->setAnchor(false);
     model[i]->setPlastic(msg->plastic);
     // names (may be in a different order than implemented model)
     // Find the mapping from user-provided param names to the implemented param names
