@@ -301,7 +301,6 @@ Netdata::Netdata(mModel *msg) {
   maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
   
   // Preparing network build (if needed)
-  vtxmodidx.clear();
   connvtxreq.clear();
   reordlist.clear();
 

@@ -108,8 +108,7 @@ Main::Main(CkArgMsg *msg) {
   netdataopts.setMap(rrMap);
   // Create chare array with model information
   mModel *mmodel = BuildModel();
-  //netdata = CProxy_Netdata::ckNew(mmodel, netdataopts);
-  netdata = CProxy_Netdata::ckNew(mmodel, netfiles);
+  netdata = CProxy_Netdata::ckNew(mmodel, netdataopts);
   // Set callback to return control to main
   CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
   netdata.ckSetReductionClient(&cbcontrol);

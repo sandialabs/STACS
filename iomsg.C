@@ -126,7 +126,7 @@ mModel* Main::BuildModel() {
   // Get size of records
   nrecstatestrings = 0;
   for (std::size_t i = 0; i < recordlist.size(); ++i) {
-    nrecstatestrings += recordlist[i].statename.size() + 1;
+    nrecstatestrings += recordlist[i].statename.size();
   }
 
   // Initialize model message
@@ -156,7 +156,7 @@ mModel* Main::BuildModel() {
   msgSize[22] = nport;             // port
   msgSize[23] = datafiles.size()+1;  // xdatafiles
   msgSize[24] = ndatafile;           // datafiles
-  msgSize[25] = ndatafile;           // datatypes
+  msgSize[25] = datafiles.size();    // datatypes
   msgSize[26] = evtloglist.size();   // evtlog
   msgSize[27] = recordlist.size();   // recmodidx
   msgSize[28] = recordlist.size();   // rectfreq
@@ -310,6 +310,7 @@ mModel* Main::BuildModel() {
     // datatypes
     mmodel->datatypes[i] = datatypes[i];
   }
+  CkAssert(mmodel->xdatafiles[datafiles.size()] == ndatafile);
 
   // Recording
   for (std::size_t i = 0; i < evtloglist.size(); ++i) {
@@ -318,11 +319,10 @@ mModel* Main::BuildModel() {
   for (std::size_t i = 0; i < recordlist.size(); ++i) {
     mmodel->recmodidx[i] = recordlist[i].modidx;
     mmodel->rectfreq[i] = recordlist[i].tfreq;
-    mmodel->xrecstate[i+1] = mmodel->xrecstate[i] + recordlist[i].statename.size() + 1;
+    mmodel->xrecstate[i+1] = mmodel->xrecstate[i] + recordlist[i].statename.size();
     for (std::size_t j = 0; j < recordlist[i].statename.size(); ++j) {
       mmodel->recstate[mmodel->xrecstate[i] + j] = recordlist[i].statename[j];
     }
-    mmodel->recstate[mmodel->xrecstate[i] + recordlist[i].statename.size()] = '\0';
   }
   CkAssert(mmodel->xrecstate[recordlist.size()] == nrecstatestrings);
 
