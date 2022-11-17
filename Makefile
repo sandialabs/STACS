@@ -49,5 +49,5 @@ endif
 # OS related
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
-  LIB += -stdlib=libc++ -mmacosx-version-min=10.15
+  LIB += -stdlib=libc++ -mmacosx-version-min=12.6
 endif

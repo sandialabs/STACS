@@ -124,7 +124,7 @@ void Netdata::Build(mGraph *msg) {
   connmodmap.clear();
   // Create mapping from vertices to sample-based edge sources
   connsampleset.resize(vertices.size()+1);
-  for (std::size_t t = 0; t < vertices.size(); ++t) {
+  for (std::size_t t = 0; t < vertices.size()+1; ++t) {
     connsampleset[t].clear();
   }
   // populate connection maps
@@ -505,19 +505,22 @@ void Netdata::Build(mGraph *msg) {
   
   // Prepare for connection
   cpdat = 0;
-  cphnd = 0;
+
+  thisProxy.ConnectHandover();
 
   // Sample-based connectivity w.r.t. the source (without distance information) is done
   // TODO: still need sample-based w.r.t. the target
+  /*
   // Connect to this part
   if (cpdat == datidx) {
-    mConn *mconn = BuildConnVtx(cpdat);
+    mConn *mconn = BuildConnVtx(datidx);
     thisProxy(cpdat).ConnectVtx(mconn);
   }
   // Request data from remote part
   else {
     thisProxy(cpdat).RequestConnVtx(datidx);
   }
+  */
 }
 
 
@@ -531,7 +534,7 @@ void Netdata::ConnectVtx(mConn *msg) {
   // Sanity check
   CkAssert(msg->datidx == cpdat);
   // Some basic information on what's being connected
-  //CkPrintf("  Connecting %d to %d\n", datidx, msg->datidx);
+  //CkPrintf("  Connecting %d to %d, backlog: %d\n", datidx, msg->datidx, connvtxreq.size());
   
   // Go through the incoming state and reparameterize the state/sticks if needed
   for (idx_t i = 0; i < norderdat; ++i) {
@@ -557,7 +560,7 @@ void Netdata::ConnectVtx(mConn *msg) {
         continue;
       }
       // Skip same index i == j
-      else if(xorderdat[datidx]+i == xorderdat[msg->datidx]+j) {
+      else if (xorderdat[datidx]+i == xorderdat[msg->datidx]+j) {
         continue;
       }
       // Evaluate connection between i and j
@@ -565,29 +568,25 @@ void Netdata::ConnectVtx(mConn *msg) {
         idx_t edg = connmodmap[msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]];
         real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+j*3, edges[edg].distparam.data());
         CkAssert(distance >= 0.0);
-        idx_t modidx;
+        idx_t modidx = MakeConnection(edg, msg->vtxordidx[j], vtxordidx[i], distance);
         // check possible connections from j (source) to i (target)
-        if ((modidx = MakeConnection(edg, msg->vtxordidx[j], vtxordidx[i], distance))) {
+        if (modidx) {
           adjcy[i].push_back(xorderdat[msg->datidx]+j);
           adjcyset[i].insert(xorderdat[msg->datidx]+j); // The set is useful for faster searching of edge existence
           edgmodidx[i].push_back(modidx);
-          if (modidx) {
-            // build state from j to i
-            state[i].push_back(BuildEdgState(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
-            stick[i].push_back(BuildEdgStick(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
-          }
-          else {
-            // build empty state
-            state[i].push_back(std::vector<real_t>());
-            stick[i].push_back(std::vector<tick_t>());
-          }
+          // build state from j to i
+          state[i].push_back(BuildEdgState(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
+          stick[i].push_back(BuildEdgStick(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
         }
       }
     }
   }
 
+  // cleanup
+  delete msg;
+
   // send any outstanding requests of built vertieces
-  for (std::list<idx_t>::iterator ireqidx = connvtxreq.begin(); ireqidx != connvtxreq.end(); ++ireqidx) {
+  for (std::list<int>::iterator ireqidx = connvtxreq.begin(); ireqidx != connvtxreq.end(); ++ireqidx) {
     mConn *mconn = BuildConnVtx(*ireqidx);
     thisProxy(*ireqidx).ConnectVtx(mconn);
     ireqidx = connvtxreq.erase(ireqidx);
@@ -609,16 +608,14 @@ void Netdata::ConnectVtx(mConn *msg) {
   else {
     thisProxy(cpdat).RequestConnVtx(datidx);
   }
-
-  // cleanup
-  delete msg;
 }
 
 // Connect Network Request Data
 //
-void Netdata::RequestConnVtx(idx_t reqidx) {
+void Netdata::RequestConnVtx(int reqidx) {
   // send data adjacency and vertex info to requesting part
   // check if vertex is built
+  //CkPrintf("  Request on %d from %d\n", datidx, reqidx);
   if (vtxmodidx.size()) {
     mConn *mconn = BuildConnVtx(reqidx);
     thisProxy(reqidx).ConnectVtx(mconn);
@@ -645,14 +642,29 @@ void Netdata::ConnectHandover() {
     }
     CkPrintf("File: %d, directed edges: %" PRIidx "\n", datidx, nadjcy);
     */
-    
-    if (cpdat == datidx) {
-      mConn *mconn = BuildConnEdg(datidx);
-      thisProxy(cpdat).ConnectEdg(mconn);
+    if (firsthand) {
+      firsthand = false;
+      //CkPrintf("Build Handover 1\n");
+      // Connect to this part
+      if (cpdat == datidx) {
+        mConn *mconn = BuildConnVtx(datidx);
+        thisProxy(cpdat).ConnectVtx(mconn);
+      }
+      // Request data from remote part
+      else {
+        thisProxy(cpdat).RequestConnVtx(datidx);
+      }
     }
-    // Work on connecting none edges now
     else {
-      thisProxy(cpdat).RequestConnEdg(datidx);
+      //CkPrintf("Build Handover 2\n");
+      if (cpdat == datidx) {
+        mConn *mconn = BuildConnEdg(datidx);
+        thisProxy(cpdat).ConnectEdg(mconn);
+      }
+      // Work on connecting none edges now
+      else {
+        thisProxy(cpdat).RequestConnEdg(datidx);
+      }
     }
   }
 }
@@ -745,7 +757,7 @@ void Netdata::ConnectEdg(mConn *msg) {
 
 // Connect Network Finished
 //
-void Netdata::RequestConnEdg(idx_t reqidx) {
+void Netdata::RequestConnEdg(int reqidx) {
   // send data adjacency info to requesting part
   mConn *mconn = BuildConnEdg(reqidx);
   thisProxy(reqidx).ConnectEdg(mconn);
@@ -759,7 +771,7 @@ void Netdata::RequestConnEdg(idx_t reqidx) {
 
 // Build Vertices
 //
-mConn* Netdata::BuildConnVtx(idx_t reqidx) {
+mConn* Netdata::BuildConnVtx(int reqidx) {
   // Initialize connection message
   int msgSize[MSG_Conn];
   msgSize[0] = norderdat;   // vtxmodidx
@@ -787,7 +799,7 @@ mConn* Netdata::BuildConnVtx(idx_t reqidx) {
 
 // Build Edge (includes vertices and adjacency)
 //
-mConn* Netdata::BuildConnEdg(idx_t reqidx) {
+mConn* Netdata::BuildConnEdg(int reqidx) {
   /* Bookkeeping */
   idx_t nsizedat;
   idx_t jadjcyidx;

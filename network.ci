@@ -105,7 +105,7 @@ module network {
     idx_t vtxdist[];
     idx_t vtxidxold[];
     idx_t vtxidxnew[];
-    idx_t datidx;
+    int datidx;
     idx_t nvtx;
     idx_t nprt;
   };
@@ -177,10 +177,10 @@ module network {
     entry void SaveBuild();
     entry void SaveCloseBuild();
     entry void ConnectVtx(mConn *msg);
-    entry void RequestConnVtx(idx_t reqidx);
+    entry void RequestConnVtx(int reqidx);
     entry void ConnectHandover();
     entry void ConnectEdg(mConn *msg);
-    entry void RequestConnEdg(idx_t reqidx);
+    entry void RequestConnEdg(int reqidx);
 
     entry void LoadPart(mDist *msg);
     entry void LoadRepart(mPart *msg);

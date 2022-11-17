@@ -305,7 +305,7 @@ class mConn : public CMessage_mConn {
     idx_t *vtxidx;      // vertex global idx
     idx_t *xadj;        // prefix for adjacency
     idx_t *adjcy;       // adjacent vertices
-    idx_t datidx;
+    int datidx;
     idx_t nvtx;
 };
 
@@ -315,7 +315,7 @@ class mReorder : public CMessage_mReorder {
     idx_t *vtxdist;
     idx_t *vtxidxold;
     idx_t *vtxidxnew;
-    idx_t datidx;
+    int datidx;
     idx_t nvtx;
     idx_t nprt;
 };
@@ -604,12 +604,12 @@ class Netdata : public CBase_Netdata {
     /* Connecting */
     idx_t MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_t dist);
     void ConnectVtx(mConn *msg);
-    void RequestConnVtx(idx_t reqidx);
-    mConn* BuildConnVtx(idx_t reqidx);
+    void RequestConnVtx(int reqidx);
+    mConn* BuildConnVtx(int reqidx);
     void ConnectHandover();
     void ConnectEdg(mConn *msg);
-    void RequestConnEdg(idx_t reqidx);
-    mConn* BuildConnEdg(idx_t reqidx);
+    void RequestConnEdg(int reqidx);
+    mConn* BuildConnEdg(int reqidx);
 
     /* Repartitioning */
     void LoadPart(mDist *msg);
@@ -844,7 +844,7 @@ class Netdata : public CBase_Netdata {
     std::vector<std::set<idx_t>> connsampleset; // target to edges that are sample-based for it
     std::vector<std::set<idx_t>> adjcyset; // set of directed afferent edges
     std::vector<idx_t> nadjcysample; // counts of number of adjcy for index-based connections
-    std::list<idx_t> connvtxreq; // parts that are requesting their vertex into
+    std::list<int> connvtxreq; // parts that are requesting their vertex into
     /* Repartitioning */
     std::vector<idx_t> vtxmetis; // distribution of vertices over files
     std::vector<idx_t> edgmetis; // distribution of edges over files
@@ -882,6 +882,7 @@ class Netdata : public CBase_Netdata {
     int cprt, rprt;
     int nprt, xprt;
     int cpdat, cphnd, cpprt;
+    bool firsthand;
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;

@@ -295,12 +295,16 @@ Netdata::Netdata(mModel *msg) {
   parts.resize(nprt);
   records.resize(nprt);
   cpprt = 0;
+  cphnd = 0;
+  firsthand = true;
 
   // Network distribution
   maindist = CkCallback(CkIndex_Main::SaveDist(NULL), mainProxy);
   
   // Preparing network build (if needed)
+  vtxmodidx.clear();
   connvtxreq.clear();
+  reordlist.clear();
 
   // Repartitioning
   vtxidxreprt.resize(netparts);
@@ -311,7 +315,6 @@ Netdata::Netdata(mModel *msg) {
   statereprt.resize(netparts);
   stickreprt.resize(netparts);
   eventreprt.resize(netparts);
-
 
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
