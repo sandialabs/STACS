@@ -50,6 +50,7 @@ void Network::CommEvent(mEvent *msg) {
   // Event prototype
   event_t event;
   tick_t departure;
+  idx_t arrival;
 
   // Distribute events
   for (idx_t i = 0; i < msg->nevent; ++i) {
@@ -68,15 +69,16 @@ void Network::CommEvent(mEvent *msg) {
       if (targets != adjmap.end()) {
         for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
           event.diffuse = departure + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
+          arrival = (idx_t) (event.diffuse/tstep);
           event.index = (*target)[1];
           // Add to event queue or spillover
-          // within upcoming year
-          if ((event.diffuse/tstep - msg->iter) < nevtday) {
-            evtcal[(*target)[0]][(event.diffuse/tstep)%nevtday].push_back(event);
-          }
           // in the past
-          else if (event.diffuse/tstep < msg->iter) {
+          if (arrival < msg->iter) {
             evtcal[(*target)[0]][(msg->iter+1)%nevtday].push_back(event);
+          }
+          // within upcoming year
+          else if ((arrival - msg->iter) < nevtday) {
+            evtcal[(*target)[0]][(arrival)%nevtday].push_back(event);
           }
           // more than a year away
           else {
@@ -90,13 +92,14 @@ void Network::CommEvent(mEvent *msg) {
       std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find(-(msg->index[i]+1));
       if (target != vtxmap.end()) {
         event.diffuse = departure; // direct events to vertices have no edge delay
+        arrival = (idx_t) (event.diffuse/tstep);
         event.index = 0;
         // Add to event queue or spillover
-        if ((event.diffuse/tstep - msg->iter) < nevtday) {
-          evtcal[target->second][(event.diffuse/tstep)%nevtday].push_back(event);
-        }
-        else if (event.diffuse/tstep < msg->iter) {
+        if (arrival < msg->iter) {
           evtcal[target->second][(msg->iter+1)%nevtday].push_back(event);
+        }
+        else if ((arrival - msg->iter) < nevtday) {
+          evtcal[target->second][(arrival)%nevtday].push_back(event);
         }
         else {
           evtcol[target->second].push_back(event);
@@ -111,13 +114,14 @@ void Network::CommEvent(mEvent *msg) {
         for (std::size_t j = 0; j < adjcy[target->second].size(); ++j) {
           if (adjcy[target->second][j] == msg->source[i]) {
             event.diffuse = departure + stick[target->second][j+1][0]; // delay always first stick of edge
+            arrival = (idx_t) (event.diffuse/tstep);
             event.index = j+1; // 0'th entry is vertex
             // Add to event queue or spillover
-            if ((event.diffuse/tstep - msg->iter) < nevtday) {
-              evtcal[target->second][(event.diffuse/tstep)%nevtday].push_back(event);
-            }
-            else if (event.diffuse/tstep < msg->iter) {
+            if (arrival < msg->iter) {
               evtcal[target->second][(msg->iter+1)%nevtday].push_back(event);
+            }
+            else if ((arrival - msg->iter) < nevtday) {
+              evtcal[target->second][(arrival)%nevtday].push_back(event);
             }
             else {
               evtcol[target->second].push_back(event);
@@ -155,6 +159,7 @@ void Network::CommStamp(mEvent *msg) {
   // Event prototype
   event_t event;
   tick_t departure;
+  idx_t arrival;
   stamp_t stamp;
 
   // Distribute events
@@ -186,12 +191,13 @@ void Network::CommStamp(mEvent *msg) {
       if (targets != adjmap.end()) {
         for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
           event.diffuse = departure + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
+          arrival = (idx_t) (event.diffuse/tstep);
           event.index = (*target)[1];
           // Add to event queue or spillover
-          if ((event.diffuse/tstep - msg->iter) < nevtday) {
-            evtcal[(*target)[0]][(event.diffuse/tstep)%nevtday].push_back(event);
+          if ((arrival - msg->iter) < nevtday) {
+            evtcal[(*target)[0]][(arrival)%nevtday].push_back(event);
           }
-          else if (event.diffuse/tstep < msg->iter) {
+          else if (arrival < msg->iter) {
             evtcal[(*target)[0]][(msg->iter+1)%nevtday].push_back(event);
           }
           else {
@@ -205,13 +211,14 @@ void Network::CommStamp(mEvent *msg) {
       std::unordered_map<idx_t, idx_t>::iterator target = vtxmap.find(-(msg->index[i]+1));
       if (target != vtxmap.end()) {
         event.diffuse = departure; // direct events to vertices have no edge delay
+        arrival = (idx_t) (event.diffuse/tstep);
         event.index = 0;
         // Add to event queue or spillover
-        if ((event.diffuse/tstep - msg->iter) < nevtday) {
-          evtcal[target->second][(event.diffuse/tstep)%nevtday].push_back(event);
-        }
-        else if (event.diffuse/tstep < msg->iter) {
+        if (arrival < msg->iter) {
           evtcal[target->second][(msg->iter+1)%nevtday].push_back(event);
+        }
+        else if ((arrival - msg->iter) < nevtday) {
+          evtcal[target->second][(arrival)%nevtday].push_back(event);
         }
         else {
           evtcol[target->second].push_back(event);
@@ -226,13 +233,14 @@ void Network::CommStamp(mEvent *msg) {
         for (std::size_t j = 0; j < adjcy[target->second].size(); ++j) {
           if (adjcy[target->second][j] == msg->source[i]) {
             event.diffuse = departure + stick[target->second][j+1][0]; // delay always first stick of edge
+            arrival = (idx_t) (event.diffuse/tstep);
             event.index = j+1; // 0'th entry is vertex
             // Add to event queue or spillover
-            if ((event.diffuse/tstep - msg->iter) < nevtday) {
-              evtcal[target->second][(event.diffuse/tstep)%nevtday].push_back(event);
-            }
-            else if (event.diffuse/tstep < msg->iter) {
+            if (arrival < msg->iter) {
               evtcal[target->second][(msg->iter+1)%nevtday].push_back(event);
+            }
+            else if ((arrival - msg->iter) < nevtday) {
+              evtcal[target->second][(arrival)%nevtday].push_back(event);
             }
             else {
               evtcol[target->second].push_back(event);
@@ -271,7 +279,7 @@ void Network::SortEventCalendar() {
   for (std::size_t i = 0; i < evtcol.size(); ++i) {
     for (std::size_t j = 0; j < evtcol[i].size(); ++j) {
       // Add to event queue or back onto spillover
-      if ((evtcol[i][j].diffuse - tsim)/tstep < nevtday) {
+      if (((idx_t) ((evtcol[i][j].diffuse - tsim)/tstep)) < nevtday) {
         evtcal[i][(evtcol[i][j].diffuse/tstep)%nevtday].push_back(evtcol[i][j]);
       }
       else {
@@ -356,7 +364,7 @@ void Network::HandleEvent(event_t& event, const idx_t i) {
   if (target & LOCAL_EDGES) {
     event.source = -1; // negative source indicates local event
     // Jump loops
-    if ((event.diffuse - tsim - tstep)/tstep < nevtday) {
+    if (((idx_t) ((event.diffuse - tsim - tstep)/tstep)) < nevtday) {
       for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
         if (edgmodidx[i][j]) {
           event.index = j+1;
@@ -387,7 +395,7 @@ void Network::HandleEvent(event_t& event, const idx_t i) {
     // vertex to itself
     event.source = -1; // negative source indicates local event
     event.index = 0;
-    if ((event.diffuse - tsim - tstep)/tstep < nevtday) {
+    if (((idx_t) ((event.diffuse - tsim - tstep)/tstep)) < nevtday) {
       evtcal[i][(event.diffuse/tstep)%nevtday].push_back(event);
     }
     else if (event.diffuse < tsim + tstep) {

@@ -472,15 +472,8 @@ void Network::CycleGroup() {
             if (target & LOCAL_EDGES) {
               events[e].source = -1; // negative source indicates local event
               // Jump loops
-              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
-                  if (edgmodidx[i][j]) {
-                    events[e].index = j+1;
-                    evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
-                  }
-                }
-              }
-              else if (events[e].diffuse < tsim + tstep) {
+              // in the past
+              if (events[e].diffuse < tsim + tstep) {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
                     events[e].index = j+1;
@@ -489,6 +482,16 @@ void Network::CycleGroup() {
                   }
                 }
               }
+              // within upcoming year
+              else if (((idx_t) ((events[e].diffuse - tsim - tstep)/tstep)) < nevtday) {
+                for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
+                  if (edgmodidx[i][j]) {
+                    events[e].index = j+1;
+                    evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
+                  }
+                }
+              }
+              // more than a year away
               else {
                 for (std::size_t j = 0; j < edgmodidx[i].size(); ++j) {
                   if (edgmodidx[i][j]) {
@@ -503,12 +506,12 @@ void Network::CycleGroup() {
               // vertex to itself
               events[e].source = -1; // negative source indicates local event
               events[e].index = 0;
-              if ((events[e].diffuse - tsim - tstep)/tstep < nevtday) {
-                evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
-              }
-              else if (events[e].diffuse < tsim + tstep) {
+              if (events[e].diffuse < tsim + tstep) {
                 // Jump now
                 model[vtxmodidx[i]]->Jump(events[e], state[i], stick[i], vtxaux[i]);
+              }
+              else if (((idx_t) ((events[e].diffuse - tsim - tstep)/tstep)) < nevtday) {
+                evtcal[i][(events[e].diffuse/tstep)%nevtday].push_back(events[e]);
               }
               else {
                 evtcol[i].push_back(events[e]);
@@ -559,6 +562,7 @@ void Network::SeedGroup(mEvent *msg) {
   // Event prototype
   event_t event;
   tick_t departure;
+  idx_t arrival;
 
   // Distribute events
   for (idx_t i = 0; i < msg->nevent; ++i) {
@@ -574,10 +578,11 @@ void Network::SeedGroup(mEvent *msg) {
     if (targets != adjmap.end()) {
       for (std::vector<std::array<idx_t, 2>>::iterator target = targets->second.begin(); target != targets->second.end(); ++target) {
         event.diffuse = departure + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
+        arrival = (idx_t) (event.diffuse/tstep);
         event.index = (*target)[1];
         // Add to event queue or spillover
-        if (event.diffuse/tstep < nevtday) {
-          evtcal[(*target)[0]][(event.diffuse/tstep)%nevtday].push_back(event);
+        if (arrival < nevtday) {
+          evtcal[(*target)[0]][(arrival)%nevtday].push_back(event);
         }
         else {
           evtcol[(*target)[0]].push_back(event);

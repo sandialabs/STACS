@@ -379,6 +379,7 @@ void Network::LoadNetwork(mPart *msg) {
     }
     // copy over event data
     event_t event;
+    idx_t arrival;
     for (idx_t e = msg->xevent[i]; e < msg->xevent[i+1]; ++e) {
       event.diffuse = msg->diffuse[e];
       event.type = msg->type[e];
@@ -386,8 +387,9 @@ void Network::LoadNetwork(mPart *msg) {
       event.index = msg->index[e];
       event.data = msg->data[e];
       // Add to event queue or spillover
-      if (event.diffuse/tstep < nevtday) {
-        evtcal[i][(event.diffuse/tstep)%nevtday].push_back(event);
+      arrival = (idx_t) (event.diffuse/tstep);
+      if (arrival < nevtday) {
+        evtcal[i][(arrival)%nevtday].push_back(event);
       }
       else {
         evtcol[i].push_back(event);
@@ -595,6 +597,7 @@ void Network::ReloadNetwork(mPart *msg) {
     }
     // copy over event data
     event_t event;
+    idx_t arrival;
     for (idx_t e = msg->xevent[i]; e < msg->xevent[i+1]; ++e) {
       event.diffuse = msg->diffuse[e];
       event.type = msg->type[e];
@@ -602,8 +605,9 @@ void Network::ReloadNetwork(mPart *msg) {
       event.index = msg->index[e];
       event.data = msg->data[e];
       // Add to event queue or spillover
-      if ((event.diffuse/tstep - iter) < nevtday) {
-        evtcal[i][(event.diffuse/tstep)%nevtday].push_back(event);
+      arrival = (idx_t) (event.diffuse/tstep);
+      if ((arrival - iter) < nevtday) {
+        evtcal[i][(arrival)%nevtday].push_back(event);
       }
       else {
         evtcol[i].push_back(event);
