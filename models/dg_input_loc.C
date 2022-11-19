@@ -50,7 +50,7 @@ class DGInputLocation : public ModelTmpl < 65, DGInputLocation > {
     YAML::Node input;
     // Trajectory variables
     std::vector<std::vector<real_t>> trajectory;
-    int traj_index;
+    std::size_t traj_index;
     tick_t tinterval;
     tick_t tupdate;
     // Grid cell variables

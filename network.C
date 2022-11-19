@@ -578,7 +578,7 @@ void Network::ReloadNetwork(mPart *msg) {
     if (model[vtxmodidx[i]]->getNAux()) {
       std::vector<std::string> auxstate = model[vtxmodidx[i]]->getAuxState();
       std::vector<std::string> auxstick = model[vtxmodidx[i]]->getAuxStick();
-      for (idx_t j = 0; j < (std::size_t) edgmodidx[i].size(); ++j) {
+      for (idx_t j = 0; (std::size_t) j < edgmodidx[i].size(); ++j) {
         if (edgmodidx[i][j]) {
           vtxaux[i].push_back(auxidx_t());
           vtxaux[i].back().index = j+1;

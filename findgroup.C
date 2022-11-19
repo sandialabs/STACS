@@ -561,7 +561,7 @@ void Network::SeedGroup(mEvent *msg) {
   tick_t departure;
 
   // Distribute events
-  for (std::size_t i = 0; i < msg->nevent; ++i) {
+  for (idx_t i = 0; i < msg->nevent; ++i) {
     // Fill in prototype
     departure = msg->diffuse[i];
     event.type = msg->type[i];

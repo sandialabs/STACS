@@ -50,7 +50,7 @@ class DGInputObject : public ModelTmpl < 66, DGInputObject > {
     YAML::Node input;
     // Trajectory variables
     std::vector<std::vector<real_t>> trajectory;
-    int traj_index;
+    std::size_t traj_index;
     tick_t tinterval;
     tick_t tupdate;
     // Obj cell variables
@@ -70,8 +70,8 @@ tick_t DGInputObject::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
   // Work with the input to compute spike rates
   // dependent on object salience
   if (tdrift >= tupdate) {
-    real_t x = trajectory[traj_index][0];
-    real_t y = trajectory[traj_index][1];
+    //real_t x = trajectory[traj_index][0];
+    //real_t y = trajectory[traj_index][1];
     //CkPrintf("  updated location: %" PRIreal ", %" PRIreal "\n", x, y);
     event_t event;
     event.diffuse = tdrift + tdiff;
@@ -81,7 +81,7 @@ tick_t DGInputObject::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
     // Figure out which object is going to be attended to (nearest object)
     int attended_obj = 0;
     real_t attended_salience = 0;
-    for (int i = 0; i < obj_act.size(); ++i) {
+    for (int i = 0; (std::size_t) i < obj_act.size(); ++i) {
       real_t dist = std::sqrt((trajectory[traj_index][0] - object_location[i][0]) * 
                               (trajectory[traj_index][0] - object_location[i][0]) +
                               (trajectory[traj_index][1] - object_location[i][1]) *

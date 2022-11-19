@@ -51,7 +51,7 @@ class SpikeInput : public ModelTmpl < 5, SpikeInput > {
     std::vector<std::vector<real_t>> spike_list;
     // Control timing
     std::vector<tick_t> next_spike_tick;
-    std::vector<int> next_spike_index;
+    std::vector<std::size_t> next_spike_index;
     tick_t next_tick_update;
 };
 

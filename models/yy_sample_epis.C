@@ -59,7 +59,7 @@ class YinYangEpis : public ModelTmpl < 130, YinYangEpis > {
     std::vector<int> sample_c; // class
     // Control flow
     tick_t tsample;
-    int sample_idx;
+    std::size_t sample_idx;
 };
 
 

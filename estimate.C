@@ -321,7 +321,7 @@ void Network::EstimateGroup(idx_t i) {
     // TODO: Threshold based off of excitatory neurons only?
     if (grpwindow[i][p].size() > (grpstamps[i][p].size() / 2)) {
       // Compute group activation
-      int nactive = 0;
+      std::size_t nactive = 0;
       std::deque<stamp_t>::iterator stamp = grpwindow[i][p].begin();
       for (std::size_t t = 0; t < grpstamps[i][p].size(); ++t) {
         while (stamp != grpwindow[i][p].end()) {

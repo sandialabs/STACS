@@ -52,7 +52,7 @@ void Network::CommEvent(mEvent *msg) {
   tick_t departure;
 
   // Distribute events
-  for (std::size_t i = 0; i < msg->nevent; ++i) {
+  for (idx_t i = 0; i < msg->nevent; ++i) {
     // Fill in prototype
     departure = msg->diffuse[i];
     event.type = msg->type[i];
@@ -70,12 +70,15 @@ void Network::CommEvent(mEvent *msg) {
           event.diffuse = departure + stick[(*target)[0]][(*target)[1]][0]; // delay always first stick of edge
           event.index = (*target)[1];
           // Add to event queue or spillover
+          // within upcoming year
           if ((event.diffuse/tstep - msg->iter) < nevtday) {
             evtcal[(*target)[0]][(event.diffuse/tstep)%nevtday].push_back(event);
           }
+          // in the past
           else if (event.diffuse/tstep < msg->iter) {
             evtcal[(*target)[0]][(msg->iter+1)%nevtday].push_back(event);
           }
+          // more than a year away
           else {
             evtcol[(*target)[0]].push_back(event);
           }
@@ -155,7 +158,7 @@ void Network::CommStamp(mEvent *msg) {
   stamp_t stamp;
 
   // Distribute events
-  for (std::size_t i = 0; i < msg->nevent; ++i) {
+  for (idx_t i = 0; i < msg->nevent; ++i) {
     // Fill in prototype stamp
     if (msg->type[i] == EVENT_SPIKE && msg->index[i] == msg->source[i]) {
       stamp.diffuse = msg->diffuse[i];

@@ -875,7 +875,7 @@ idx_t Netdata::MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_
       // TODO: make sure file-based connections completely override
       //       other connection types (or make them mutually exclusive)
       // TODO: split up files in dCSR order as well
-      if (targetidx >= datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix.size()) {
+      if ((std::size_t) targetidx >= datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix.size()) {
         CkPrintf("  error: datafile %s does not have row for %" PRIidx "\n",
             datafiles[(idx_t) (edges[edg].probparam[k][0])].filename.c_str(), targetidx);
       } else if (datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidx].find((real_t) sourceidx) ==
