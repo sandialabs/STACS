@@ -672,9 +672,6 @@ mPart* Network::BuildRepart() {
 void Netdata::BuildRepart() {
   // Loop through parts
   for (int k = 0; k < nprt; ++k) {
-    // TODO: instead of xvtxidx, just have mpart send the old vtxidx
-    //       this will eventually be needed for structural plasticity
-    idx_t xvtxidx = vtxdist[parts[k]->prtidx];
     idx_t jstate = 0;
     idx_t jstick = 0;
     for (idx_t i = 0; i < parts[k]->nvtx; ++i) {
