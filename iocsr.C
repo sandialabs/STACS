@@ -711,69 +711,72 @@ void Netdata::WriteRecord() {
     nrecord += records[k]->nrecord;
   }
 
-  // Open File
   if (nevtlog) {
+    // Open File
     sprintf(recfile, "%s/%s/%s.evtlog.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, datidx);
     pEvtlog = fopen(recfile,"w");
     if (pEvtlog == NULL) {
       CkPrintf("Error opening files for recording %d\n", datidx);
       CkExit();
     }
+    // TODO: Store records indexed by time and then by type
+    // Loop through parts
+    for (int k = 0; k < nprt; ++k) {
+      // Loop through events
+      for (idx_t e = 0; e < records[k]->nevtlog; ++e) {
+        // event types lacking data
+        if (records[k]->type[e] == EVENT_SPIKE) {
+          fprintf(pEvtlog, "%" PRIidx " %" PRItickhex " %" PRIidx "\n",
+              records[k]->type[e], records[k]->diffuse[e], records[k]->source[e]);
+        }
+        // event types with data
+        else {
+          fprintf(pEvtlog, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
+              records[k]->type[e], records[k]->diffuse[e], records[k]->source[e], records[k]->index[e], records[k]->data[e]);
+        }
+      }
+    }
+    // Cleanup
+    fclose(pEvtlog);
   }
+
   if (nrecord) {
+    // Open File
     sprintf(recfile, "%s/%s/%s.record.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, datidx);
     pRecord = fopen(recfile,"w");
     if (pRecord == NULL) {
       CkPrintf("Error opening files for recording %d\n", datidx);
       CkExit();
     }
-  }
-
-  // TODO: Store records indexed by time and then by type
-  // Loop through parts
-  for (int k = 0; k < nprt; ++k) {
-    // Loop through events
-    for (idx_t e = 0; e < records[k]->nevtlog; ++e) {
-      // event types lacking data
-      if (records[k]->type[e] == EVENT_SPIKE) {
-        fprintf(pEvtlog, "%" PRIidx " %" PRItickhex " %" PRIidx "\n",
-            records[k]->type[e], records[k]->diffuse[e], records[k]->source[e]);
-      }
-      // event types with data
-      else {
-        fprintf(pEvtlog, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealfull "\n",
-            records[k]->type[e], records[k]->diffuse[e], records[k]->source[e], records[k]->index[e], records[k]->data[e]);
-      }
-    }
     // Loop through other records
     // TODO: add record type and modify accordingly
-    for (idx_t r = 0; r < records[k]->nrecord; ++r) {
-      // timestamp followed by number of data entries
-      fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx "",
-          records[k]->type[records[k]->nevtlog+r], records[k]->drift[r],
-          (records[k]->xdata[r+1] - records[k]->xdata[r]),
-          (records[k]->xdiffuse[r+1] - records[k]->xdiffuse[r]),
-          (records[k]->xindex[r+1] - records[k]->xindex[r]));
-      // real data (states)
-      for (idx_t s = records[k]->xdata[r]; s < records[k]->xdata[r+1]; ++s) {
-        fprintf(pRecord, " %" PRIrealfull "", records[k]->data[s]);
+    for (int k = 0; k < nprt; ++k) {
+      for (idx_t r = 0; r < records[k]->nrecord; ++r) {
+        // timestamp followed by number of data entries
+        fprintf(pRecord, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIidx "",
+            records[k]->type[records[k]->nevtlog+r], records[k]->drift[r],
+            (records[k]->xdata[r+1] - records[k]->xdata[r]),
+            (records[k]->xdiffuse[r+1] - records[k]->xdiffuse[r]),
+            (records[k]->xindex[r+1] - records[k]->xindex[r]));
+        // real data (states)
+        for (idx_t s = records[k]->xdata[r]; s < records[k]->xdata[r+1]; ++s) {
+          fprintf(pRecord, " %" PRIrealfull "", records[k]->data[s]);
+        }
+        // tick data (sticks)
+        for (idx_t s = records[k]->xdiffuse[r]; s < records[k]->xdiffuse[r+1]; ++s) {
+          fprintf(pRecord, " %" PRItickhex "", records[k]->diffuse[s]);
+        }
+        // idx data
+        for (idx_t s = records[k]->xindex[r]; s < records[k]->xindex[r+1]; ++s) {
+          fprintf(pRecord, " %" PRIidx "", records[k]->index[s]);
+        }
+        // one line per record
+        fprintf(pRecord, "\n");
       }
-      // tick data (sticks)
-      for (idx_t s = records[k]->xdiffuse[r]; s < records[k]->xdiffuse[r+1]; ++s) {
-        fprintf(pRecord, " %" PRItickhex "", records[k]->diffuse[s]);
-      }
-      // idx data
-      for (idx_t s = records[k]->xindex[r]; s < records[k]->xindex[r+1]; ++s) {
-        fprintf(pRecord, " %" PRIidx "", records[k]->index[s]);
-      }
-      // one line per record
-      fprintf(pRecord, "\n");
     }
+    // Cleanup
+    fclose(pRecord);
   }
-  
-  // Cleanup
-  if (nevtlog) { fclose(pEvtlog); }
-  if (nrecord) { fclose(pRecord); }
 }
 
 
