@@ -534,7 +534,7 @@ void Netdata::ConnectVtx(mConn *msg) {
   
   // Go through the incoming state and reparameterize the state/sticks if needed
   for (idx_t i = 0; i < norderdat; ++i) {
-    for (std::size_t j = 0; j < nadjcysample[i]; ++j) {
+    for (idx_t j = 0; j < nadjcysample[i]; ++j) {
       if (xorderdat[msg->datidx] <= adjcy[i][j] && adjcy[i][j] < xorderdat[msg->datidx+1]) {
         // Reparameterize with information
         idx_t locsourceidx = adjcy[i][j] - xorderdat[msg->datidx];

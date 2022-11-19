@@ -172,9 +172,9 @@ mRecord* Network::BuildRecord() {
   }
   
   // Counters
-  idx_t jdata = evtlog.size();
-  idx_t jdiffuse = evtlog.size();
-  idx_t jindex = evtlog.size();
+  std::size_t jdata = evtlog.size();
+  std::size_t jdiffuse = evtlog.size();
+  std::size_t jindex = evtlog.size();
   
   // Prefix starts at end of event data
   mrecord->xdata[0] = evtlog.size();

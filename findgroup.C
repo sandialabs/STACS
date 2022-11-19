@@ -95,7 +95,7 @@ void Network::FindGroup() {
           // Use only valid anchor edges
           std::vector<idx_t> anchor;
           anchor.clear();
-          for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+          for (idx_t j = 0; (std::size_t) j < edgmodidx[i].size(); ++j) {
             if (model[edgmodidx[i][j]]->getAnchor()) {
               // TODO: Based off of spiking property of the 
               //       model instead of just anchor models
@@ -106,9 +106,9 @@ void Network::FindGroup() {
           }
 
           // Group combinatorics
-          for (idx_t j0 = 0; j0 < anchor.size(); ++j0) {
-            for (idx_t j1 = j0+1; j1 < anchor.size(); ++j1) {
-              for (idx_t j2 = j1+1; j2 < anchor.size(); ++j2) {
+          for (std::size_t j0 = 0; j0 < anchor.size(); ++j0) {
+            for (std::size_t j1 = j0+1; j1 < anchor.size(); ++j1) {
+              for (std::size_t j2 = j1+1; j2 < anchor.size(); ++j2) {
                 // Test for spiking of mother neuron
                 // assuming perfect timing of anchor
                 model[vtxmodidx[i]]->Reset(state[i][0], stick[i][0]);

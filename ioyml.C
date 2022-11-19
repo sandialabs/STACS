@@ -206,7 +206,7 @@ int Main::ReadConfig(std::string configfile) {
     teventq = TEVENTQ_DEFAULT;
     CkPrintf("  teventq not defined, defaulting to: %.2g ms\n", teventq);
   }
-  nevtday = (idx_t)(((tick_t)(teventq*TICKS_PER_MS))/tstep) + 1;
+  nevtday = (((tick_t)(teventq*TICKS_PER_MS))/tstep) + 1;
   // How often to display the simulation time (in ms)
   try {
     tdisplay = config["tdisplay"].as<real_t>();

@@ -437,15 +437,15 @@ class NetModel {
     std::vector<std::string> getAuxStick() const { return auxstick; }
     idx_t getParamIdx(const std::string& name) const {
       idx_t index = std::find(paramlist.begin(), paramlist.end(), name) - paramlist.begin();
-      return (index < paramlist.size() ? index : -1);
+      return ((std::size_t) index < paramlist.size() ? index : -1);
     }
     idx_t getStateIdx(const std::string& name) const {
       idx_t index = std::find(statelist.begin(), statelist.end(), name) - statelist.begin();
-      return (index < statelist.size() ? index : -1);
+      return ((std::size_t) index < statelist.size() ? index : -1);
     }
     idx_t getStickIdx(const std::string& name) const {
       idx_t index = std::find(sticklist.begin(), sticklist.end(), name) - sticklist.begin();
-      return (index < sticklist.size() ? index : -1);
+      return ((std::size_t) index < sticklist.size() ? index : -1);
     }
     // TODO: Move polychronization stuff out of model
     bool getPlastic() const { return plastic; }
@@ -752,7 +752,7 @@ class Netdata : public CBase_Netdata {
     // Dimensions are stored: targetdim x sourcedim
     real_t rngfile(real_t *param, idx_t sourceidx, idx_t targetidx) {
       real_t state = 0.0;
-      if (targetidx >= datafiles[(idx_t) (param[0])].matrix.size() ||
+      if ((std::size_t) targetidx >= datafiles[(idx_t) (param[0])].matrix.size() ||
           datafiles[(idx_t) (param[0])].matrix[targetidx].find(sourceidx) ==
           datafiles[(idx_t) (param[0])].matrix[targetidx].end()) {
         // TODO: Throw an error if element doesn't exist

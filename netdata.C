@@ -118,7 +118,7 @@ Netdata::Netdata(mModel *msg) {
     stateconfig.resize(modelconf[i].nstate, false);
     modelconf[i].statename.resize(modelconf[i].nstate);
     modelconf[i].statename = model[modmap[modelconf[i].modname]]->getStateList();
-    for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
+    for (idx_t j = 0; j < msg->nstate[i]; ++j) {
       std::string statename = std::string(msg->statename + msg->xstatename[jstatename], msg->statename + msg->xstatename[jstatename+1]);
       statemap[j] = model[modmap[modelconf[i].modname]]->getStateIdx(statename.c_str());
       // some basic error checking
@@ -137,7 +137,7 @@ Netdata::Netdata(mModel *msg) {
     stickconfig.resize(modelconf[i].nstick, false);
     modelconf[i].stickname.resize(modelconf[i].nstick);
     modelconf[i].stickname = model[modmap[modelconf[i].modname]]->getStickList();
-    for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
+    for (idx_t j = 0; j < msg->nstick[i]; ++j) {
       std::string stickname = std::string(msg->stickname + msg->xstickname[jstickname], msg->stickname + msg->xstickname[jstickname+1]);
       stickmap[j] = model[modmap[modelconf[i].modname]]->getStickIdx(stickname.c_str());
       // some basic error checking
@@ -152,7 +152,7 @@ Netdata::Netdata(mModel *msg) {
     // prepare containers for parameters
     modelconf[i].stateinit.resize(modelconf[i].nstate);
     modelconf[i].stateparam.resize(modelconf[i].nstate);
-    for (std::size_t j = 0; j < msg->nstate[i]; ++j) {
+    for (idx_t j = 0; j < msg->nstate[i]; ++j) {
       // stateinit
       modelconf[i].stateinit[statemap[j]] = msg->stateinit[msg->xstateinit[i] + j];
       switch (modelconf[i].stateinit[statemap[j]]) {
@@ -197,7 +197,7 @@ Netdata::Netdata(mModel *msg) {
     // prepare containers
     modelconf[i].stickinit.resize(modelconf[i].nstick);
     modelconf[i].stickparam.resize(modelconf[i].nstick);
-    for (std::size_t j = 0; j < msg->nstick[i]; ++j) {
+    for (idx_t j = 0; j < msg->nstick[i]; ++j) {
       // stickinit
       modelconf[i].stickinit[stickmap[j]] = msg->stickinit[msg->xstickinit[i] + j];
       switch (modelconf[i].stickinit[stickmap[j]]) {
@@ -241,14 +241,14 @@ Netdata::Netdata(mModel *msg) {
     }
     // Now go through the states that weren't defined by the model config
     // These are the false entries in stateconfig
-    for (std::size_t j = 0; j < modelconf[i].nstate; ++j) {
+    for (idx_t j = 0; j < modelconf[i].nstate; ++j) {
       if (stateconfig[j]) { continue; }
       else {
         modelconf[i].stateinit[j] = model[modmap[modelconf[i].modname]]->getDefaultStateType(j);
         modelconf[i].stateparam[j] = model[modmap[modelconf[i].modname]]->getDefaultStateParam(j);
       }
     }
-    for (std::size_t j = 0; j < modelconf[i].nstick; ++j) {
+    for (idx_t j = 0; j < modelconf[i].nstick; ++j) {
       if (stickconfig[j]) { continue; }
       else {
         modelconf[i].stickinit[j] = model[modmap[modelconf[i].modname]]->getDefaultStickType(j);

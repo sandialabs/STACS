@@ -547,7 +547,7 @@ void Netdata::ReadPart() {
       eventreprt[reprt[i]].back().push_back(eventpre);
     }
     neventdat += jevent;
-    CkAssert(eventreprt[reprt[i]].back().size() == jevent);
+    CkAssert(eventreprt[reprt[i]].back().size() == (std::size_t) jevent);
   }
 
   // Cleanup
@@ -907,7 +907,7 @@ void Netdata::WriteEstimate() {
     }
 
     // Loop through events
-    for (idx_t e = 1; e < grplog.size(); ++e) {
+    for (std::size_t e = 1; e < grplog.size(); ++e) {
       fprintf(pGrplog, "%" PRIidx " %" PRItickhex " %" PRIidx " %" PRIidx " %" PRIrealsec "\n",
           grplog[e].type, grplog[e].diffuse, grplog[e].source, grplog[e].index, grplog[e].data);
     }

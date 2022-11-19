@@ -111,7 +111,7 @@ Network::Network(mModel *msg) {
     paramvalues.resize(model[i]->getNParam());
     std::vector<bool> paramconfig;
     paramconfig.resize(model[i]->getNParam(),false);
-    for (std::size_t j = 0; j < msg->nparam[i-1]; ++j) {
+    for (idx_t j = 0; j < msg->nparam[i-1]; ++j) {
       std::string paramname = std::string(msg->paramname + msg->xparamname[jparamname], msg->paramname + msg->xparamname[jparamname+1]);
       parammap[j] = model[i]->getParamIdx(paramname.c_str());
       // some basic error checking
@@ -125,7 +125,7 @@ Network::Network(mModel *msg) {
     }
     // Now go through the parameters that weren't defined by the model config
     // These are the false entries in paramconfig
-    for (std::size_t j = 0; j < model[i]->getNParam(); ++j) {
+    for (idx_t j = 0; j < model[i]->getNParam(); ++j) {
       if (paramconfig[j]) { continue; }
       else {
         paramvalues[j] = model[i]->getDefaultParam(j);
@@ -161,7 +161,7 @@ Network::Network(mModel *msg) {
   record.clear();
   recordlist.clear();
   recordmodset.resize(model.size());
-  for (idx_t i = 0; i < model.size(); ++i) {
+  for (std::size_t i = 0; i < model.size(); ++i) {
     recordmodset[i].clear();
   }
   for (idx_t r = 0; r < msg->nrecord; ++r) {
@@ -317,7 +317,7 @@ void Network::LoadNetwork(mPart *msg) {
   nevent = 0;
 
   // Get adjacency matrix
-  for (idx_t i = 0; i < adjcy.size(); ++i) {
+  for (idx_t i = 0; (std::size_t) i < adjcy.size(); ++i) {
     vtxidx[i] = vtxdist[prtidx] + i;
     vtxmap[vtxdist[prtidx] + i] = i;
     vtxmodidx[i] = msg->vtxmodidx[i];
@@ -341,7 +341,7 @@ void Network::LoadNetwork(mPart *msg) {
       leapidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
     }
     // copy over edge data
-    for (idx_t j = 0; j < adjcy[i].size(); ++j) {
+    for (idx_t j = 0; (std::size_t) j < adjcy[i].size(); ++j) {
       adjcy[i][j] = msg->adjcy[msg->xadj[i] + j];
       // models
       edgmodidx[i][j] = msg->edgmodidx[jmodidx++];
@@ -362,7 +362,7 @@ void Network::LoadNetwork(mPart *msg) {
     if (model[vtxmodidx[i]]->getNAux()) {
       std::vector<std::string> auxstate = model[vtxmodidx[i]]->getAuxState();
       std::vector<std::string> auxstick = model[vtxmodidx[i]]->getAuxStick();
-      for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+      for (idx_t j = 0; (std::size_t) j < edgmodidx[i].size(); ++j) {
         if (edgmodidx[i][j]) {
           vtxaux[i].push_back(auxidx_t());
           vtxaux[i].back().index = j+1;
@@ -422,7 +422,7 @@ void Network::LoadNetwork(mPart *msg) {
 
   // Set up recording
   // Header information (vtx/edg corresponding to data)
-  for (idx_t r = 0; r < recordlist.size(); ++r) {
+  for (idx_t r = 0; (std::size_t) r < recordlist.size(); ++r) {
     record.push_back(record_t());
     record.back().recidx = r;
     record.back().trec = 0;
@@ -431,13 +431,13 @@ void Network::LoadNetwork(mPart *msg) {
     record.back().index.clear();
     recordlist[r].recvtxidx.clear();
     recordlist[r].recedgidx.resize(vtxmodidx.size());
-    for (idx_t i = 0; i < vtxmodidx.size(); ++i) {
+    for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
       recordlist[r].recedgidx[i].clear();
     }
   }
   // Populate recording indices
   std::set<idx_t>::iterator jrec;
-  for (idx_t i = 0; i < vtxmodidx.size(); ++i) {
+  for (idx_t i = 0; (std::size_t) i < vtxmodidx.size(); ++i) {
     // vertices
     for (jrec = recordmodset[vtxmodidx[i]].begin(); jrec != recordmodset[vtxmodidx[i]].end(); ++jrec) {
       recordlist[*jrec].recvtxidx.push_back(i);
@@ -446,7 +446,7 @@ void Network::LoadNetwork(mPart *msg) {
       record[*jrec].index.push_back(0);
     }
     // edges
-    for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+    for (idx_t j = 0; (std::size_t) j < edgmodidx[i].size(); ++j) {
       for (jrec = recordmodset[edgmodidx[i][j]].begin(); jrec != recordmodset[edgmodidx[i][j]].end(); ++jrec) {
         if (recordlist[*jrec].recvtxidx.size() == 0 || recordlist[*jrec].recvtxidx.back() != i) {
           recordlist[*jrec].recvtxidx.push_back(i);
@@ -533,7 +533,7 @@ void Network::ReloadNetwork(mPart *msg) {
   nevent = 0;
 
   // Get adjacency matrix
-  for (idx_t i = 0; i < adjcy.size(); ++i) {
+  for (idx_t i = 0; (std::size_t) i < adjcy.size(); ++i) {
     vtxidx[i] = vtxdist[prtidx] + i;
     vtxmap[vtxdist[prtidx] + i] = i;
     vtxmodidx[i] = msg->vtxmodidx[i];
@@ -557,7 +557,7 @@ void Network::ReloadNetwork(mPart *msg) {
       leapidx[vtxmodidx[i]].push_back(std::array<idx_t, 2>{{i, 0}});
     }
     // copy over edge data
-    for (idx_t j = 0; j < adjcy[i].size(); ++j) {
+    for (idx_t j = 0; (std::size_t) j < adjcy[i].size(); ++j) {
       adjcy[i][j] = msg->adjcy[msg->xadj[i] + j];
       // models
       edgmodidx[i][j] = msg->edgmodidx[jmodidx++];
@@ -578,7 +578,7 @@ void Network::ReloadNetwork(mPart *msg) {
     if (model[vtxmodidx[i]]->getNAux()) {
       std::vector<std::string> auxstate = model[vtxmodidx[i]]->getAuxState();
       std::vector<std::string> auxstick = model[vtxmodidx[i]]->getAuxStick();
-      for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+      for (idx_t j = 0; j < (std::size_t) edgmodidx[i].size(); ++j) {
         if (edgmodidx[i][j]) {
           vtxaux[i].push_back(auxidx_t());
           vtxaux[i].back().index = j+1;
@@ -629,7 +629,7 @@ void Network::ReloadNetwork(mPart *msg) {
   
   // Re-set up recording
   // Header information (vtx/edg corresponding to data)
-  for (idx_t r = 0; r < recordlist.size(); ++r) {
+  for (idx_t r = 0; (std::size_t) r < recordlist.size(); ++r) {
     record.push_back(record_t());
     record.back().recidx = r;
     record.back().trec = 0;
@@ -638,13 +638,13 @@ void Network::ReloadNetwork(mPart *msg) {
     record.back().index.clear();
     recordlist[r].recvtxidx.clear();
     recordlist[r].recedgidx.resize(vtxmodidx.size());
-    for (idx_t i = 0; i < vtxmodidx.size(); ++i) {
+    for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
       recordlist[r].recedgidx[i].clear();
     }
   }
   // Populate recording indices
   std::set<idx_t>::iterator jrec;
-  for (idx_t i = 0; i < vtxmodidx.size(); ++i) {
+  for (idx_t i = 0; (std::size_t) i < vtxmodidx.size(); ++i) {
     // vertices
     for (jrec = recordmodset[vtxmodidx[i]].begin(); jrec != recordmodset[vtxmodidx[i]].end(); ++jrec) {
       recordlist[*jrec].recvtxidx.push_back(i);
@@ -653,7 +653,7 @@ void Network::ReloadNetwork(mPart *msg) {
       record[*jrec].index.push_back(0);
     }
     // edges
-    for (idx_t j = 0; j < edgmodidx[i].size(); ++j) {
+    for (idx_t j = 0; (std::size_t) j < edgmodidx[i].size(); ++j) {
       for (jrec = recordmodset[edgmodidx[i][j]].begin(); jrec != recordmodset[edgmodidx[i][j]].end(); ++jrec) {
         if (recordlist[*jrec].recvtxidx.size() == 0 || recordlist[*jrec].recvtxidx.back() != i) {
           recordlist[*jrec].recvtxidx.push_back(i);
