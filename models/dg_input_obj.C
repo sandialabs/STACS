@@ -144,20 +144,20 @@ void DGInputObject::OpenPorts() {
     CkPrintf("  warning: trajectory not defined\n");
     trajectory = {{0.0,0.0,0.0}};
   }
-  CkPrintf("  trajectory length: %d\n", trajectory.size());
+  CkPrintf("  trajectory length: %zu\n", trajectory.size());
   try {
     object_location = input["object_location"].as<std::vector<std::vector<real_t>>>();
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  warning: objects not defined\n");
     object_location = {{0.0,0.0}};
   }
-  CkPrintf("  number of objects: %d\n", object_location.size());
+  CkPrintf("  number of objects: %zu\n", object_location.size());
   try {
     obj_act = input["obj_act"].as<std::vector<std::vector<real_t>>>();
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  warning: object cell activity distribution not defined\n");
   }
-  CkPrintf("  object neurons: %d\n", obj_act.size());
+  CkPrintf("  object neurons: %zu\n", obj_act.size());
 }
 
 // Close ports

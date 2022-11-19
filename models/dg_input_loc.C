@@ -138,7 +138,7 @@ void DGInputLocation::OpenPorts() {
     CkPrintf("  warning: trajectory not defined\n");
     trajectory = {{0.0,0.0,0.0}};
   }
-  CkPrintf("  trajectory length: %d\n", trajectory.size());
+  CkPrintf("  trajectory length: %zu\n", trajectory.size());
   try {
     loc_act = input["loc_act"].as<std::vector<real_t>>();
   } catch (YAML::RepresentationException& e) {
@@ -164,7 +164,7 @@ void DGInputLocation::OpenPorts() {
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  warning: grid cell offset y not defined\n");
   }
-  CkPrintf("  grid neurons: %d\n", loc_act.size());
+  CkPrintf("  grid neurons: %zu\n", loc_act.size());
 }
 
 // Close ports

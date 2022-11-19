@@ -37,7 +37,7 @@ void Netdata::LoadPart(mDist *msg) {
   delete msg;
 
   // Read in files
-  CkPrintf("Reading network data files %" PRIidx "\n", datidx);
+  CkPrintf("Reading network data files %d\n", datidx);
   ReadPart();
   
   // Return control to main

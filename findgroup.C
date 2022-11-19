@@ -223,7 +223,7 @@ void Network::ComputeGroup() {
     std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx-1);
     if (!grpseeds.empty() && mother != vtxmap.end()) {
       idx_t groupidx = mother->second;
-      CkPrintf("  Groups found %d\n", grpstamps[groupidx].size());
+      CkPrintf("  Groups found %zu\n", grpstamps[groupidx].size());
       if (grpstamps[groupidx].size()) {
         // Write to file
         WriteGroup(groupidx);

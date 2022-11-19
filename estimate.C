@@ -341,10 +341,10 @@ void Network::EstimateGroup(idx_t i) {
         }
       }
       if (nactive > (grpstamps[i][p].size() / 2)) {
-        CkPrintf("PNG %d, %d activated\n", vtxidx[i], p);
+        CkPrintf("PNG %" PRIidx ", %zu activated\n", vtxidx[i], p);
         // Record group activation
         event.source = vtxidx[i];
-        event.index = p;
+        event.index = (idx_t) p;
         event.data = ((real_t)(grpdur[i][p]/TICKS_PER_MS));
         grplog.push_back(event);
         // Clear window for repeats

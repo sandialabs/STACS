@@ -355,7 +355,8 @@ void Netdata::LoadData(mDist *msg) {
   delete msg;
 
   // Read in files
-  CkPrintf("Reading network data files %" PRIidx "\n", datidx);
+  //CkPrintf("Reading network data files %" PRIidx "\n", datidx);
+  CkPrintf("Reading network data files %d\n", datidx);
   ReadNetwork();
 
   // Return control to main

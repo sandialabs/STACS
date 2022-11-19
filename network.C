@@ -417,7 +417,7 @@ void Network::LoadNetwork(mPart *msg) {
   CreateComm();
 
   // Print some information
-  CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjpart: %" PRIidx "\n",
+  CkPrintf("  Network part %d:   vtx: %zu   edg: %" PRIidx "   adjvtx: %zu   adjpart: %" PRIidx "\n",
            prtidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
 
   // Set up recording
@@ -624,7 +624,7 @@ void Network::ReloadNetwork(mPart *msg) {
   CreateComm();
 
   // Print some information
-  CkPrintf("  Network part %" PRIidx ":   vtx: %d   edg: %d   adjvtx: %d   adjpart: %" PRIidx "\n",
+  CkPrintf("  Network part %d:   vtx: %zu   edg: %" PRIidx "   adjvtx: %zu   adjpart: %" PRIidx "\n",
            prtidx, adjcy.size(), nadjcy, adjmap.size(), nadjpart);
   
   // Re-set up recording

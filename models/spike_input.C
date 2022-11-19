@@ -117,7 +117,7 @@ void SpikeInput::OpenPorts() {
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  warning: spike list not defined\n");
   }
-  CkPrintf("  number of connected vertices: %d\n", spike_list.size());
+  CkPrintf("  number of connected vertices: %zu\n", spike_list.size());
   // Make sure the number of connected vertices matches the yaml file input
   CkAssert(param[0] == spike_list.size());
   // Set up spiking updates

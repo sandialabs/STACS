@@ -559,7 +559,7 @@ void Netdata::ReadPart() {
   delete[] line;
 
   // Print out some information
-  CkPrintf("  File: %d   Vertices: %" PRIidx "   Edges: %" PRIidx "   States: %" PRIidx "   Sticks: %" PRIidx"   Events: %" PRIidx"\n",
+  CkPrintf("  File: %d   Vertices: %zu   Edges: %" PRIidx "   States: %" PRIidx "   Sticks: %" PRIidx"   Events: %" PRIidx"\n",
       datidx, reprt.size(), nsizedat, nstatedat, nstickdat, neventdat);
 
   // Prepare for reording partitions

@@ -215,7 +215,7 @@ void YinYangEpis::OpenPorts() {
   } catch (YAML::RepresentationException& e) {
     CkPrintf("  warning: yin yang samples not defined\n");
   }
-  CkPrintf("  number of yin-yang samples: %d\n", sample_c.size());
+  CkPrintf("  number of yin-yang samples: %zu\n", sample_c.size());
 }
 
 // Close ports

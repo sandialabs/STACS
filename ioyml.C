@@ -1165,7 +1165,7 @@ int Main::ReadModel() {
         part << " " << modname;
         modelparts.append(part.str());
       }
-      CkPrintf("  Model: %d   Name: %s   Type: %d   States: %u   Parts:%s\n",
+      CkPrintf("  Model: %zu   Name: %s   Type: %" PRIidx "   States: %" PRIidx "   Parts:%s\n",
           i+1, modelconf[i].modname.c_str(), modelconf[i].modtype, modelconf[i].nstate + modelconf[i].nstick,
           modelparts.c_str());
     }
@@ -1179,7 +1179,7 @@ int Main::ReadModel() {
         modelports.append(port.str());
       }
       // TODO: modtype to name for base model (may move into netdata for this?)
-      CkPrintf("  Model: %d   Name: %s   Type: %d   States: %u   Params: %u   Ports:%s\n",
+      CkPrintf("  Model: %zu   Name: %s   Type: %" PRIidx "   States: %" PRIidx "   Params: %zu   Ports:%s\n",
           i+1, modelconf[i].modname.c_str(), modelconf[i].modtype, modelconf[i].nstate + modelconf[i].nstick,
           modelconf[i].param.size(), (modelports == "") ? " None" : modelports.c_str());
     }

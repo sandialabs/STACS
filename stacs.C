@@ -401,7 +401,7 @@ void Main::Init() {
         grpanchorstring.append(grpanchor.str());
       }
       // Compute vertices evaluated
-      CkPrintf("  Random Number Seed  (randseed): %" PRIidx "\n"
+      CkPrintf("  Random Number Seed  (randseed): %u\n"
                "  Group Directory     (groupdir): %s\n"
                "  Simulation Time Step   (tstep): %" PRIrealms "ms\n"
                "  Event Queue Length   (teventq): %" PRIrealms "ms\n"
@@ -422,7 +422,7 @@ void Main::Init() {
     }
     else if (runmode == RUNMODE_ESTIMATE) {
       if (episodic) {
-        CkPrintf("  Random Number Seed  (randseed): %" PRIidx "\n"
+        CkPrintf("  Random Number Seed  (randseed): %u\n"
                  "  Group Directory     (groupdir): %s\n"
                  "  Simulation Time Step   (tstep): %" PRIrealms "ms\n"
                  "  Event Queue Length   (teventq): %" PRIrealms "ms\n"
@@ -432,7 +432,7 @@ void Main::Init() {
                  ((real_t)(tepisode/TICKS_PER_MS)), episodes);
       }
       else {
-        CkPrintf("  Random Number Seed  (randseed): %" PRIidx "\n"
+        CkPrintf("  Random Number Seed  (randseed): %u\n"
                  "  Group Directory     (groupdir): %s\n"
                  "  Simulation Time Step   (tstep): %" PRIrealms "ms\n"
                  "  Event Queue Length   (teventq): %" PRIrealms "ms\n"
