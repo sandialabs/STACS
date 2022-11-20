@@ -46,6 +46,39 @@ CkReductionMsg *netGroup(int nMsg, CkReductionMsg **msgs) {
 * Polychronization Initialization
 **************************************************************************/
 
+// Polychronization Configuration
+//
+void Network::LoadGroup(mGroup *msg) {
+  // polychronization models
+  grpactives.resize(msg->nmodel+1);
+  grpmothers.resize(msg->nmodel+1);
+  grpanchors.resize(msg->nmodel+1);
+  // "none" model
+  grpactives[0] = false;
+  grpmothers[0] = false;
+  grpanchors[0] = false;
+  for (idx_t i = 1; i < msg->nmodel+1; ++i) {
+    grpactives[i] = msg->grpactive[i-1];
+    grpmothers[i] = msg->grpmother[i-1];
+    grpanchors[i] = msg->grpanchor[i-1];
+  }
+
+  // cleanup
+  delete msg;
+
+  for (idx_t i = 0; (std::size_t) i < adjcy.size(); ++i) {
+    // initialize polychronization
+    grpstamps[i].clear();
+    grpdur[i].clear();
+    grpwindow[i].clear();
+    ReadGroup(i);
+  }
+
+  // return control to main
+  contribute(0, NULL, CkReduction::nop);
+}
+
+
 // Coordination with NetData chare array
 //
 void Network::InitGroup(CProxy_Netdata cpdata) {
@@ -79,7 +112,7 @@ void Network::FindGroup() {
     // Only one vertex containing partition performs control
     std::unordered_map<idx_t, idx_t>::iterator mother = vtxmap.find(compidx);
     if (mother != vtxmap.end()) {
-      if (model[vtxmodidx[mother->second]]->getMother()) {
+      if (grpmothers[vtxmodidx[mother->second]]) {
         // Bookkeeping
         idx_t i = mother->second;
         grpstamps[i].clear();
@@ -96,7 +129,7 @@ void Network::FindGroup() {
           std::vector<idx_t> anchor;
           anchor.clear();
           for (idx_t j = 0; (std::size_t) j < edgmodidx[i].size(); ++j) {
-            if (model[edgmodidx[i][j]]->getAnchor()) {
+            if (grpanchors[edgmodidx[i][j]]) {
               // TODO: Based off of spiking property of the 
               //       model instead of just anchor models
               if (model[edgmodidx[i][j]]->getStickIdx("delay") == 0) {
@@ -375,7 +408,7 @@ void Network::CycleGroup() {
     
     // Perform computation
     for (std::size_t i = 0; i < vtxmodidx.size(); ++i) {
-      if (model[vtxmodidx[i]]->getActive() == false) {
+      if (grpactives[vtxmodidx[i]] == false) {
         evtcal[i][evtday].clear();
         continue;
       }

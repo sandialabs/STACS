@@ -20,7 +20,6 @@ extern /*readonly*/ idx_t intrec;
 extern /*readonly*/ idx_t intbal;
 extern /*readonly*/ idx_t intsave;
 extern /*readonly*/ tick_t tmax;
-extern /*readonly*/ idx_t grpvtxmin;
 
 
 /**************************************************************************
@@ -83,9 +82,6 @@ Network::Network(mModel *msg) {
   // "none" model
   model.push_back(ModelFactory::newModel()->Create(0));
   // TODO: Roll this into model creation perhaps
-  model[0]->setActive(false);
-  model[0]->setMother(false);
-  model[0]->setAnchor(false);
   model[0]->setPlastic(false);
 
   idx_t jparamname = 0;
@@ -95,12 +91,6 @@ Network::Network(mModel *msg) {
     model.push_back(ModelFactory::newModel()->Create(msg->modtype[i-1]));
     model[i]->setPort(msg->port + msg->xport[i-1]);
     model[i]->setRandom(unifdist, &rngine);
-    //model[i]->setActive(msg->grpactive[i-1]);
-    //model[i]->setMother(msg->grpmother[i-1]);
-    //model[i]->setAnchor(msg->grpanchor[i-1]);
-    model[i]->setActive(false);
-    model[i]->setMother(false);
-    model[i]->setAnchor(false);
     model[i]->setPlastic(msg->plastic);
     // names (may be in a different order than implemented model)
     // Find the mapping from user-provided param names to the implemented param names
@@ -400,11 +390,6 @@ void Network::LoadNetwork(mPart *msg) {
     if (model[vtxmodidx[i]]->getNPort()) {
       model[vtxmodidx[i]]->OpenPorts();
     }
-    // initialize polychronization
-    grpstamps[i].clear();
-    grpdur[i].clear();
-    grpwindow[i].clear();
-    ReadGroup(i);
   }
   CkAssert(msg->nedg == nadjcy);
   CkAssert(msg->nedg == jmodidx);

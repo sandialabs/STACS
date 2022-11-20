@@ -84,6 +84,19 @@ Main::Main(CkArgMsg *msg) {
     CkPrintf("Error reading graph specification...\n");
     CkExit();
   }
+
+  // Read graph distribution files (for built networks)
+  if (runmode != std::string(RUNMODE_BUILD) &&
+      runmode != std::string(RUNMODE_BUILDSIM)) {
+    if (ReadDist()) {
+      CkPrintf("Error reading graph distribution...\n");
+      CkExit();
+    }
+
+    // Convert group percentage to index
+    grpvtxmin = (idx_t)(std::floor(grpvtxminreal * netdist[netparts].nvtx));
+    grpvtxmax = (idx_t)(std::floor(grpvtxmaxreal * netdist[netparts].nvtx));
+  }
   
   // Charm information
   mainProxy = thisProxy;
@@ -98,7 +111,6 @@ Main::Main(CkArgMsg *msg) {
            "  Charm++ Processing Elements  : %d\n"
            "  Network Partitions per PE    : %.2g\n",
            runmode.c_str(), netfiles, netparts, CkNumPes(), netpe);
-
   
   // Netdata chare array (used in all runmodes)
   // Set Round Robin Mapping
@@ -183,11 +195,6 @@ void Main::Control() {
       // Start timer
       wcstart = std::chrono::system_clock::now();
 
-      // Read graph distribution files
-      if (ReadDist()) {
-        CkPrintf("Error reading graph distribution...\n");
-        CkExit();
-      }
       CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
       mDist *mdist = BuildDist();
       netdata.LoadPart(mdist);
@@ -269,18 +276,7 @@ void Main::Control() {
 
   // Simulate an already built network
   else if (runmode == std::string(RUNMODE_SIMULATE) ||
-           runmode == std::string(RUNMODE_SIMGPU) ||
-           runmode == std::string(RUNMODE_FINDGROUP) ||
-           runmode == std::string(RUNMODE_ESTIMATE)) {
-    // Read graph distribution files
-    if (ReadDist()) {
-      CkPrintf("Error reading graph distribution...\n");
-      CkExit();
-    }
-    // Convert group percentage to index
-    grpvtxmin = (idx_t)(std::floor(grpvtxminreal * netdist[netparts].nvtx));
-    grpvtxmax = (idx_t)(std::floor(grpvtxmaxreal * netdist[netparts].nvtx));
-
+           runmode == std::string(RUNMODE_SIMGPU)) {
     // Initialize coordination
     cinit = 0;
     ninit = 0;
@@ -302,6 +298,41 @@ void Main::Control() {
     mVtxs *mvtxs = BuildVtxs();
     stream = CProxy_Stream::ckNew(mvtxs);
 #endif
+  }
+  else if (runmode == std::string(RUNMODE_FINDGROUP) ||
+           runmode == std::string(RUNMODE_ESTIMATE)) {
+    if (readflag) {
+      readflag = false;
+
+      // Breaking up the setup into two parts for group config info
+      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
+      mModel *mmodel = BuildModel();
+      network = CProxy_Network::ckNew(mmodel, netparts);
+      network.ckSetReductionClient(&cbcontrol);
+    }
+    else {
+      // Initialize coordination
+      cinit = 0;
+      ninit = 0;
+      CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
+
+      // Loading network data from file
+      ++ninit;
+      mDist *mdist = BuildDist();
+      netdata.LoadData(mdist);
+      netdata.ckSetReductionClient(&cbinit);
+      // Network chare array is used in simulation
+      ++ninit;
+      mGroup *mgroup = BuildGroup();
+      network.LoadGroup(mgroup);
+      network.ckSetReductionClient(&cbinit);
+#ifdef STACS_WITH_YARP
+      // stream
+      ++ninit;
+      mVtxs *mvtxs = BuildVtxs();
+      stream = CProxy_Stream::ckNew(mvtxs);
+#endif
+    }
   }
 }
   

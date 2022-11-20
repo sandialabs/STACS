@@ -87,6 +87,13 @@ module network {
     idx_t nedgmaskparam;
   };
 
+  message mGroup {
+    bool grpactive[];
+    bool grpmother[];
+    bool grpanchor[];
+    idx_t nmodel;
+  };
+
   message mConn {
     idx_t vtxmodidx[];
     idx_t vtxordidx[];
@@ -228,6 +235,7 @@ module network {
     entry void SaveEstimate();
     entry void SaveFinalEstimate();
     
+    entry void LoadGroup(mGroup *msg);
     entry void InitGroup(CProxy_Netdata cpdata);
     entry void FindGroup();
     entry void ComputeGroup(idx_t nseeds, int grpart);

@@ -82,9 +82,6 @@ struct model_t {
   std::vector<std::string> paramname;
   std::vector<real_t> param;
   std::vector<std::string> port;
-  bool grpactive;
-  bool grpmother;
-  bool grpanchor;
 };
 
 // Vertices
@@ -156,6 +153,7 @@ class Main : public CBase_Main {
     mDist* BuildDist();
     mModel* BuildModel();
     mGraph* BuildGraph();
+    mGroup* BuildGroup();
 #ifdef STACS_WITH_YARP
     mVtxs* BuildVtxs();
 #endif

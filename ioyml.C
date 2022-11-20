@@ -1121,31 +1121,6 @@ int Main::ReadModel() {
       }
     }
 
-    // Polychronization (active models)
-    // TODO: move non-standard simulation stuff to a different function?
-    modelconf[jmod].grpactive = false;
-    for (std::size_t j = 0; j < grpactives.size(); ++j) {
-      if (modelconf[jmod].modname == grpactives[j]) {
-        modelconf[jmod].grpactive = true;
-        break;
-      }
-    }
-    // Polychronization (mother vertices)
-    modelconf[jmod].grpmother = false;
-    for (std::size_t j = 0; j < grpmothers.size(); ++j) {
-      if (modelconf[jmod].modname == grpmothers[j]) {
-        modelconf[jmod].grpmother = true;
-        break;
-      }
-    }
-    // Polychronization (anchor edges)
-    modelconf[jmod].grpanchor = false;
-    for (std::size_t j = 0; j < grpanchors.size(); ++j) {
-      if (modelconf[jmod].modname == grpanchors[j]) {
-        modelconf[jmod].grpanchor = true;
-        break;
-      }
-    }
     // update for next model
     ++jmod;
   }

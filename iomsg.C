@@ -154,9 +154,6 @@ mModel* Main::BuildModel() {
   msgSize[20] = nparam;            // param
   msgSize[21] = modelconf.size()+1;   // xport
   msgSize[22] = nport;             // port
-  //msgSize[23] = modelconf.size();     // grpactive
-  //msgSize[24] = modelconf.size();     // grpmother
-  //msgSize[25] = modelconf.size();     // grpanchor
   msgSize[23] = datafiles.size()+1;  // xdatafiles
   msgSize[24] = ndatafile;           // datafiles
   msgSize[25] = datafiles.size();    // datatypes
@@ -286,14 +283,6 @@ mModel* Main::BuildModel() {
       // xport
       mmodel->xport[i+1] += modelconf[i].port[j].size() + 1;
     }
-    /*
-    // grpactive
-    mmodel->grpactive[i] = modelconf[i].grpactive;
-    // grpmother
-    mmodel->grpmother[i] = modelconf[i].grpmother;
-    // grpanchor
-    mmodel->grpanchor[i] = modelconf[i].grpanchor;
-    */
   }
   CkAssert(jstatename == nstatename);
   CkAssert(jstickname == nstickname);
@@ -476,6 +465,42 @@ mGraph* Main::BuildGraph() {
 
   // return graph
   return mgraph;
+}
+
+// Build group information for polychronization
+//
+mGroup* Main::BuildGroup() {
+  // Initialize graph message
+  int msgSize[MSG_Group];
+  msgSize[0] = modelconf.size();   // grpactive
+  msgSize[1] = modelconf.size();   // grpmother
+  msgSize[2] = modelconf.size();   // grpanchor
+  mGroup *mgroup = new(msgSize, 0) mGroup;
+  mgroup->nmodel = modelconf.size();
+
+  // Build message
+  for (std::size_t i = 0; i < modelconf.size(); ++i) {
+    // grpactive
+    if (std::find(grpactives.begin(), grpactives.end(), modelconf[i].modname) != grpactives.end()) {
+      mgroup->grpactive[i] = true;
+    } else {
+      mgroup->grpactive[i] = false;
+    }
+    // grpmother
+    if (std::find(grpmothers.begin(), grpmothers.end(), modelconf[i].modname) != grpmothers.end()) {
+      mgroup->grpmother[i] = true;
+    } else {
+      mgroup->grpmother[i] = false;
+    }
+    // grpanchor
+    if (std::find(grpanchors.begin(), grpanchors.end(), modelconf[i].modname) != grpanchors.end()) {
+      mgroup->grpanchor[i] = true;
+    } else {
+      mgroup->grpanchor[i] = false;
+    }
+  }
+
+  return mgroup;
 }
 
 

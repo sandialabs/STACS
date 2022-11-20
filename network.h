@@ -240,10 +240,6 @@ class mModel : public CMessage_mModel {
     real_t *param;      // network model parameters
     idx_t *xport;       // network port prefix
     char *port;        // network port name
-    // TODO: remove polychron from base sim/model and create separate header/files for it
-    //bool *grpactive;   // polychronization (active)
-    //bool *grpmother;   // polychronization (mother)
-    //bool *grpanchor;   // polychronization (anchor)
     idx_t *xdatafiles;  // prefix sum for filenames
     char *datafiles;    // filenames (concatenated)
     idx_t *datatypes;   // data filetypes
@@ -298,6 +294,21 @@ class mGraph : public CMessage_mGraph {
     idx_t nedgmaskparam;
 };
 
+// Polychronization information
+//
+#define MSG_Group 3
+class mGroup : public CMessage_mGroup {
+  public:
+    // TODO: remove polychron from base sim/model and create separate header/files for it
+    bool *grpactive;   // polychronization (active)
+    bool *grpmother;   // polychronization (mother)
+    bool *grpanchor;   // polychronization (anchor)
+    idx_t nmodel;
+};
+
+
+// Network building connectivity
+//
 #define MSG_Conn 6
 class mConn : public CMessage_mConn {
   public:
@@ -449,9 +460,6 @@ class NetModel {
     }
     // TODO: Move polychronization stuff out of model
     bool getPlastic() const { return plastic; }
-    bool getActive() const { return active; }
-    bool getMother() const { return mother; }
-    bool getAnchor() const { return anchor; }
     /* Setters */
     void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
       unifdist = u;
@@ -468,9 +476,6 @@ class NetModel {
       }
     }
     void setPlastic(bool plas) { plastic = plas; }
-    void setActive(bool grpactive) { active = grpactive; }
-    void setMother(bool grpmother) { mother = grpmother; }
-    void setAnchor(bool grpanchor) { anchor = grpanchor; }
     /* Computational Abstract Functions */
     virtual tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) = 0;
     virtual void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) = 0;
@@ -507,10 +512,6 @@ class NetModel {
     std::vector<std::string> portname;
     /* Control Flow */
     bool plastic;
-    /* Polychronization */
-    bool active;
-    bool mother;
-    bool anchor;
 };
 
 // Network model template
@@ -946,6 +947,7 @@ class Network : public CBase_Network {
     void SaveFinalEstimate();
 
     /* Polychronization */
+    void LoadGroup(mGroup *msg);
     void InitGroup(CProxy_Netdata cpdata);
     void FindGroup();
     void ComputeGroup(idx_t nseeds, int grpart);
@@ -1015,6 +1017,9 @@ class Network : public CBase_Network {
     std::vector<route_t> grpleg; // Generated spike-timing routes during computation per partition
     std::vector<route_t> grproute; // Candidate group (evaluated on reduction)
     std::vector<std::vector<route_t>> grproutes; // Collection of groups for a given vertex
+    std::vector<bool> grpactives;   // active models (used in stamp)
+    std::vector<bool> grpmothers;   // mother models (target of activation set)
+    std::vector<bool> grpanchors;   // anchor models (starts activation set)
     /* Random Number Generation */
     std::mt19937 rngine;
     std::uniform_real_distribution<real_t> *unifdist;
