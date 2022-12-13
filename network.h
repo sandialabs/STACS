@@ -790,8 +790,8 @@ class Netdata : public CBase_Netdata {
       // width/height subject to periodic boundary conditions
       real_t dx = std::abs(xyz1[0] - xyz2[0]);
       real_t dy = std::abs(xyz1[1] - xyz2[1]);
-      if (dx > param[0]/2.0) { dx -= param[0]/2.0; }
-      if (dy > param[1]/2.0) { dy -= param[1]/2.0; }
+      if (dx > param[0]/2.0) { dx = param[0] - dx; }
+      if (dy > param[1]/2.0) { dy = param[1] - dy; }
       // Distance currently doesn't depend on z
       return sqrt((dx*dx)+(dy*dy));
     }
