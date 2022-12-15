@@ -1,0 +1,29 @@
+# simulation
+runmode : "simulate"
+randseed: 2032
+plastic : no
+episodic: no
+loadbal : no
+selfconn: yes
+rpcport : "/stacs/rpc"
+rpcpause: no
+
+# network
+netwkdir: "networks/fugunet"
+netparts: 1 # 8 network partitions
+netfiles: 1 # 4 network data files
+filebase: "fugunet"
+fileload: ""
+filesave: ".out"
+recordir: "record"
+groupdir: "group"
+
+# timing
+tstep   : 1.0 # 1 millisecond
+teventq : 20.0 # 20 milliseconds
+tdisplay: 1000.0 # 1 second
+trecord : 10000.0 # 10 second
+tbalance: 60000.0
+tsave   : 60000.0 # 1 minute
+tmax    : 100.0 # 3 minutes
+
