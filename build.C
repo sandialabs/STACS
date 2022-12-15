@@ -418,7 +418,7 @@ void Netdata::Build(mGraph *msg) {
             int prt = (iprt - xpopvtxidxprt[edges[edg].source-1].begin()) - 1;
             idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source-1][prt] + (sourceordix[j] - xpopvtxidxprt[edges[edg].source-1][prt]);
             // Check for self connections
-            if (glbsourceidx == glbtargetidx) {
+            if (!selfconn && glbsourceidx == glbtargetidx) {
               continue;
             } else {
               adjcy[i].push_back(glbsourceidx);
@@ -556,7 +556,7 @@ void Netdata::ConnectVtx(mConn *msg) {
         continue;
       }
       // Skip same index i == j
-      else if (xorderdat[datidx]+i == xorderdat[msg->datidx]+j) {
+      else if (!selfconn && xorderdat[datidx]+i == xorderdat[msg->datidx]+j) {
         continue;
       }
       // Evaluate connection between i and j

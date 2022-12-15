@@ -175,6 +175,7 @@ mModel* Main::BuildModel() {
   mmodel->plastic = plastic;
   mmodel->episodic = episodic;
   mmodel->loadbal = loadbal;
+  mmodel->selfconn = selfconn;
 
   // Prefixes starts with zero
   mmodel->xmodname[0] = 0;
