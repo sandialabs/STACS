@@ -1,258 +1,314 @@
+stream:
+  - modname: lec_input
+    coord: [0.0, 0.0, 0.0]
+  - modname: mec_input
+    coord: [0.0, 0.0, 0.0]
+
 vertex:
-  - modname: iec
-    order: 55000
+  - modname: lec
+    order: 550
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
   - modname: mec
-    order: 55000
+    order: 550
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
   - modname: mopp
-    order: 5000
+    order: 50
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
   - modname: gc
-    order: 1000000
+    order: 10000
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
   - modname: pbc
-    order: 12500
+    order: 125
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
   - modname: cbc
-    order: 7500
+    order: 75
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
   - modname: mc
-    order: 30000
+    order: 300
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
   - modname: hipp
-    order: 15000
+    order: 150
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
   - modname: hicap
-    order: 5000
+    order: 50
     shape: line
     length: 1.0
     coord: [0.0, 0.0, 0.0]
 
 edge:
-  - source: iec
+  - source: lec_input
+    target: [lec]
+    modname: syn_change_rate
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 1
+  - source: mec_input
+    target: [mec]
+    modname: syn_change_rate
+    cutoff: 0.0
+    connect:
+      - type: sample
+        order: 1
+  - source: lec
     target: [mopp]
-    modname: syn_glu
+    modname: syn_lec2mopp
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 2000
-  - source: iec
+      - type: sample norm
+        order: 100
+        variance: 0.1
+  - source: lec
     target: [gc]
-    modname: syn_glu_stdp
+    modname: syn_lec2gc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 2000
-  - source: iec
+      - type: sample norm
+        order: 100
+        variance: 0.1
+  - source: lec
     target: [pbc]
-    modname: syn_glu
+    modname: syn_lec2pbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 2000
-  - source: iec
+      - type: sample norm
+        order: 100
+        variance: 0.1
+  - source: lec
     target: [cbc]
-    modname: syn_glu
+    modname: syn_lec2cbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 2000
+      - type: sample norm
+        order: 100
+        variance: 0.1
   - source: mec
     target: [mopp]
-    modname: syn_glu
+    modname: syn_mec2mopp
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 2000
+      - type: sample norm
+        order: 100
+        variance: 0.1
   - source: mec
     target: [gc]
-    modname: syn_glu_stdp
+    modname: syn_mec2gc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 2000
+      - type: sample norm
+        order: 100
+        variance: 0.1
   - source: mec
     target: [pbc]
-    modname: syn_glu
+    modname: syn_mec2pbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 2000
+      - type: sample norm
+        order: 100
+        variance: 0.1
   - source: mec
     target: [cbc]
-    modname: syn_glu
+    modname: syn_mec2cbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 2000
+      - type: sample norm
+        order: 100
+        variance: 0.1
   - source: mopp
     target: [gc]
-    modname: syn_gaba
+    modname: syn_mopp2gc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 100
+      - type: sample norm
+        order: 10
+        variance: 0.1
   - source: gc
     target: [pbc]
-    modname: syn_glu
+    modname: syn_gc2pbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 12000
+      - type: sample norm
+        order: 600
+        variance: 0.04
   - source: gc
     target: [cbc]
-    modname: syn_glu
+    modname: syn_gc2cbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 3000
+      - type: sample norm
+        order: 150
+        variance: 0.04
 #  - source: gc
 #    target: [mc]
-#    modname: syn_glu
+#    modname: syn_gc2mc
 #    cutoff: 0.0
 #    connect:
-#      - type: sample
-#        order: 100
+#      - type: sample norm
+#        order: 10
+        variance: 0.04
   - source: gc
     target: [mc]
-    modname: syn_glu_stdp
+    modname: syn_gc2mc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 1000
+      - type: sample norm
+        order: 50
+        variance: 0.04
   - source: gc
     target: [hipp]
-    modname: syn_glu
+    modname: syn_gc2hipp
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 3500
+      - type: sample norm
+        order: 175
+        variance: 0.04
   - source: gc
     target: [hicap]
-    modname: syn_glu
+    modname: syn_gc2hicap
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 3500
+      - type: sample norm
+        order: 175
+        variance: 0.04
   - source: pbc
     target: [gc]
-    modname: syn_gaba
+    modname: syn_pbc2gc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 300
+      - type: sample norm
+        order: 15
+        variance: 0.15
   - source: pbc
     target: [pbc]
-    modname: syn_gaba
+    modname: syn_pbc2pbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 150
+      - type: sample norm
+        order: 15
+        variance: 0.15
   - source: cbc
     target: [gc]
-    modname: syn_gaba
+    modname: syn_cbc2gc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 300
+      - type: sample norm
+        order: 15
+        variance: 0.15
   - source: cbc
     target: [cbc]
-    modname: syn_gaba
+    modname: syn_cbc2cbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 150
+      - type: sample norm
+        order: 15
+        variance: 0.15
   - source: mc
     target: [gc]
-    modname: syn_glu_stdp
+    modname: syn_mc2gc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 1000
+      - type: sample anti-norm
+        order: 25
+        variance: 0.3
+        variance-y: 0.3
   - source: mc
     target: [pbc]
-    modname: syn_glu
+    modname: syn_mc2pbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 1500
+      - type: sample anti-norm
+        order: 75
+        variance: 0.15
+        variance-y: 0.3
   - source: mc
     target: [cbc]
-    modname: syn_glu
+    modname: syn_mc2cbc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 1500
+      - type: sample anti-norm
+        order: 75
+        variance: 0.15
+        variance-y: 0.3
   - source: hipp
     target: [gc]
-    modname: syn_gaba
+    modname: syn_hipp2gc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 500
+      - type: sample norm
+        order: 25
+        variance: 0.08
   - source: hicap
     target: [gc]
-    modname: syn_gaba
+    modname: syn_hicap2gc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 500
+      - type: sample norm
+        order: 25
+        variance: 0.08
   - source: pbc
     target: [mc]
-    modname: syn_gaba
+    modname: syn_pbc2mc 
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 300
+      - type: sample norm
+        order: 15
+        variance: 0.15
   - source: cbc
     target: [mc]
-    modname: syn_gaba
+    modname: syn_cbc2mc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 300
+      - type: sample norm
+        order: 15
+        variance: 0.15
   - source: hipp
     target: [mc]
-    modname: syn_gaba
+    modname: syn_hipp2mc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 500
+      - type: sample norm
+        order: 25
+        variance: 0.08
   - source: hicap
     target: [mc]
-    modname: syn_gaba
+    modname: syn_hicap2mc
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 500
+      - type: sample norm
+        order: 25
+        variance: 0.08
   - source: mc
     target: [hipp]
-    modname: syn_glu
+    modname: syn_mc2hipp
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 1500
+      - type: sample anti-norm
+        order: 75
+        variance: 0.15
+        variance-y: 0.3
   - source: mc
     target: [hicap]
-    modname: syn_glu
+    modname: syn_mc2hicap
     cutoff: 0.0
     connect:
-      - type: sample
-        order: 1500
+      - type: sample anti-norm
+        order: 75
+        variance: 0.15
+        variance-y: 0.3
+

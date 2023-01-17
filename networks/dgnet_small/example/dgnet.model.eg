@@ -1,7 +1,49 @@
 ---
+type: record
+events:
+  - spike
+  - set rate
+probes:
+  - tfreq: 100.0 # 100ms
+    modname: mec
+    state: rate
+  - tfreq: 100.0
+    modname: gc
+    state: v
+...
+
+---
+type: stream
+modname: lec_input
+modtype: 66
+param:
+  - name: I_rheo
+    value: 45
+  - name: obj_mult
+    value: 3
+port:
+  - name: input
+    value: lec_input.yml
+...
+
+---
+type: stream
+modname: mec_input
+modtype: 65
+param:
+  - name: I_rheo
+    value: 45
+  - name: loc_mult
+    value: 8
+port:
+  - name: input
+    value: mec_input.yml
+...
+
+---
 type: vertex
-modname: iec
-modtype: 60
+modname: lec
+modtype: 61
 param:
   - name: vt
     value: -35.0
@@ -17,17 +59,25 @@ param:
     value: -65
   - name: d
     value: 100
+  - name: k1
+    value: 0.2
+  - name: k2
+    value: 10.0
+  - name: tau
+    value: 2.0
+  - name: I_psn
+    value: 0.0
 state:
   - name: v
     init: constant
     value: -70.0
   - name: u
     init: constant
-    value: -14.0
-  - name: I_syn
+    value: 0.0
+  - name: I_app
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: rate
     init: constant
     value: 0.0
 ...
@@ -35,7 +85,7 @@ state:
 ---
 type: vertex
 modname: mec
-modtype: 60
+modtype: 61
 param:
   - name: vt
     value: -35.0
@@ -51,17 +101,25 @@ param:
     value: -65
   - name: d
     value: 100
+  - name: k1
+    value: 0.2
+  - name: k2
+    value: 10.0
+  - name: tau
+    value: 2.0
+  - name: I_psn
+    value: 0.0
 state:
   - name: v
     init: constant
     value: -70.0
   - name: u
     init: constant
-    value: -14.0
-  - name: I_syn
+    value: 0.0
+  - name: I_app
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: rate
     init: constant
     value: 0.0
 ...
@@ -85,17 +143,29 @@ param:
     value: -52
   - name: d
     value: 40
+  - name: k1
+    value: 0.01
+  - name: k2
+    value: 10.0
+  - name: tau_glu
+    value: 2.0
+  - name: tau_gaba
+    value: 4.0
+  - name: E_glu
+    value: 0.0
+  - name: E_gaba
+    value: -80.0
 state:
   - name: v
     init: constant
     value: -50.0
   - name: u
     init: constant
-    value: -10.0
-  - name: I_syn
+    value: 0.0
+  - name: g_act_glu
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: g_act_gaba
     init: constant
     value: 0.0
 ...
@@ -119,17 +189,29 @@ param:
     value: -55
   - name: d
     value: 25
+  - name: k1
+    value: 0.075
+  - name: k2
+    value: 30
+  - name: tau_glu
+    value: 2.0
+  - name: tau_gaba
+    value: 4.0
+  - name: E_glu
+    value: 0.0
+  - name: E_gaba
+    value: -80.0
 state:
   - name: v
     init: constant
     value: -75.0
   - name: u
     init: constant
-    value: -15.0
-  - name: I_syn
+    value: 0.0
+  - name: g_act_glu
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: g_act_gaba
     init: constant
     value: 0.0
 ...
@@ -153,17 +235,29 @@ param:
     value: -55
   - name: d
     value: 20
+  - name: k1
+    value: 0.4
+  - name: k2
+    value: 10.0
+  - name: tau_glu
+    value: 2.0
+  - name: tau_gaba
+    value: 4.0
+  - name: E_glu
+    value: 0.0
+  - name: E_gaba
+    value: -80.0
 state:
   - name: v
     init: constant
     value: -62.0
   - name: u
     init: constant
-    value: -12.4
-  - name: I_syn
+    value: 0.0
+  - name: g_act_glu
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: g_act_gaba
     init: constant
     value: 0.0
 ...
@@ -187,17 +281,29 @@ param:
     value: -55
   - name: d
     value: 20
+  - name: k1
+    value: 0.4
+  - name: k2
+    value: 10.0
+  - name: tau_glu
+    value: 2.0
+  - name: tau_gaba
+    value: 4.0
+  - name: E_glu
+    value: 0.0
+  - name: E_gaba
+    value: -80.0
 state:
   - name: v
     init: constant
     value: -62.0
   - name: u
     init: constant
-    value: -12.4
-  - name: I_syn
+    value: 0.0
+  - name: g_act_glu
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: g_act_gaba
     init: constant
     value: 0.0
 ...
@@ -221,17 +327,29 @@ param:
     value: -55
   - name: d
     value: 250
+  - name: k1
+    value: 0.125
+  - name: k2
+    value: 10
+  - name: tau_glu
+    value: 2.0
+  - name: tau_gaba
+    value: 4.0
+  - name: E_glu
+    value: 0.0
+  - name: E_gaba
+    value: -80.0
 state:
   - name: v
     init: constant
     value: -65.0
   - name: u
     init: constant
-    value: -13.0
-  - name: I_syn
+    value: 0.0
+  - name: g_act_glu
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: g_act_gaba
     init: constant
     value: 0.0
 ...
@@ -255,17 +373,29 @@ param:
     value: -60
   - name: d
     value: 40
+  - name: k1
+    value: 0.01
+  - name: k2
+    value: 100.0
+  - name: tau_glu
+    value: 2.0
+  - name: tau_gaba
+    value: 4.0
+  - name: E_glu
+    value: 0.0
+  - name: E_gaba
+    value: -80.0
 state:
   - name: v
     init: constant
     value: -65.0
   - name: u
     init: constant
-    value: -13.0
-  - name: I_syn
+    value: 0.0
+  - name: g_act_glu
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: g_act_gaba
     init: constant
     value: 0.0
 ...
@@ -289,17 +419,29 @@ param:
     value: -30
   - name: d
     value: 75
+  - name: k1
+    value: 0.1
+  - name: k2
+    value: 10.0
+  - name: tau_glu
+    value: 2.0
+  - name: tau_gaba
+    value: 4.0
+  - name: E_glu
+    value: 0.0
+  - name: E_gaba
+    value: -80.0
 state:
   - name: v
     init: constant
     value: -65.0
   - name: u
     init: constant
-    value: -13.0
-  - name: I_syn
+    value: 0.0
+  - name: g_act_glu
     init: constant
     value: 0.0
-  - name: I_comp
+  - name: g_act_gaba
     init: constant
     value: 0.0
 ...
@@ -344,46 +486,759 @@ state:
 
 ---
 type: edge
-modname: syn_glu
+modname: syn_change_rate
+modtype: 67
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 1.0
+...
+
+---
+type: edge
+modname: syn_lec2mopp
 modtype: 62
 param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
 state:
   - name: delay
     init: constant
     rep: tick
-    value: 1.0
-  - name: weight
-    init: constant
-    value: 6.0
+    value: 13.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0286
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
 ...
 
 ---
 type: edge
-modname: syn_glu_stdp
+modname: syn_lec2gc
 modtype: 63
 param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+  - name: A_ltp
+    value: 0.00001
+  - name: A_ltd
+    value: 0.00003
+  - name: tau
+    value: 5.0
+  - name: g_max
+    value: 100.0
+  - name: update
+    value: 1000.0
 state:
   - name: delay
     init: constant
     rep: tick
-    value: 1.0
-  - name: weight
+    value: 13.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0286
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+  - name: gdelta
     init: constant
-    value: 6.0
+    value: 0.0
+  - name: ltptrace
+    init: constant
+    value: 0.0
+  - name: ltdtrace
+    init: constant
+    value: 0.0
+  - name: ltptlast
+    init: constant
+    rep: tick
+    value: 0.0
+  - name: ltdtlast
+    init: constant
+    rep: tick
+    value: 0.0
 ...
 
 ---
 type: edge
-modname: syn_gaba
-modtype: 64
+modname: syn_lec2pbc
+modtype: 62
 param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
 state:
   - name: delay
     init: constant
     rep: tick
-    value: 1.0
-  - name: weight
-    init: constant
-    value: -5.0
+    value: 15.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0545
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
 ...
+
+---
+type: edge
+modname: syn_lec2cbc
+modtype: 62
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 15.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0545
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_mec2mopp
+modtype: 62
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 12.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0286
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_mec2gc
+modtype: 63
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+  - name: A_ltp
+    value: 0.00001
+  - name: A_ltd
+    value: 0.00003
+  - name: tau
+    value: 5.0
+  - name: g_max
+    value: 100.0
+  - name: update
+    value: 1000.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 14.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0229
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+  - name: gdelta
+    init: constant
+    value: 0.0
+  - name: ltptrace
+    init: constant
+    value: 0.0
+  - name: ltdtrace
+    init: constant
+    value: 0.0
+  - name: ltptlast
+    init: constant
+    rep: tick
+    value: 0.0
+  - name: ltdtlast
+    init: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: edge
+modname: syn_mec2pbc
+modtype: 62
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 14.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0545
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_mec2cbc
+modtype: 62
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 14.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0545
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_mopp2gc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 1.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.15
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_gc2pbc
+modtype: 62
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.2
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 3.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0818
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_gc2cbc
+modtype: 62
+param:
+  - name: n_sites
+    value: 3
+  - name: p_rel
+    value: 0.25
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 3.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.182
+    std: 0.5
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_gc2mc
+modtype: 63
+param:
+  - name: n_sites
+    value: 4
+  - name: p_rel
+    value: 0.4
+  - name: A_ltp
+    value: 0.00001
+  - name: A_ltd
+    value: 0.00001
+  - name: tau
+    value: 5.0
+  - name: g_max
+    value: 100.0
+  - name: update
+    value: 1000.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 3.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0714
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+  - name: gdelta
+    init: constant
+    value: 0.0
+  - name: ltptrace
+    init: constant
+    value: 0.0
+  - name: ltdtrace
+    init: constant
+    value: 0.0
+  - name: ltptlast
+    init: constant
+    rep: tick
+    value: 0.0
+  - name: ltdtlast
+    init: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: edge
+modname: syn_gc2hipp
+modtype: 62
+param:
+  - name: n_sites
+    value: 2
+  - name: p_rel
+    value: 0.4
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 3.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.269
+    std: 0.5
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_gc2hicap
+modtype: 62
+param:
+  - name: n_sites
+    value: 2
+  - name: p_rel
+    value: 0.4
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 3.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.269
+    std: 0.5
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_pbc2gc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.95
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.270
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_pbc2pbc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 1.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.287
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_cbc2gc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.95
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.270
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_cbc2cbc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 1.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.287
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_mc2gc
+modtype: 63
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+  - name: A_ltp
+    value: 0.00001
+  - name: A_ltd
+    value: 0.00001
+  - name: tau
+    value: 5.0
+  - name: g_max
+    value: 100.0
+  - name: update
+    value: 1000.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 10.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0246
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+  - name: gdelta
+    init: constant
+    value: 0.0
+  - name: ltptrace
+    init: constant
+    value: 0.0
+  - name: ltdtrace
+    init: constant
+    value: 0.0
+  - name: ltptlast
+    init: constant
+    rep: tick
+    value: 0.0
+  - name: ltdtlast
+    init: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: edge
+modname: syn_mc2pbc
+modtype: 62
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 10.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0545
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_mc2cbc
+modtype: 62
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.9
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 10.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0545
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_hipp2gc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 1.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 3.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.13
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_hicap2gc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 1.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 3.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.13
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_pbc2mc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.95
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.270
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_cbc2mc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 0.95
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.270
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_hipp2mc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 1.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.07
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_hicap2mc
+modtype: 64
+param:
+  - name: n_sites
+    value: 1
+  - name: p_rel
+    value: 1.0
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.07
+    std: 0.3
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_mc2hipp
+modtype: 62
+param:
+  - name: n_sites
+    value: 3
+  - name: p_rel
+    value: 0.2
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0308
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
+---
+type: edge
+modname: syn_mc2hicap
+modtype: 62
+param:
+  - name: n_sites
+    value: 3
+  - name: p_rel
+    value: 0.2
+state:
+  - name: delay
+    init: constant
+    rep: tick
+    value: 2.0
+  - name: g_act
+    init: lower bounded lognorm
+    mean: 0.0308
+    std: 1.0
+    bound: 0.0
+    scale: 500.0
+...
+
 

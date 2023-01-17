@@ -1,15 +1,16 @@
 # simulation
 runmode : "simulate"
 randseed: 2032
-plastic : no
+plastic : yes
 episodic: no
+loadbal : yes
 rpcport : "/stacs/rpc"
 rpcpause: no
 
 # network
-netwkdir: "networks/dgnet"
-netparts: 128 # 128 network partitions
-netfiles: 128 # 128 network data files
+netwkdir: "networks/dgnet_small"
+netparts: 16 # 128 network partitions
+netfiles: 16 # 128 network data files
 filebase: "dgnet"
 fileload: ""
 filesave: ".out"
@@ -19,7 +20,9 @@ groupdir: "group"
 # timing
 tstep   : 1.0 # 1 millisecond
 teventq : 10.0 # 10 milliseconds
-tdisplay: 1000.0 # 1 second
+tdisplay: 100.0 # 1 second
 trecord : 1000.0 # 1 second
+tbalance: 2000.0 # 2 second
 tsave   : 5000.0 # 5 second
 tmax    : 5000.0 # 5 second
+

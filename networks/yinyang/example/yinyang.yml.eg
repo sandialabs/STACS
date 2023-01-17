@@ -1,0 +1,27 @@
+# simulation
+runmode : "simulate"
+randseed: 2032
+plastic : yes
+episodic: yes
+rpcport : "/stacs/rpc"
+rpcpause: no
+
+# network
+netwkdir: "networks/yinyang"
+netparts: 1 # 8 network partitions
+netfiles: 1 # 4 network data files
+filebase: "yinyang"
+fileload: ""
+filesave: ".out"
+recordir: "record"
+groupdir: "group"
+
+# timing
+tstep   : 1.0 # 1 millisecond
+teventq : 10.0 # 10 milliseconds
+tdisplay: 1000.0 # 1 second
+trecord : 10000.0 # 1 second
+tsave   : 60000.0 # 1 minute
+tmax    : 180000.0 # 3 minutes
+tepisode: 100.0 # 100 milliseconds
+episodes: 10000 # 50 episodes

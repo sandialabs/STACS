@@ -1,0 +1,218 @@
+---
+type: stream
+modname: yy_input
+modtype: 130
+param:
+  - name: t_max
+    value: 30.0
+  - name: ampl
+    value: 6.0
+  - name: train
+    value: 1.0
+port:
+  - name: input
+    value: yy_train.yml
+...
+
+---
+type: vertex
+modname: lif_input
+modtype: 39
+param:
+  - name: v_thresh
+    value: 10.0
+  - name: tau_m
+    value: 20.0
+  - name: C
+    value: 1.0
+  - name: tau_syn
+    value: 5.0
+  - name: psn_rate
+    value: 5.0
+state:
+  - name: v
+    init: constant
+    value: 0.0
+  - name: I
+    init: constant
+    value: 0.0
+  - name: I_stim
+    init: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif_hidden
+modtype: 39
+param:
+  - name: v_thresh
+    value: 5.5
+  - name: tau_m
+    value: 20.0
+  - name: C
+    value: 1.0
+  - name: tau_syn
+    value: 5.0
+  - name: psn_rate
+    value: 5.0
+state:
+  - name: v
+    init: constant
+    value: 0.0
+  - name: I
+    init: constant
+    value: 0.0
+  - name: I_stim
+    init: constant
+    value: 0.0
+...
+
+---
+type: vertex
+modname: lif_output
+modtype: 39
+param:
+  - name: v_thresh
+    value: 7.0
+  - name: tau_m
+    value: 20.0
+  - name: C
+    value: 1.0
+  - name: tau_syn
+    value: 5.0
+  - name: psn_rate
+    value: 3.0
+state:
+  - name: v
+    init: constant
+    value: 0.0
+  - name: I
+    init: constant
+    value: 0.0
+  - name: I_stim
+    init: constant
+    value: 0.0
+...
+
+---
+type: edge
+modname: syn_stdp_ih
+modtype: 36
+param:
+  - name: wmax
+    value: 3.0
+  - name: tau
+    value: 20.0
+  - name: update
+    value: 1000
+  - name: a_p
+    value: 0.1
+  - name: a_n
+    value: 0.13
+state:
+  - name: delay
+    rep: tick
+#    init: constant
+#    value: 4.0
+    init: uniform interval
+    min: 1.0
+    max: 9.0
+    int: 1.0
+  - name: weight
+    init: lower bounded normal
+    mean: 1.5
+    std: 0.5
+    bound: 0.5
+  - name: wdelta
+    init: constant
+    value: 0.0
+  - name: ptrace
+    init: constant
+    value: 0.0
+  - name: ntrace
+    init: constant
+    value: 0.0
+  - name: ptlast
+    init: constant
+    rep: tick
+    value: 0.0
+  - name: ntlast
+    init: constant
+    rep: tick
+    value: 0.0
+...
+
+---
+type: edge
+modname: syn_stdp_ho
+modtype: 36
+param:
+  - name: wmax
+    value: 3.0
+  - name: tau
+    value: 20.0
+  - name: update
+    value: 1000
+  - name: a_p
+    value: 0.115
+  - name: a_n
+    value: 0.1
+state:
+  - name: delay
+    rep: tick
+#    init: constant
+#    value: 4.0
+    init: uniform interval
+    min: 1.0
+    max: 9.0
+    int: 1.0
+  - name: weight
+    init: lower bounded normal
+    mean: 1.5
+    std: 0.5
+    bound: 0.5
+  - name: wdelta
+    init: constant
+    value: 0.0
+  - name: ptrace
+    init: constant
+    value: 0.0
+  - name: ntrace
+    init: constant
+    value: 0.0
+  - name: ptlast
+    init: constant
+    rep: tick
+    value: 0.0
+  - name: ntlast
+    init: constant
+    rep: tick
+    value: 0.0
+...
+
+#---
+#type: edge
+#modname: syn_nostdp_hh
+#modtype: 31
+#param:
+#state:
+#  - name: delay
+#    rep: tick
+#    init: constant
+#    value: 1.0
+#  - name: weight
+#    init: constant
+#    value: 0.0
+#...
+
+---
+type: edge
+modname: syn_ampl
+modtype: 40
+state:
+  - name: delay
+    rep: tick
+    init: constant
+    value: 1.0
+...
