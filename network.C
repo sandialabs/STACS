@@ -72,6 +72,7 @@ Network::Network(mModel *msg) {
   plastic = msg->plastic;
   episodic = msg->episodic;
   loadbal = msg->loadbal;
+  selfconn = msg->selfconn;
 
   // Network Models
   for (std::size_t i = 0; i < model.size(); ++i) {

@@ -111,6 +111,13 @@ int Main::ReadConfig(std::string configfile) {
     loadbal = LOADBAL_DEFAULT;
     CkPrintf("  loadbal not defined, defaulting to: %s\n", (loadbal ? "true" : "false"));
   }
+  // Self connections (for building)
+  try {
+    selfconn = config["selfconn"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    selfconn = SELFCONN_DEFAULT;
+    //CkPrintf("  selfconn not defined, defaulting to: %s\n", (selfconn ? "true" : "false"));
+  }
 #ifdef STACS_WITH_YARP
   // RPC port
   try {

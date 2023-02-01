@@ -1,0 +1,54 @@
+stream:
+  - modname: yy_input
+    coord: [0.0, 0.0, 0.0]
+
+vertex:
+  - modname: lif_input
+    order: 5
+    shape: point
+    coord: [0.0, 0.0, 0.0]
+  - modname: lif_hidden
+    order: 200
+    shape: point
+    coord: [0.0, 0.0, 0.0]
+  - modname: lif_output
+    order: 3
+    shape: point
+    coord: [0.0, 0.0, 0.0]
+
+edge:
+  - source: yy_input
+    target: [lif_input]
+    modname: syn_ampl
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
+  - source: yy_input
+    target: [lif_output]
+    modname: syn_ampl
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
+  - source: lif_input
+    target: [lif_hidden]
+    modname: syn_stdp_ih
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
+  - source: lif_hidden
+    target: [lif_output]
+    modname: syn_stdp_ho
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 1.0
+#  - source: lif_hidden
+#    target: [lif_hidden]
+#    modname: syn_nostdp_hh
+#    cutoff: 0.0
+#    connect:
+#      - type: uniform
+#        prob: 1.0

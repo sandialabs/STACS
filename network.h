@@ -257,6 +257,7 @@ class mModel : public CMessage_mModel {
     bool plastic;      // toggle for plasticity
     bool episodic;     // toggle for episodic simulation
     bool loadbal;      // toggle for periodic load balancing
+    bool selfconn;      // toggle for self connections during build
 };
 
 // Network graph information
@@ -790,8 +791,8 @@ class Netdata : public CBase_Netdata {
       // width/height subject to periodic boundary conditions
       real_t dx = std::abs(xyz1[0] - xyz2[0]);
       real_t dy = std::abs(xyz1[1] - xyz2[1]);
-      if (dx > param[0]/2.0) { dx -= param[0]/2.0; }
-      if (dy > param[1]/2.0) { dy -= param[1]/2.0; }
+      if (dx > param[0]/2.0) { dx = param[0] - dx; }
+      if (dy > param[1]/2.0) { dy = param[1] - dy; }
       // Distance currently doesn't depend on z
       return sqrt((dx*dx)+(dy*dy));
     }
@@ -885,6 +886,7 @@ class Netdata : public CBase_Netdata {
     int cprt, rprt;
     int nprt, xprt;
     int cpdat, cphnd, cpprt;
+    bool selfconn; // toggle for self connections
 #ifdef STACS_WITH_YARP
     /* YARP */
     yarp::os::Network yarp;
@@ -1031,6 +1033,7 @@ class Network : public CBase_Network {
     bool plastic;
     bool episodic;
     bool loadbal;
+    bool selfconn;
     /* Timing */
     tick_t tsim;
     tick_t teps;

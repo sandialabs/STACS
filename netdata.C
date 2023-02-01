@@ -92,6 +92,9 @@ Netdata::Netdata(mModel *msg) {
   rngtype[RNGTYPE_BLIN] = std::string("bounded linear");
   rngtype[RNGTYPE_FILE] = std::string("file");
 
+  // Self connections allowed
+  selfconn = msg->selfconn;
+
   // Set up counters
   idx_t jstateparam = 0;
   idx_t jstickparam = 0;
