@@ -645,9 +645,9 @@ void Netdata::BuildParts() {
       // vtxmodidx
       parts[k]->vtxmodidx[i] = vtxmodidx[xvtxidx+i];
       // xyz
-      parts[k]->xyz[i*3+0] = xyz[xvtxidx+i*3+0];
-      parts[k]->xyz[i*3+1] = xyz[xvtxidx+i*3+1];
-      parts[k]->xyz[i*3+2] = xyz[xvtxidx+i*3+2];
+      parts[k]->xyz[i*3+0] = xyz[(xvtxidx+i)*3+0];
+      parts[k]->xyz[i*3+1] = xyz[(xvtxidx+i)*3+1];
+      parts[k]->xyz[i*3+2] = xyz[(xvtxidx+i)*3+2];
       // vertex state
       for (std::size_t s = 0; s < state[xvtxidx+i][0].size(); ++s) {
         parts[k]->state[jstate++] = state[xvtxidx+i][0][s];
