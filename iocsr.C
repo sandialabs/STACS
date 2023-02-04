@@ -581,7 +581,7 @@ void Netdata::ReadPart() {
   for (idx_t i = 0; i < nprt; ++i) {
     norderprt[i] = 0;
   }
-  vtxdist.resize(netfiles+1);
+  vtxdist.resize(netparts+1);
   vtxdist[0] = 0;
 }
     

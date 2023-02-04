@@ -31,8 +31,8 @@ void Netdata::LoadPart(mDist *msg) {
     vtxmetis[i] = msg->vtxdist[j];
     edgmetis[i] = msg->edgdist[j];
   }
-  vtxmetis[netfiles] = msg->vtxdist[netfiles];
-  edgmetis[netfiles] = msg->edgdist[netfiles];
+  vtxmetis[netfiles] = msg->vtxdist[netparts];
+  edgmetis[netfiles] = msg->edgdist[netparts];
   // cleanup
   delete msg;
 
@@ -433,7 +433,7 @@ void Netdata::Reorder(mReorder *msg) {
 
     // Build parts from file-based network information
     BuildParts();
-    
+
     // return control to main when done
     contribute(0, NULL, CkReduction::nop);
   }
