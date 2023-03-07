@@ -76,6 +76,7 @@ int Main::ReadConfig(std::string configfile) {
       runmode != std::string(RUNMODE_SIMGPU) &&
       runmode != std::string(RUNMODE_BUILDSIM) &&
       runmode != std::string(RUNMODE_BUILD) &&
+      runmode != std::string(RUNMODE_MIGRATE) &&
       runmode != std::string(RUNMODE_REPART) &&
       runmode != std::string(RUNMODE_FINDGROUP) && 
       runmode != std::string(RUNMODE_ESTIMATE)) {
@@ -178,7 +179,7 @@ int Main::ReadConfig(std::string configfile) {
     filesave = std::string(FILESAVE_DEFAULT);
     CkPrintf("  filesave not defined, defaulting to: \"%s\"\n", filesave.c_str());
   }
-  if (runmode == "build") {
+  if (runmode == "build" || runmode == "migrate") {
     filesave = std::string("");
   }
   // Records output directory

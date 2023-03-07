@@ -25,6 +25,7 @@
 #define RUNMODE_SIMGPU    "simgpu"
 #define RUNMODE_BUILDSIM  "buildsim"
 #define RUNMODE_BUILD     "build"
+#define RUNMODE_MIGRATE   "migrate"
 #define RUNMODE_REPART    "repart"
 #define RUNMODE_FINDGROUP "findgroup"
 #define RUNMODE_ESTIMATE  "estimate"

@@ -187,7 +187,8 @@ void Main::Control() {
   }
 
   // Reorder an already built network
-  else if (runmode == std::string(RUNMODE_REPART)) {
+  else if (runmode == std::string(RUNMODE_MIGRATE) ||
+           runmode == std::string(RUNMODE_REPART)) {
     if (readflag) {
       CkPrintf("Reading network\n");
       readflag = false;
