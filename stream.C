@@ -36,7 +36,7 @@ Stream::Stream(mVtxs *msg) {
   delete msg;
 
   // Return control to main
-  mainProxy.Init();
+  contribute(0, NULL, CkReduction::nop);
 }
 
 // Stream migration

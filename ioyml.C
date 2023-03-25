@@ -1271,7 +1271,7 @@ int Main::ReadModel() {
 //
 int Main::ReadGraph() {
   // Load model file
-  CkPrintf("Loading graph from %s/%s.graph\n", netwkdir.c_str(), filebase.c_str());
+  CkPrintf("Reading graph information\n");// from %s/%s.graph\n", netwkdir.c_str(), filebase.c_str());
   YAML::Node graphfile;
   try {
     graphfile = YAML::LoadFile(netwkdir + "/" + filebase + ".graph");

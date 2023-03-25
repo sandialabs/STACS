@@ -50,6 +50,69 @@ mDist* Main::BuildDist() {
   return mdist;
 }
 
+// Build model names for netdata
+//
+mModname* Main::BuildModname() {
+  /* Bookkeeping */
+  idx_t nmodname;
+  idx_t ndatafile;
+
+  // Get total name sizes
+  nmodname = 0;
+  for (std::size_t i = 0; i < modelconf.size(); ++i) {
+    nmodname += modelconf[i].modname.size();
+  }
+  // Get size of datafiles
+  ndatafile = 0;
+  for (std::size_t i = 0; i < datafiles.size(); ++i) {
+    ndatafile += datafiles[i].size();
+  }
+
+  // Initialize model message
+  int msgSize[MSG_Modname];
+  msgSize[0] = modelconf.size();     // modtype
+  msgSize[1] = modelconf.size()+1;   // xmodname
+  msgSize[2] = nmodname;             // modname
+  msgSize[3] = datafiles.size()+1;   // xdatafiles
+  msgSize[4] = ndatafile;            // datafiles
+  msgSize[5] = datafiles.size();     // datatypes
+  mModname *mmodname = new(msgSize, 0) mModname;
+  // Sizes
+  mmodname->nmodel = modelconf.size();
+  mmodname->ndatafiles = datafiles.size();
+
+  // Prefixes starts with zero
+  mmodname->xmodname[0] = 0;
+  mmodname->xdatafiles[0] = 0;
+
+  // Copy over model information
+  for (std::size_t i = 0; i < modelconf.size(); ++i) {
+    // modtype
+    mmodname->modtype[i] = modelconf[i].modtype;
+    // xmodname
+    mmodname->xmodname[i+1] = mmodname->xmodname[i] + modelconf[i].modname.size();
+    for (std::size_t j = 0; j < modelconf[i].modname.size(); ++j) {
+      mmodname->modname[mmodname->xmodname[i] + j] = modelconf[i].modname[j];
+    }
+  }
+
+  // Data files
+  for (std::size_t i = 0; i < datafiles.size(); ++i) {
+    // xdatafiles
+    mmodname->xdatafiles[i+1] = mmodname->xdatafiles[i] + datafiles[i].size();
+    for (std::size_t j = 0; j < datafiles[i].size(); ++j) {
+      // datafiles
+      mmodname->datafiles[mmodname->xdatafiles[i] + j] = datafiles[i][j];
+    }
+    // datatypes
+    mmodname->datatypes[i] = datatypes[i];
+  }
+  CkAssert(mmodname->xdatafiles[datafiles.size()] == ndatafile);
+
+  // Return model names
+  return mmodname;
+}
+
 // Build models for network
 //
 mModel* Main::BuildModel() {
@@ -473,12 +536,18 @@ mGraph* Main::BuildGraph() {
 mGroup* Main::BuildGroup() {
   // Initialize graph message
   int msgSize[MSG_Group];
-  msgSize[0] = modelconf.size();   // grpactive
-  msgSize[1] = modelconf.size();   // grpmother
-  msgSize[2] = modelconf.size();   // grpanchor
+  msgSize[0] = netparts+1;         // vtxdist
+  msgSize[1] = modelconf.size();   // grpactive
+  msgSize[2] = modelconf.size();   // grpmother
+  msgSize[3] = modelconf.size();   // grpanchor
   mGroup *mgroup = new(msgSize, 0) mGroup;
   mgroup->nmodel = modelconf.size();
 
+  // Get distribution info
+  for (int i = 0; i < netparts+1; ++i) {
+    //vtxdist
+    mgroup->vtxdist[i] = netdist[i].nvtx;
+  }
   // Build message
   for (std::size_t i = 0; i < modelconf.size(); ++i) {
     // grpactive

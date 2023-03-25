@@ -13,6 +13,17 @@ module network {
     idx_t eventdist[];
   };
   
+  message mModname {
+    idx_t modtype[];
+    idx_t xmodname[];
+    char modname[];
+    idx_t xdatafiles[];
+    char datafiles[];
+    idx_t datatypes[];
+    idx_t nmodel;
+    idx_t ndatafiles;
+  };
+
   message mModel {
     idx_t modtype[];
     idx_t graphtype[];
@@ -88,6 +99,7 @@ module network {
   };
 
   message mGroup {
+    idx_t vtxdist[];
     bool grpactive[];
     bool grpmother[];
     bool grpanchor[];
@@ -101,17 +113,15 @@ module network {
     idx_t vtxidx[];
     idx_t xadj[];
     idx_t adjcy[];
-    int datidx;
+    int prtidx;
     idx_t nvtx;
   };
 
   message mReorder {
-    idx_t vtxdist[];
     idx_t vtxidxold[];
     idx_t vtxidxnew[];
-    int datidx;
+    int prtidx;
     idx_t nvtx;
-    idx_t nprt;
   };
 
   message mPart {
@@ -135,6 +145,21 @@ module network {
     idx_t nstate;
     idx_t nstick;
     idx_t nevent;
+    int prtidx;
+  };
+
+  message mMatrix {
+    idx_t rows[];
+    idx_t cols[];
+    real_t values[];
+    idx_t dfidx;
+    idx_t xrow;
+    idx_t nrow;
+  };
+
+  message mRepart {
+    idx_t reprtidx[];
+    idx_t nvtx;
     int prtidx;
   };
   
@@ -175,26 +200,16 @@ module network {
   };
   
   array [1D] Netdata {
-    entry Netdata(mModel *msg);
-    
-    entry void Build(mGraph *msg);
-    entry void SaveBuild();
-    entry void SaveCloseBuild();
-    entry void ConnectVtx(mConn *msg);
-    entry void RequestConnVtx(int reqidx);
-    entry void ConnectHandover();
-    entry void ConnectEdg(mConn *msg);
-    entry void RequestConnEdg(int reqidx);
-
-    entry void LoadPart(mDist *msg);
-    entry void LoadRepart(mPart *msg);
-    entry void ScatterPart();
-    entry void GatherPart(mPart *msg);
-    entry void Reorder(mReorder *msg);
+    entry Netdata(mModname *msg);
     
     entry void LoadData(mDist *msg);
+    entry void LoadRepart();
+    entry void LoadFile();
     entry void LoadNetwork(int prtidx, const CkCallback &cbpart);
+    entry void LoadNetpart(int prtidx, const CkCallback &cbpart);
+    entry void LoadMatrix(int prtidx, int xrow, int nrow, const CkCallback &cbpart);
     
+    entry void SaveBuild(mPart *msg);
     entry void SaveNetwork(mPart *msg);
     entry void SaveCloseNetwork(mPart *msg);
     entry void CloseNetwork();
@@ -207,17 +222,33 @@ module network {
 
   array [1D] Network {
     entry Network(mModel *msg);
+    
+    entry void LoadData();
     entry void LoadNetwork(mPart *msg);
-    entry void ReloadNetwork(mPart *msg);
+    entry void LoadRepart();
+    entry void LoadNetpart(mRepart *msg);
+    entry void LoadFile();
+    entry void LoadMatrix(mMatrix *msg);
     
-    entry void InitSim(CProxy_Netdata cpdata);
-    entry void ContSim();
+    entry void OrderGraph(mGraph *msg);
+    entry void Build();
+    entry void ConnectVtx(mConn *msg);
+    entry void RequestConnVtx(int reqidx);
+    entry void ConnectHandover();
+    entry void ConnectEdg(mConn *msg);
+    entry void RequestConnEdg(int reqidx);
+
+    entry void Repart();
+    entry void RebalNetwork();
+    entry void ScatterPart();
+    entry void GatherPart(mPart *msg);
+    entry void Reorder(mReorder *msg);
+    
+    entry void InitProxy(CProxy_Netdata cpdata);
+    entry void InitNetwork(std::string runmode, const CkCallback &cbcheck);
+    entry void StartNetwork();
     entry void CycleSim();
-    
-    entry void InitSimGPU(CProxy_Netdata cpdata);
     entry void CycleSimGPU();
-    
-    entry void InitEst(CProxy_Netdata cpdata);
     entry void CycleEst();
     
     entry void GoAhead(mGo *msg);
@@ -225,18 +256,17 @@ module network {
     entry void CommStamp(mEvent *msg);
     entry void CommRPC(mRPC *msg);
    
+    entry void SaveBuild();
     entry void SaveNetwork();
     entry void SaveCloseNetwork();
     entry void CloseNetwork();
     
-    entry void RebalNetwork();
     entry void SaveRecord();
     entry void SaveFinalRecord();
     entry void SaveEstimate();
     entry void SaveFinalEstimate();
     
     entry void LoadGroup(mGroup *msg);
-    entry void InitGroup(CProxy_Netdata cpdata);
     entry void FindGroup();
     entry void ComputeGroup(idx_t nseeds, int grpart);
     entry void ComputeGroup();

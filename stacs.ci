@@ -34,11 +34,9 @@ mainmodule stacs {
   
   mainchare Main {
     entry Main(CkArgMsg *msg);
-    entry [reductiontarget] void Control();
     entry [reductiontarget] void Init();
     entry [reductiontarget] void Start();
     entry [reductiontarget] void Check();
-    entry [reductiontarget] void Cont();
     entry [reductiontarget] void Stop();
     entry [reductiontarget] void Halt();
     

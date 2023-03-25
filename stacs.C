@@ -46,8 +46,6 @@ Main::Main(CkArgMsg *msg) {
   CkPrintf("\nSimulation Tool for Asynchronous Cortical Streams (stacs)\n");
 
   // Command line arguments
-  // TODO: distinguish between runmode (stacs, genet) and simmode (sim, fg, est)
-  // For right now, the following still depends on the config.yml to get runmode
   std::string configfile;
   if (msg->argc < 2) {
     configfile = std::string(CONFIG_DEFAULT);
@@ -85,7 +83,7 @@ Main::Main(CkArgMsg *msg) {
     CkExit();
   }
 
-  // Read graph distribution files (for built networks)
+  //Read graph distribution files (for built networks)
   if (runmode != std::string(RUNMODE_BUILD) &&
       runmode != std::string(RUNMODE_BUILDSIM)) {
     if (ReadDist()) {
@@ -97,7 +95,7 @@ Main::Main(CkArgMsg *msg) {
     grpvtxmin = (idx_t)(std::floor(grpvtxminreal * netdist[netparts].nvtx));
     grpvtxmax = (idx_t)(std::floor(grpvtxmaxreal * netdist[netparts].nvtx));
   }
-  
+
   // Charm information
   mainProxy = thisProxy;
   mCastGrpId = CProxy_CkMulticastMgr::ckNew();
@@ -112,24 +110,34 @@ Main::Main(CkArgMsg *msg) {
            "  Network Partitions per PE    : %.2g\n",
            runmode.c_str(), netfiles, netparts, CkNumPes(), netpe);
   
-  // Netdata chare array (used in all runmodes)
-  // Set Round Robin Mapping
-  // TODO: Ideally set this to one chare per compute node
+  // Netdata and network chare arrays
+  ninit = 0;
+  cinit = 0;
+  // Set Round Robin Mapping for data
+  // Ideally set this to one chare per compute node
   CkArrayOptions netdataopts(netfiles);
   CProxy_RRMap rrMap = CProxy_RRMap::ckNew();
   netdataopts.setMap(rrMap);
-  // Create chare array with model information
+  // Create chare arrays with model information
+  ++ninit;
+  //mModname *mmodname = BuildModname();
+  mModname *mmodname = BuildModname();
+  netdata = CProxy_Netdata::ckNew(mmodname, netdataopts);
+  // Initialize network chares as well
+  ++ninit;
   mModel *mmodel = BuildModel();
-  netdata = CProxy_Netdata::ckNew(mmodel, netdataopts);
+  network = CProxy_Network::ckNew(mmodel, netparts);
   // Set callback to return control to main
-  CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
-  netdata.ckSetReductionClient(&cbcontrol);
+  CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
+  netdata.ckSetReductionClient(&cbinit);
+  network.ckSetReductionClient(&cbinit);
 
   // bookkeeping for program control
-  buildflag = true;
-  repartflag = true;
   readflag = true;
-  writeflag = true;
+  loadflag = true;
+  buildflag = false;
+  moveflag = false;
+  writeflag = false;
   lbflag = true;
 }
 
@@ -146,209 +154,184 @@ Main::Main(CkMigrateMessage *msg) {
 
 // Coordination for file input, initialized chare arrays
 //
-void Main::Control() {
+void Main::Init() {
   // Determine program control based on the run mode
-
-  // Network needs to be built
-  if (runmode == std::string(RUNMODE_BUILD)) {
-    if (buildflag) {
-      CkPrintf("Building network\n");
-      buildflag = false;
-
-      // Start timer
-      wcstart = std::chrono::system_clock::now();
-
-      // Build Network
-      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
-      mGraph *mgraph = BuildGraph();
-      netdata.Build(mgraph);
-      netdata.ckSetReductionClient(&cbcontrol);
-    }
-    else if (writeflag) {
-      CkPrintf("Writing network\n");
-      writeflag = false;
-      
-      // Stop timer
-      wcstop = std::chrono::system_clock::now();
-      // Print timing
-      std::chrono::duration<real_t> wctime = std::chrono::duration_cast<std::chrono::milliseconds>(wcstop - wcstart);
-      CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", wctime.count());
-
-      // Halting coordination
-      chalt = 0;
-      nhalt = 0;
-      // Set callback for halting (actually not needed)
-      CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
-      netdata.ckSetReductionClient(&cbhalt);
-      // Write network to disk
-      netdata.SaveCloseBuild();
-      ++nhalt;
-    }
-  }
-
-  // Reorder an already built network
-  else if (runmode == std::string(RUNMODE_MIGRATE) ||
-           runmode == std::string(RUNMODE_REPART)) {
-    if (readflag) {
-      CkPrintf("Reading network\n");
-      readflag = false;
-
-      // Start timer
-      wcstart = std::chrono::system_clock::now();
-
-      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
-      mDist *mdist = BuildDist();
-      netdata.LoadPart(mdist);
-      netdata.ckSetReductionClient(&cbcontrol);
-    }
-    else if (repartflag) {
-      CkPrintf("Repartitioning network\n");
-      repartflag = false;
-
-      // Scatter and gather part information
-      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
-      netdata.ScatterPart();
-      netdata.ckSetReductionClient(&cbcontrol);
-    }
-    else if (writeflag) {
-      CkPrintf("Writing network\n");
-      writeflag = false;
-      
-      // Stop timer
-      wcstop = std::chrono::system_clock::now();
-      // Print timing
-      std::chrono::duration<real_t> wctime = std::chrono::duration_cast<std::chrono::milliseconds>(wcstop - wcstart);
-      CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", wctime.count());
-
-      // Halting coordination
-      chalt = 0;
-      nhalt = 0;
-      // Set callback for halting (actually not needed)
-      CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
-      netdata.ckSetReductionClient(&cbhalt);
-      // Write network to disk
-      netdata.SaveCloseBuild();
-      ++nhalt;
-    }
-  }
-
-  // Build and simulate network
-  else if (runmode == std::string(RUNMODE_BUILDSIM)) {
-    if (buildflag) {
-      CkPrintf("Building network\n");
-      buildflag = false;
-
-      // Start timer
-      wcstart = std::chrono::system_clock::now();
-
-      // Build Network
-      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
-      mGraph *mgraph = BuildGraph();
-      netdata.Build(mgraph);
-      netdata.ckSetReductionClient(&cbcontrol);
-    }
-    else if (writeflag) {
-      CkPrintf("Writing network\n");
-      writeflag = false;
-      
-      // Stop timer
-      wcstop = std::chrono::system_clock::now();
-      // Print timing
-      std::chrono::duration<real_t> wctime = std::chrono::duration_cast<std::chrono::milliseconds>(wcstop - wcstart);
-      CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", wctime.count());
-
-      // Initialize coordination
-      cinit = 0;
-      ninit = 0;
-      // Set callback for initialization
-      CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
-      // Write network to disk
-      netdata.SaveBuild();
-      netdata.ckSetReductionClient(&cbinit);
-      // Network chare array is used in simulation
-      ++ninit;
-      mModel *mmodel = BuildModel();
-      network = CProxy_Network::ckNew(mmodel, netparts);
-      network.ckSetReductionClient(&cbinit);
-      // Convert runmode to simulate
-      runmode = std::string(RUNMODE_SIMULATE);
-    }
-  }
-
-  // Simulate an already built network
-  else if (runmode == std::string(RUNMODE_SIMULATE) ||
-           runmode == std::string(RUNMODE_SIMGPU)) {
-    // Initialize coordination
-    cinit = 0;
+  if (++cinit == ninit) {
     ninit = 0;
-    CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
-
-    // Loading network data from file
-    ++ninit;
-    mDist *mdist = BuildDist();
-    netdata.LoadData(mdist);
-    netdata.ckSetReductionClient(&cbinit);
-    // Network chare array is used in simulation
-    ++ninit;
-    mModel *mmodel = BuildModel();
-    network = CProxy_Network::ckNew(mmodel, netparts);
-    network.ckSetReductionClient(&cbinit);
-#ifdef STACS_WITH_YARP
-    // stream
-    ++ninit;
-    mVtxs *mvtxs = BuildVtxs();
-    stream = CProxy_Stream::ckNew(mvtxs);
-#endif
-  }
-  else if (runmode == std::string(RUNMODE_FINDGROUP) ||
-           runmode == std::string(RUNMODE_ESTIMATE)) {
+    cinit = 0;
+    
+    // Populate network (build or from disk)
     if (readflag) {
       readflag = false;
 
-      // Breaking up the setup into two parts for group config info
-      CkCallback cbcontrol(CkReductionTarget(Main, Control), mainProxy);
-      mModel *mmodel = BuildModel();
-      network = CProxy_Network::ckNew(mmodel, netparts);
-      network.ckSetReductionClient(&cbcontrol);
-    }
-    else {
-      // Initialize coordination
-      cinit = 0;
-      ninit = 0;
-      CkCallback cbinit(CkReductionTarget(Main, Init), mainProxy);
+      // Pass some metadata to network chares
+      // now that netdata has been initialized
+      ++ninit;
+      network.InitProxy(netdata);
+      
+      // Network needs to be built
+      if (runmode == std::string(RUNMODE_BUILD)     ||
+          runmode == std::string(RUNMODE_BUILDSIM)) {
+        buildflag = true;
+        CkPrintf("Reading datafiles\n");
+        // Load data files (if any) from disk
+        ++ninit;
+        netdata.LoadFile();
+        ++ninit;
+        mGraph *mgraph = BuildGraph();
+        network.OrderGraph(mgraph);
+      }
+      // Network needs to be read from disk
+      else {
+        CkPrintf("Reading network\n");
 
-      // Loading network data from file
+        // Load network from disk
+        ++ninit;
+        mDist *mdist = BuildDist();
+        netdata.LoadData(mdist);
+
+        // Optional loading of information based on runmode
+        // Partitioning information
+        if (runmode == std::string(RUNMODE_MIGRATE) ||
+            runmode == std::string(RUNMODE_REPART)) {
+          moveflag = true;
+          ++ninit;
+          netdata.LoadRepart();
+        }
+      }
+    }
+
+    // Load network partitions
+    else if (loadflag) {
+      loadflag = false;
+      
+      // Load any data files
+      if (buildflag) {
+        CkPrintf("Loading datafiles\n");
+        ++ninit;
+        network.LoadFile();
+      }
+
+      // Regular loading of network
+      else {
+        CkPrintf("Loading network\n");
+        ++ninit;
+        network.LoadData();
+
+        // Optional loading of information based on runmode
+        // Partitioning information
+        if (runmode == std::string(RUNMODE_MIGRATE) ||
+            runmode == std::string(RUNMODE_REPART)) {
+          ++ninit;
+          network.LoadRepart();
+        }
+        // Polychronous group information
+        else if (runmode == std::string(RUNMODE_FINDGROUP) ||
+                 runmode == std::string(RUNMODE_ESTIMATE)) {
+          ++ninit;
+          mGroup *mgroup = BuildGroup();
+          // TODO: Should this stay as network?
+          network.LoadGroup(mgroup);
+        }
+      }
+    }
+
+    // Build network (from graph and files)
+    else if (buildflag) {
+      buildflag = false;
+      writeflag = true;
+      CkPrintf("Building network\n");
+
+      // Start timer
+      wcstart = std::chrono::system_clock::now();
+
+      // Build Network
       ++ninit;
-      mDist *mdist = BuildDist();
-      netdata.LoadData(mdist);
-      netdata.ckSetReductionClient(&cbinit);
-      // Network chare array is used in simulation
+      network.Build();
+    }
+
+    // Reorder an already built network
+    else if (moveflag) {
+      moveflag = false;
+      writeflag = true;
+      CkPrintf("Repartitioning network\n");
+      
+      // Start timer
+      wcstart = std::chrono::system_clock::now();
+      
       ++ninit;
-      mGroup *mgroup = BuildGroup();
-      network.LoadGroup(mgroup);
-      network.ckSetReductionClient(&cbinit);
+      network.Repart();
+    }
+
+    // Write out any generated network
+    else if (writeflag) {
+      writeflag = false;
+      CkPrintf("Writing network\n");
+      
+      // Stop timer
+      wcstop = std::chrono::system_clock::now();
+      // Print timing
+      std::chrono::duration<real_t> wctime = std::chrono::duration_cast<std::chrono::milliseconds>(wcstop - wcstart);
+      CkPrintf("  Elapsed time (wall clock): %" PRIrealsec " seconds\n", wctime.count());
+
+      // Determine if exiting afterwards or not
+      if (runmode == std::string(RUNMODE_BUILD)   ||
+          runmode == std::string(RUNMODE_MIGRATE) ||
+          runmode == std::string(RUNMODE_REPART)) {
+        // Halting coordination
+        chalt = 0;
+        nhalt = 0;
+        // Set callback for halting (actually not needed)
+        CkCallback cbhalt(CkReductionTarget(Main, Halt), mainProxy);
+        network.ckSetReductionClient(&cbhalt);
+        // Write network to disk
+        ++nhalt;
+        network.SaveCloseNetwork();
+      }
+      else {
+        if (runmode == std::string(RUNMODE_BUILDSIM)) {
+          // Write network to disk
+          ++ninit;
+          network.SaveBuild();
+          // Convert runmode to simulate
+          runmode = std::string(RUNMODE_SIMULATE);
+        }
+      }
+    }
+
+    // Start running the network
+    else {
+      CkPrintf("Initializing network\n");
+        
+      // Initialize coordination
+      CkCallback cbstart(CkReductionTarget(Main, Start), mainProxy);
+      CkCallback cbcheck(CkReductionTarget(Main, Check), mainProxy);
+
+      // Initialize network
+      ++ninit;
+      network.InitNetwork(runmode, cbcheck);
+      network.ckSetReductionClient(&cbstart);
 #ifdef STACS_WITH_YARP
       // stream
       ++ninit;
       mVtxs *mvtxs = BuildVtxs();
       stream = CProxy_Stream::ckNew(mvtxs);
+      stream.ckSetReductionClient(&cbstart);
 #endif
     }
   }
 }
-  
-// Coordination for file input, initialized chare arrays
-//
-void Main::Init() {
-  // Wait on initialization
-  if (++cinit == ninit) {
-    CkPrintf("Initializing network\n");
 
-    // Load data from input files to network parts
-    CkCallback cbstart(CkReductionTarget(Main, Start), mainProxy);
-    network.ckSetReductionClient(&cbstart);
-    CkCallback cbcont(CkReductionTarget(Main, Check), mainProxy);
-    netdata.ckSetReductionClient(&cbcont);
+// Coordination for starting simulation, initialized network partitions
+//
+void Main::Start() {
+  if (++cinit == ninit) {
+    ninit = 0;
+    cinit = 0;
+    
+    // Start simulation
+    CkCallback cbstop(CkReductionTarget(Main, Stop), mainProxy);
+    network.ckSetReductionClient(&cbstop);
 
     if (runmode == RUNMODE_SIMULATE) {
       if (episodic) {
@@ -378,8 +361,6 @@ void Main::Init() {
       }
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleSim(), network);
-      netcont = CkCallback(CkIndex_Network::ContSim(), network);
-      network.InitSim(netdata);
     }
     else if (runmode == RUNMODE_SIMGPU) {
       if (episodic) {
@@ -408,7 +389,6 @@ void Main::Init() {
       }
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleSimGPU(), network);
-      network.InitSimGPU(netdata);
     }
     else if (runmode == RUNMODE_FINDGROUP) {
       // collect active models
@@ -450,7 +430,6 @@ void Main::Init() {
                ((real_t)grpvtxminreal), grpvtxmin, ((real_t)grpvtxmaxreal), grpvtxmax);
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleGroup(), network);
-      network.InitGroup(netdata);
     }
     else if (runmode == RUNMODE_ESTIMATE) {
       if (episodic) {
@@ -476,39 +455,29 @@ void Main::Init() {
       }
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleEst(), network);
-      network.InitEst(netdata);
     }
-    
+
 #ifdef STACS_WITH_YARP
     // Open RPC port
     stream.OpenRPC(network, netcycle, rpcpause);
-#endif
-  }
-}
 
-// Coordination for starting simulation, initialized network partitions
-//
-void Main::Start() {
-  // Start simulation
-  CkCallback cbstop(CkReductionTarget(Main, Stop), mainProxy);
-  network.ckSetReductionClient(&cbstop);
-
-#ifdef STACS_WITH_YARP
-  if (rpcpause) {
-    // Start paused
-    CkPrintf("Starting (paused)\n");
-  }
-  else {
-    CkPrintf("Starting\n");
-    netcycle.send();
-  }
+    // Start computing
+    if (rpcpause) {
+      // Start paused (wait for rpc)
+      CkPrintf("Starting (paused)\n");
+    }
+    else {
+      CkPrintf("Starting\n");
+      network.StartNetwork();
+    }
 #else
-  CkPrintf("Starting\n");
-  netcycle.send();
+    CkPrintf("Starting\n");
+    network.StartNetwork();
 #endif
 
-  // Start timer
-  wcstart = std::chrono::system_clock::now();
+    // Start timer
+    wcstart = std::chrono::system_clock::now();
+  }
 }
 
 // Coordination of continuing simulation after repartitioning
@@ -516,27 +485,13 @@ void Main::Start() {
 void Main::Check() {
   if (lbflag) {
     lbflag = false;
-    CkPrintf("Rebalancing\n");
-
-    // Scatter and gather part information
-    netdata.ScatterPart();
+    CkPrintf("Repartitioning\n");
+    network.Repart();
   }
   else {
     lbflag = true;
-    CkCallback cbcont(CkReductionTarget(Main, Cont), mainProxy);
-    network.ckSetReductionClient(&cbcont);
-
-    CkPrintf("Reloading\n");
-    netcont.send();
+    network.StartNetwork();
   }
-}
-
-void Main::Cont() {
-  CkCallback cbstop(CkReductionTarget(Main, Stop), mainProxy);
-  network.ckSetReductionClient(&cbstop);
-
-  CkPrintf("Restarting\n");
-  netcycle.send();
 }
 
 

@@ -10,8 +10,11 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
+extern /*readonly*/ CProxy_Main mainProxy;
 extern /*readonly*/ int netparts;
 extern /*readonly*/ int netfiles;
+extern /*readonly*/ tick_t tstep;
+extern /*readonly*/ idx_t nevtday;
 
 
 /**************************************************************************
@@ -20,251 +23,356 @@ extern /*readonly*/ int netfiles;
 
 // Load data from files into partitions
 //
-void Netdata::LoadPart(mDist *msg) {
-  // Copy over metis distribution from dist
-  vtxmetis.resize(netfiles+1);
-  edgmetis.resize(netfiles+1);
-  int ndiv = netparts/netfiles;
-  int nrem = netparts%netfiles;
-  for (int i = 0; i < netfiles ; ++i) {
-    int j = i*ndiv + (i < nrem ? i : nrem);
-    vtxmetis[i] = msg->vtxdist[j];
-    edgmetis[i] = msg->edgdist[j];
-  }
-  vtxmetis[netfiles] = msg->vtxdist[netparts];
-  edgmetis[netfiles] = msg->edgdist[netparts];
-  // cleanup
-  delete msg;
-
+void Netdata::LoadRepart() {
   // Read in files
-  CkPrintf("Reading network data files %d\n", datidx);
-  ReadPart();
+  CkPrintf("  Reading repartitioning files %d\n", datidx);
+  ReadNetpart();
   
   // Return control to main
   contribute(0, NULL, CkReduction::nop);
 }
 
-// Load data from network into partitions
+// Coordination with NetData chare array
 //
-void Netdata::LoadRepart(mPart *msg) {
-  // Stash part
-  parts[msg->prtidx - xprt] = msg;
-  
-  // Wait for all parts
-  if (++cprt == nprt) {
-    cprt = 0;
+void Network::LoadRepart() {
+  // Request network part from input
+  netdata(datidx).LoadNetpart(prtidx,
+      CkCallback(CkIndex_Network::LoadNetpart(NULL), thisProxy(prtidx)));
+}
 
-    // Convert parts to local data
-    BuildRepart();
+void Netdata::LoadNetpart(int prtidx, const CkCallback &cbpart) {
+  // Initialize distribution message
+  int msgSize[MSG_Repart];
+  msgSize[0] = vtxdist[prtidx+1] - vtxdist[prtidx]; // reprtidx
+  mRepart *mrepart = new(msgSize, 0) mRepart;
+  mrepart->nvtx = vtxdist[prtidx+1] - vtxdist[prtidx];
+  mrepart->prtidx = prtidx;
+  // Some sanity checks (no more vtxmetis)
+  CkAssert(prtidx >= xprt);
+  CkAssert(reprtidx.size() == (vtxdist[xprt+nprt] - vtxdist[xprt]));
 
-    // Cleanup stash
-    for (idx_t i = 0; i < nprt; ++i) {
-      delete parts[i];
-    }
-
-    // Return control to main
-    contribute(0, NULL, CkReduction::nop);
+  // Get distribution info
+  for (int i = 0; i < vtxdist[prtidx+1] - vtxdist[prtidx]; ++i) {
+    // reprtidx
+    mrepart->reprtidx[i] = reprtidx[i + vtxdist[prtidx] - vtxdist[xprt]];
   }
+
+  // Send part to network
+  cbpart.send(mrepart);
+}
+
+void Network::LoadNetpart(mRepart *msg) {
+  // Copy over repart data
+  CkAssert(msg->prtidx == prtidx);
+  
+  reprtidx.resize(msg->nvtx);
+  for (std::size_t i = 0; i < reprtidx.size(); ++i) {
+    reprtidx[i] = msg->reprtidx[i];
+  }
+  
+  // Clear out partitioning
+  vtxprted.clear();
+  xyzprted.clear();
+  adjcyprted.clear();
+  edgmodidxprted.clear();
+  stateprted.clear();
+  stickprted.clear();
+  eventprted.clear();
+  // Prepare for reordering partitions
+  norderprt = 0;
+  cpprt = 0;
+  cphnd = 0;
+
+  // cleanup
+  delete msg;
+  
+  // Return control to main
+  contribute(0, NULL, CkReduction::nop);
+}
+
+void Network::RebalNetwork() {
+  // Compute Repartitioning
+  reprtidx.resize(adjcy.size());
+  evtflat.clear();
+  evtflat.resize(adjcy.size());
+  for (std::size_t i = 0; i < adjcy.size(); ++i) {
+    reprtidx[i] = prtidx;
+  }
+  
+  // Clear out partitioning
+  vtxprted.clear();
+  xyzprted.clear();
+  adjcyprted.clear();
+  edgmodidxprted.clear();
+  stateprted.clear();
+  stickprted.clear();
+  eventprted.clear();
+  // Prepare for reordering partitions
+  norderprt = 0;
+  cpprt = 0;
+  cphnd = 0;
+
+  //thisProxy(prtidx).Repart();
+  contribute(0, NULL, CkReduction::nop, maincheck);
+}
+
+void Network::Repart() {
+  // Repartitioning
+  vtxidxreprt.clear();
+  vtxmodidxreprt.clear();
+  xyzreprt.clear();
+  adjcyreprt.clear();
+  edgmodidxreprt.clear();
+  statereprt.clear();
+  stickreprt.clear();
+  eventreprt.clear();
+  vtxidxreprt.resize(netparts);
+  vtxmodidxreprt.resize(netparts);
+  xyzreprt.resize(netparts);
+  adjcyreprt.resize(netparts);
+  edgmodidxreprt.resize(netparts);
+  statereprt.resize(netparts);
+  stickreprt.resize(netparts);
+  eventreprt.resize(netparts);
+
+  for (std::size_t i = 0; i < reprtidx.size(); ++i) {
+    CkAssert(reprtidx[i] < netparts);
+    // Preallocation
+    adjcyreprt[reprtidx[i]].push_back(std::vector<idx_t>());
+    edgmodidxreprt[reprtidx[i]].push_back(std::vector<idx_t>());
+    statereprt[reprtidx[i]].push_back(std::vector<real_t>());
+    stickreprt[reprtidx[i]].push_back(std::vector<tick_t>());
+    eventreprt[reprtidx[i]].push_back(std::vector<event_t>());
+    // Vertices
+    vtxidxreprt[reprtidx[i]].push_back(vtxdist[prtidx] + i);
+    vtxmodidxreprt[reprtidx[i]].push_back(vtxmodidx[i]);
+    xyzreprt[reprtidx[i]].push_back(xyz[i*3+0]);
+    xyzreprt[reprtidx[i]].push_back(xyz[i*3+1]);
+    xyzreprt[reprtidx[i]].push_back(xyz[i*3+2]);
+    // Vertex state
+    for (std::size_t s = 0; s < state[i][0].size(); ++s) {
+      statereprt[reprtidx[i]].back().push_back(state[i][0][s]);
+    }
+    for (std::size_t s = 0; s < stick[i][0].size(); ++s) {
+      stickreprt[reprtidx[i]].back().push_back(stick[i][0][s]);
+    }
+    // Edges
+    for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
+      adjcyreprt[reprtidx[i]].back().push_back(adjcy[i][j]);
+      edgmodidxreprt[reprtidx[i]].back().push_back(edgmodidx[i][j]);
+      for (std::size_t s = 0; s < state[i][j+1].size(); ++s) {
+        statereprt[reprtidx[i]].back().push_back(state[i][j+1][s]);
+      }
+      for (std::size_t s = 0; s < stick[i][j+1].size(); ++s) {
+        stickreprt[reprtidx[i]].back().push_back(stick[i][j+1][s]);
+      }
+    }
+    // Events
+    for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
+      for (std::size_t e = 0; e < evtcal[i][j].size(); ++e) {
+        eventreprt[reprtidx[i]].back().push_back(evtcal[i][j][e]);
+      }
+    }
+    for (std::size_t e = 0; e < evtcol[i].size(); ++e) {
+      eventreprt[reprtidx[i]].back().push_back(evtcol[i][e]);
+    }
+  }
+  // Clear data once copied
+  vtxmodidx.clear();
+  xyz.clear();
+  adjcy.clear();
+  edgmodidx.clear();
+  state.clear();
+  stick.clear();
+  evtcal.clear();
+  evtcol.clear();
+  
+  thisProxy(prtidx).ScatterPart();
 }
 
 // Scatter Partitions across Network
 //
-void Netdata::ScatterPart() {
+void Network::ScatterPart() {
   // Compute which part goes to which data
-  for (int prtdatidx = 0; prtdatidx < netfiles; ++prtdatidx) {
-    // Which parts on this data
-    int ndiv = netparts/netfiles;
-    int nrem = netparts%netfiles;
-    int nprtidx = ndiv + (prtdatidx < nrem);
-    int xprtidx = prtdatidx*ndiv + (prtdatidx < nrem ? prtdatidx : nrem);
-
-    // Loop through parts (global prtidx)
-    for (int prtidx = xprtidx; prtidx < xprtidx + nprtidx; ++prtidx) {
-      // Count sizes
-      idx_t nedgidx = 0;
-      idx_t nstate = 0;
-      idx_t nstick = 0;
-      idx_t nevent = 0;
-      for (std::size_t i = 0; i < vtxidxreprt[prtidx].size(); ++i) {
-        nedgidx += adjcyreprt[prtidx][i].size();
-      }
-      for (std::size_t i = 0; i < statereprt[prtidx].size(); ++i) {
-        nstate += statereprt[prtidx][i].size();
-      }
-      for (std::size_t i = 0; i < stickreprt[prtidx].size(); ++i) {
-        nstick += stickreprt[prtidx][i].size();
-      }
-      for (std::size_t i = 0; i < eventreprt[prtidx].size(); ++i) {
-        nevent += eventreprt[prtidx][i].size();
-      }
-
-      // Initialize connection message
-      int msgSize[MSG_Part];
-      msgSize[0] = 0;                              // vtxdist (to be recomputed)
-      msgSize[1] = vtxidxreprt[prtidx].size();     // vtxidx
-      msgSize[2] = vtxidxreprt[prtidx].size();     // vtxmodidx
-      msgSize[3] = vtxidxreprt[prtidx].size() * 3; // xyz
-      msgSize[4] = vtxidxreprt[prtidx].size() + 1; // xadj
-      msgSize[5] = nedgidx;                       // adjcy
-      msgSize[6] = nedgidx;                       // edgmodidx
-      msgSize[7] = nstate;                        // state
-      msgSize[8] = nstick;                        // stick
-      msgSize[9] = vtxidxreprt[prtidx].size() + 1; // xevent
-      msgSize[10] = nevent;                        // diffuse
-      msgSize[11] = nevent;                       // type
-      msgSize[12] = nevent;                       // source
-      msgSize[13] = nevent;                       // index
-      msgSize[14] = nevent;                       // data
-      mPart *mpart = new(msgSize, 0) mPart;
-      // Sizes
-      mpart->nvtx = vtxidxreprt[prtidx].size();
-      mpart->nedg = nedgidx; // currently unused by gather
-      mpart->nstate = nstate;
-      mpart->nstick = nstick;
-      mpart->nevent = nevent;
-      mpart->prtidx = prtidx;
-
-      // set up counters
-      idx_t jedgidx = 0;
-      idx_t jstate = 0;
-      idx_t jstick = 0;
-      idx_t jevent = 0;
-      // prefixes start at zero
-      mpart->xadj[0] = 0;
-      mpart->xevent[0] = 0;
-
-      for (std::size_t i = 0; i < vtxidxreprt[prtidx].size(); ++i) {
-        // vtxidx
-        mpart->vtxidx[i] = vtxidxreprt[prtidx][i];
-        // vtxmodidx
-        mpart->vtxmodidx[i] = vtxmodidxreprt[prtidx][i];
-        // xyz
-        mpart->xyz[i*3+0] = xyzreprt[prtidx][i*3+0];
-        mpart->xyz[i*3+1] = xyzreprt[prtidx][i*3+1];
-        mpart->xyz[i*3+2] = xyzreprt[prtidx][i*3+2];
-        // xadj
-        mpart->xadj[i+1] = mpart->xadj[i] + adjcyreprt[prtidx][i].size();
-        for (std::size_t j = 0; j < adjcyreprt[prtidx][i].size(); ++j) {
-          // adjncy
-          mpart->adjcy[jedgidx] = adjcyreprt[prtidx][i][j];
-          // edgmodidx
-          mpart->edgmodidx[jedgidx++] = edgmodidxreprt[prtidx][i][j];
-        }
-        // xevent
-        mpart->xevent[i+1] = mpart->xevent[i] + eventreprt[prtidx][i].size();
-        for (std::size_t j = 0; j < eventreprt[prtidx][i].size(); ++j) {
-          //event
-          mpart->diffuse[jevent] = eventreprt[prtidx][i][j].diffuse;
-          mpart->type[jevent] = eventreprt[prtidx][i][j].type;
-          mpart->source[jevent] = eventreprt[prtidx][i][j].source;
-          mpart->index[jevent] = eventreprt[prtidx][i][j].index;
-          mpart->data[jevent++] = eventreprt[prtidx][i][j].data;
-        }
-      }
-      CkAssert(jedgidx == nedgidx);
-      CkAssert(jevent == nevent);
-      for (std::size_t i = 0; i < statereprt[prtidx].size(); ++i) {
-        for (std::size_t s = 0; s < statereprt[prtidx][i].size(); ++s) {
-          mpart->state[jstate++] = statereprt[prtidx][i][s];
-        }
-        for (std::size_t s = 0; s < stickreprt[prtidx][i].size(); ++s) {
-          mpart->stick[jstick++] = stickreprt[prtidx][i][s];
-        }
-      }
-      CkAssert(jstate == nstate);
-      CkAssert(jstick == nstick);
-
-      // Send part
-      thisProxy(prtdatidx).GatherPart(mpart);
+  for (int prtprtidx = 0; prtprtidx < netparts; ++prtprtidx) {
+    // Count sizes
+    idx_t nedgidx = 0;
+    idx_t nstate = 0;
+    idx_t nstick = 0;
+    idx_t nevent = 0;
+    for (std::size_t i = 0; i < vtxidxreprt[prtprtidx].size(); ++i) {
+      nedgidx += adjcyreprt[prtprtidx][i].size();
     }
+    for (std::size_t i = 0; i < statereprt[prtprtidx].size(); ++i) {
+      nstate += statereprt[prtprtidx][i].size();
+    }
+    for (std::size_t i = 0; i < stickreprt[prtprtidx].size(); ++i) {
+      nstick += stickreprt[prtprtidx][i].size();
+    }
+    for (std::size_t i = 0; i < eventreprt[prtprtidx].size(); ++i) {
+      nevent += eventreprt[prtprtidx][i].size();
+    }
+
+    // Initialize connection message
+    int msgSize[MSG_Part];
+    msgSize[0] = 0;                              // vtxdist (to be recomputed)
+    msgSize[1] = vtxidxreprt[prtprtidx].size();     // vtxidx
+    msgSize[2] = vtxidxreprt[prtprtidx].size();     // vtxmodidx
+    msgSize[3] = vtxidxreprt[prtprtidx].size() * 3; // xyz
+    msgSize[4] = vtxidxreprt[prtprtidx].size() + 1; // xadj
+    msgSize[5] = nedgidx;                       // adjcy
+    msgSize[6] = nedgidx;                       // edgmodidx
+    msgSize[7] = nstate;                        // state
+    msgSize[8] = nstick;                        // stick
+    msgSize[9] = vtxidxreprt[prtprtidx].size() + 1; // xevent
+    msgSize[10] = nevent;                        // diffuse
+    msgSize[11] = nevent;                       // type
+    msgSize[12] = nevent;                       // source
+    msgSize[13] = nevent;                       // index
+    msgSize[14] = nevent;                       // data
+    mPart *mpart = new(msgSize, 0) mPart;
+    // Sizes
+    mpart->nvtx = vtxidxreprt[prtprtidx].size();
+    mpart->nedg = nedgidx; // currently unused by gather
+    mpart->nstate = nstate;
+    mpart->nstick = nstick;
+    mpart->nevent = nevent;
+    mpart->prtidx = prtprtidx;
+
+    // set up counters
+    idx_t jedgidx = 0;
+    idx_t jstate = 0;
+    idx_t jstick = 0;
+    idx_t jevent = 0;
+    // prefixes start at zero
+    mpart->xadj[0] = 0;
+    mpart->xevent[0] = 0;
+
+    for (std::size_t i = 0; i < vtxidxreprt[prtprtidx].size(); ++i) {
+      // vtxidx
+      mpart->vtxidx[i] = vtxidxreprt[prtprtidx][i];
+      // vtxmodidx
+      mpart->vtxmodidx[i] = vtxmodidxreprt[prtprtidx][i];
+      // xyz
+      mpart->xyz[i*3+0] = xyzreprt[prtprtidx][i*3+0];
+      mpart->xyz[i*3+1] = xyzreprt[prtprtidx][i*3+1];
+      mpart->xyz[i*3+2] = xyzreprt[prtprtidx][i*3+2];
+      // xadj
+      mpart->xadj[i+1] = mpart->xadj[i] + adjcyreprt[prtprtidx][i].size();
+      for (std::size_t j = 0; j < adjcyreprt[prtprtidx][i].size(); ++j) {
+        // adjncy
+        mpart->adjcy[jedgidx] = adjcyreprt[prtprtidx][i][j];
+        // edgmodidx
+        mpart->edgmodidx[jedgidx++] = edgmodidxreprt[prtprtidx][i][j];
+      }
+      // xevent
+      mpart->xevent[i+1] = mpart->xevent[i] + eventreprt[prtprtidx][i].size();
+      for (std::size_t j = 0; j < eventreprt[prtprtidx][i].size(); ++j) {
+        //event
+        mpart->diffuse[jevent] = eventreprt[prtprtidx][i][j].diffuse;
+        mpart->type[jevent] = eventreprt[prtprtidx][i][j].type;
+        mpart->source[jevent] = eventreprt[prtprtidx][i][j].source;
+        mpart->index[jevent] = eventreprt[prtprtidx][i][j].index;
+        mpart->data[jevent++] = eventreprt[prtprtidx][i][j].data;
+      }
+    }
+    CkAssert(jedgidx == nedgidx);
+    CkAssert(jevent == nevent);
+    for (std::size_t i = 0; i < statereprt[prtprtidx].size(); ++i) {
+      for (std::size_t s = 0; s < statereprt[prtprtidx][i].size(); ++s) {
+        mpart->state[jstate++] = statereprt[prtprtidx][i][s];
+      }
+      for (std::size_t s = 0; s < stickreprt[prtprtidx][i].size(); ++s) {
+        mpart->stick[jstick++] = stickreprt[prtprtidx][i][s];
+      }
+    }
+    CkAssert(jstate == nstate);
+    CkAssert(jstick == nstick);
+
+    // Send part
+    thisProxy(prtprtidx).GatherPart(mpart);
   }
 }
 
 
 // Gather Partitions and perform reordering
 //
-void Netdata::GatherPart(mPart *msg) {
+void Network::GatherPart(mPart *msg) {
   // Bookkeeping
-  int prtidx = msg->prtidx - xprt; // global to local
+  //int prtprtidx = msg->prtidx - xprt; // global to local
   idx_t jstate = 0;
   idx_t jstick = 0;
   idx_t jevent = 0;
-  idx_t xvtx = vtxprted[prtidx].size();
-  norderdat += msg->nvtx;
-  norderprt[prtidx] += msg->nvtx;
+  idx_t xvtx = vtxprted.size(); // current size
+  norderprt += msg->nvtx;
 
-  // allocate data for repartitioning
-  vtxprted[prtidx].resize(norderprt[prtidx]);
-  xyzprted[prtidx].resize(norderprt[prtidx]*3);
-  adjcyprted[prtidx].resize(norderprt[prtidx]);
-  edgmodidxprted[prtidx].resize(norderprt[prtidx]);
-  stateprted[prtidx].resize(norderprt[prtidx]);
-  stickprted[prtidx].resize(norderprt[prtidx]);
-  eventprted[prtidx].resize(norderprt[prtidx]);
-  // also allocate for reordering
-  adjcyreord[prtidx].resize(norderprt[prtidx]);
-  edgmodidxreord[prtidx].resize(norderprt[prtidx]);
-  statereord[prtidx].resize(norderprt[prtidx]);
-  stickreord[prtidx].resize(norderprt[prtidx]);
+  // increase data allocated for repartitioning
+  vtxprted.resize(norderprt);
+  xyzprted.resize(norderprt*3);
+  adjcyprted.resize(norderprt);
+  edgmodidxprted.resize(norderprt);
+  stateprted.resize(norderprt);
+  stickprted.resize(norderprt);
+  eventprted.resize(norderprt);
 
   // copy part data (unsorted)
   for (idx_t i = 0; i < msg->nvtx; ++i) {
     // vtxidx
-    vtxprted[prtidx][xvtx+i].vtxidx = msg->vtxidx[i];
+    vtxprted[xvtx+i].vtxidx = msg->vtxidx[i];
     // vtxmodidx
-    vtxprted[prtidx][xvtx+i].modidx = msg->vtxmodidx[i];
+    vtxprted[xvtx+i].modidx = msg->vtxmodidx[i];
     // localidx
-    vtxprted[prtidx][xvtx+i].vtxidxloc = xvtx+i;
+    vtxprted[xvtx+i].vtxidxloc = xvtx+i;
     // xyz
-    xyzprted[prtidx][(xvtx+i)*3+0] = msg->xyz[i*3+0];
-    xyzprted[prtidx][(xvtx+i)*3+1] = msg->xyz[i*3+1];
-    xyzprted[prtidx][(xvtx+i)*3+2] = msg->xyz[i*3+2];
+    xyzprted[(xvtx+i)*3+0] = msg->xyz[i*3+0];
+    xyzprted[(xvtx+i)*3+1] = msg->xyz[i*3+1];
+    xyzprted[(xvtx+i)*3+2] = msg->xyz[i*3+2];
     // vertex state
-    stateprted[prtidx][xvtx+i].push_back(std::vector<real_t>());
-    stickprted[prtidx][xvtx+i].push_back(std::vector<tick_t>());
-    CkAssert(vtxprted[prtidx][xvtx+i].modidx > 0);
-    stateprted[prtidx][xvtx+i][0].resize(modelconf[vtxprted[prtidx][xvtx+i].modidx-1].nstate);
-    stickprted[prtidx][xvtx+i][0].resize(modelconf[vtxprted[prtidx][xvtx+i].modidx-1].nstick);
-    for(std::size_t s = 0; s < stateprted[prtidx][xvtx+i][0].size(); ++s) {
-      stateprted[prtidx][xvtx+i][0][s] = msg->state[jstate++];
+    stateprted[xvtx+i].push_back(std::vector<real_t>());
+    stickprted[xvtx+i].push_back(std::vector<tick_t>());
+    CkAssert(vtxprted[xvtx+i].modidx > 0);
+    stateprted[xvtx+i][0].resize(modelconf[vtxprted[xvtx+i].modidx-1].nstate);
+    stickprted[xvtx+i][0].resize(modelconf[vtxprted[xvtx+i].modidx-1].nstick);
+    for(std::size_t s = 0; s < stateprted[xvtx+i][0].size(); ++s) {
+      stateprted[xvtx+i][0][s] = msg->state[jstate++];
     }
-    for(std::size_t s = 0; s < stickprted[prtidx][xvtx+i][0].size(); ++s) {
-      stickprted[prtidx][xvtx+i][0][s] = msg->stick[jstick++];
+    for(std::size_t s = 0; s < stickprted[xvtx+i][0].size(); ++s) {
+      stickprted[xvtx+i][0][s] = msg->stick[jstick++];
     }
 
     // handle edges
-    idx_t xedg = adjcyprted[prtidx][xvtx+i].size();
-    adjcyprted[prtidx][xvtx+i].resize(xedg + msg->xadj[i+1] - msg->xadj[i]);
-    edgmodidxprted[prtidx][xvtx+i].resize(xedg + msg->xadj[i+1] - msg->xadj[i]);
+    idx_t xedg = adjcyprted[xvtx+i].size();
+    adjcyprted[xvtx+i].resize(xedg + msg->xadj[i+1] - msg->xadj[i]);
+    edgmodidxprted[xvtx+i].resize(xedg + msg->xadj[i+1] - msg->xadj[i]);
     for (idx_t j = 0; j < msg->xadj[i+1] - msg->xadj[i]; ++j) {
       // adjcy
-      adjcyprted[prtidx][xvtx+i][xedg+j] = msg->adjcy[msg->xadj[i] + j];
+      adjcyprted[xvtx+i][xedg+j] = msg->adjcy[msg->xadj[i] + j];
       // edgmodidx
-      edgmodidxprted[prtidx][xvtx+i][xedg+j] = msg->edgmodidx[msg->xadj[i] + j];
+      edgmodidxprted[xvtx+i][xedg+j] = msg->edgmodidx[msg->xadj[i] + j];
       // state
-      stateprted[prtidx][xvtx+i].push_back(std::vector<real_t>());
-      stickprted[prtidx][xvtx+i].push_back(std::vector<tick_t>());
+      stateprted[xvtx+i].push_back(std::vector<real_t>());
+      stickprted[xvtx+i].push_back(std::vector<tick_t>());
       // only push edge state if model and not 'none'
-      if (edgmodidxprted[prtidx][xvtx+i][xedg+j] > 0) {
-        stateprted[prtidx][xvtx+i][xedg+j+1].resize(modelconf[edgmodidxprted[prtidx][xvtx+i][xedg+j]-1].nstate);
-        stickprted[prtidx][xvtx+i][xedg+j+1].resize(modelconf[edgmodidxprted[prtidx][xvtx+i][xedg+j]-1].nstick);
-        for(std::size_t s = 0; s < stateprted[prtidx][xvtx+i][xedg+j+1].size(); ++s) {
-          stateprted[prtidx][xvtx+i][xedg+j+1][s] = msg->state[jstate++];
+      if (edgmodidxprted[xvtx+i][xedg+j] > 0) {
+        stateprted[xvtx+i][xedg+j+1].resize(modelconf[edgmodidxprted[xvtx+i][xedg+j]-1].nstate);
+        stickprted[xvtx+i][xedg+j+1].resize(modelconf[edgmodidxprted[xvtx+i][xedg+j]-1].nstick);
+        for(std::size_t s = 0; s < stateprted[xvtx+i][xedg+j+1].size(); ++s) {
+          stateprted[xvtx+i][xedg+j+1][s] = msg->state[jstate++];
         }
-        for(std::size_t s = 0; s < stickprted[prtidx][xvtx+i][xedg+j+1].size(); ++s) {
-          stickprted[prtidx][xvtx+i][xedg+j+1][s] = msg->stick[jstick++];
+        for(std::size_t s = 0; s < stickprted[xvtx+i][xedg+j+1].size(); ++s) {
+          stickprted[xvtx+i][xedg+j+1][s] = msg->stick[jstick++];
         }
       }
     }
 
     // events
-    eventprted[prtidx][xvtx+i].resize(msg->xevent[i+1] - msg->xevent[i]);
+    eventprted[xvtx+i].resize(msg->xevent[i+1] - msg->xevent[i]);
     for (idx_t e = 0; e < msg->xevent[i+1] - msg->xevent[i]; ++e) {
-      eventprted[prtidx][xvtx+i][e].diffuse = msg->diffuse[jevent];
-      eventprted[prtidx][xvtx+i][e].type = msg->type[jevent];
-      eventprted[prtidx][xvtx+i][e].source = msg->source[jevent];
-      eventprted[prtidx][xvtx+i][e].index = msg->index[jevent];
-      eventprted[prtidx][xvtx+i][e].data = msg->data[jevent++];
+      eventprted[xvtx+i][e].diffuse = msg->diffuse[jevent];
+      eventprted[xvtx+i][e].type = msg->type[jevent];
+      eventprted[xvtx+i][e].source = msg->source[jevent];
+      eventprted[xvtx+i][e].index = msg->index[jevent];
+      eventprted[xvtx+i][e].data = msg->data[jevent++];
     }
   }
   CkAssert(jstate == msg->nstate);
@@ -276,11 +384,9 @@ void Netdata::GatherPart(mPart *msg) {
 
   // When all parts are gathered from all other data,
   // Perform reordering of vertex indices and start reordering
-  if (++cpprt == netfiles*nprt) {
-    cpprt = 0;
+  if (++cphnd == netparts) {
+    cphnd = 0;
     // cleanup finished data structures
-    vtxmetis.clear();
-    edgmetis.clear();
     vtxidxreprt.clear();
     vtxmodidxreprt.clear();
     xyzreprt.clear();
@@ -289,88 +395,83 @@ void Netdata::GatherPart(mPart *msg) {
     statereprt.clear();
     stickreprt.clear();
     eventreprt.clear();
-    vtxidxreprt.resize(netparts);
-    vtxmodidxreprt.resize(netparts);
-    xyzreprt.resize(netparts);
-    edgmodidxreprt.resize(netparts);
-    adjcyreprt.resize(netparts);
-    statereprt.resize(netparts);
-    stickreprt.resize(netparts);
-    eventreprt.resize(netparts);
+    
+    // Set up recomputation of vtxdist
+    vtxdist.clear();
+    vtxdist.resize(netparts+1);
+    vtxdist[0] = 0;
 
-    // collect order parts
-    std::string orderprts;
-    for (idx_t jprt = 0; jprt < nprt; ++jprt) {
-      std::ostringstream orderprt;
-      orderprt << " " << norderprt[jprt];
-      orderprts.append(orderprt.str());
-    }
-    CkPrintf("  Reparted File: %d   Vertices: %" PRIidx " {%s }\n",
-             datidx, norderdat, orderprts.c_str());
+    CkPrintf("  Repartition: %d (%d)   Vertices: %" PRIidx "\n",
+             prtidx, datidx, norderprt);
 
     // set up containers
-    vtxmodidx.resize(norderdat);
-    xyz.resize(norderdat*3);
-    adjcy.resize(norderdat);
-    edgmodidx.resize(norderdat);
-    state.resize(norderdat);
-    stick.resize(norderdat);
-    event.resize(norderdat);
-    eventsourcereord.resize(norderdat);
-    eventindexreord.resize(norderdat);
+    vtxmodidx.resize(norderprt);
+    xyz.resize(norderprt*3);
+    adjcy.resize(norderprt);
+    edgmodidx.resize(norderprt);
+    state.resize(norderprt);
+    stick.resize(norderprt);
+    evtflat.resize(norderprt);
+    // reordering
+    adjcyreord.resize(norderprt);
+    edgmodidxreord.resize(norderprt);
+    statereord.resize(norderprt);
+    stickreord.resize(norderprt);
+    eventindexreord.clear();
+    eventsourcereord.resize(norderprt);
+    eventindexreord.resize(norderprt);
 
-    // Go through part data and reorder
-    idx_t xvtx = 0;
-    for (idx_t jprt = 0; jprt < nprt; ++jprt) {
-      //CkPrintf("  Reordering Part %" PRIidx "\n", xprt+jprt);
-      // reorder based on modidx
-      std::sort(vtxprted[jprt].begin(), vtxprted[jprt].end());
+    // Go through part data and reorder based on modidx
+    std::sort(vtxprted.begin(), vtxprted.end());
 
-      // add to data structures
-      for (idx_t i = 0; i < norderprt[jprt]; ++i) {
-        // vtxmodidx
-        vtxmodidx[xvtx+i] = vtxprted[jprt][i].modidx;
-        // xyz
-        xyz[(xvtx+i)*3+0] = xyzprted[jprt][(vtxprted[jprt][i].vtxidxloc)*3+0];
-        xyz[(xvtx+i)*3+1] = xyzprted[jprt][(vtxprted[jprt][i].vtxidxloc)*3+1];
-        xyz[(xvtx+i)*3+2] = xyzprted[jprt][(vtxprted[jprt][i].vtxidxloc)*3+2];
-        // adjcy
-        adjcyreord[jprt][i] = adjcyprted[jprt][vtxprted[jprt][i].vtxidxloc];
-        edgmodidxreord[jprt][i] = edgmodidxprted[jprt][vtxprted[jprt][i].vtxidxloc];
-        // state (for vertex)
-        state[xvtx+i].push_back(stateprted[jprt][vtxprted[jprt][i].vtxidxloc][0]);
-        stick[xvtx+i].push_back(stickprted[jprt][vtxprted[jprt][i].vtxidxloc][0]);
-        // rest of state
-        statereord[jprt][i] = stateprted[jprt][vtxprted[jprt][i].vtxidxloc];
-        stickreord[jprt][i] = stickprted[jprt][vtxprted[jprt][i].vtxidxloc];
-        // events
-        event[xvtx+i] = eventprted[jprt][vtxprted[jprt][i].vtxidxloc];
-        eventsourcereord[xvtx+i].resize(event[xvtx+i].size());
-        for (std::size_t e = 0; e < event[xvtx+i].size(); ++e) {
-          eventsourcereord[xvtx+i][e] = event[xvtx+i][e].source;
-        }
-        eventindexreord[xvtx+i].push_back(0);
+    // add to data structures
+    for (idx_t i = 0; i < norderprt; ++i) {
+      // vtxmodidx
+      vtxmodidx[i] = vtxprted[i].modidx;
+      // xyz
+      xyz[i*3+0] = xyzprted[(vtxprted[i].vtxidxloc)*3+0];
+      xyz[i*3+1] = xyzprted[(vtxprted[i].vtxidxloc)*3+1];
+      xyz[i*3+2] = xyzprted[(vtxprted[i].vtxidxloc)*3+2];
+      // adjcy
+      adjcyreord[i] = adjcyprted[vtxprted[i].vtxidxloc];
+      edgmodidxreord[i] = edgmodidxprted[vtxprted[i].vtxidxloc];
+      // state (for vertex)
+      state[i].push_back(stateprted[vtxprted[i].vtxidxloc][0]);
+      stick[i].push_back(stickprted[vtxprted[i].vtxidxloc][0]);
+      // rest of state
+      statereord[i] = stateprted[vtxprted[i].vtxidxloc];
+      stickreord[i] = stickprted[vtxprted[i].vtxidxloc];
+      // events
+      evtflat[i] = eventprted[vtxprted[i].vtxidxloc];
+      eventsourcereord[i].resize(evtflat[i].size());
+      for (std::size_t e = 0; e < evtflat[i].size(); ++e) {
+        eventsourcereord[i][e] = evtflat[i][e].source;
       }
-
-      // increment xvtx
-      xvtx += norderprt[jprt];
+      eventindexreord[i].push_back(0);
     }
+    // Clear completed structures
+    xyzprted.clear();
+    adjcyprted.clear();
+    edgmodidxprted.clear();
+    stateprted.clear();
+    stickprted.clear();
+    eventprted.clear();
 
     // Take care of any ordering that may have come in
     // Go through ordering list
     for (std::list<mReorder *>::iterator iordidx = reordlist.begin(); iordidx != reordlist.end(); ++iordidx) {
-      if ((*iordidx)->datidx == cpdat) {
+      if ((*iordidx)->prtidx == cpprt) {
         // Perform reordering
         ReordEdg((*iordidx));
         // Move to next part
-        ++cpdat;
+        ++cpprt;
         // Erase element from list
         iordidx = reordlist.erase(iordidx);
       }
     }
 
     // Broadcast reordlist in order of file
-    if (cpdat == datidx) {
+    if (cpprt == prtidx) {
       mReorder *morder = BuildReorder();
       thisProxy.Reorder(morder);
     }
@@ -380,18 +481,18 @@ void Netdata::GatherPart(mPart *msg) {
 
 // Handle ordering messages
 //
-void Netdata::Reorder(mReorder *msg) {
+void Network::Reorder(mReorder *msg) {
   // Save message for processing
   reordlist.push_back(msg);
 
   if (adjcy.size()) {
     // Go through ordering list
     for (std::list<mReorder *>::iterator iordidx = reordlist.begin(); iordidx != reordlist.end(); ++iordidx) {
-      if ((*iordidx)->datidx == cpdat) {
+      if ((*iordidx)->prtidx == cpprt) {
         // Perform reordering
         ReordEdg((*iordidx));
         // Move to next part
-        ++cpdat;
+        ++cpprt;
         // Erase element from list
         iordidx = reordlist.erase(iordidx);
       }
@@ -399,10 +500,10 @@ void Netdata::Reorder(mReorder *msg) {
   }
 
   // Check if done reordering
-  if (cpdat == netfiles) {
-    cpdat = 0;
+  if (cpprt == netparts) {
+    cpprt = 0;
     // reindex events
-    for (idx_t i = 0; i < norderdat; ++i) {
+    for (idx_t i = 0; i < norderprt; ++i) {
       CkAssert(eventindexreord[i].size() == adjcy[i].size()+1);
       // create map
       std::unordered_map<idx_t, idx_t> oldtonew;
@@ -410,10 +511,39 @@ void Netdata::Reorder(mReorder *msg) {
         oldtonew[eventindexreord[i][j]] = j;
       }
       // modify index
-      for (std::size_t j = 0; j < event[i].size(); ++j) {
-        event[i][j].index = oldtonew[event[i][j].index];
+      for (std::size_t j = 0; j < evtflat[i].size(); ++j) {
+        evtflat[i][j].index = oldtonew[evtflat[i][j].index];
       }
     }
+    // Copy events back on to queue
+    evtcal.clear();
+    evtcal.resize(norderprt);
+    evtcol.clear();
+    evtcol.resize(norderprt);
+    for (idx_t i = 0; i < norderprt; ++i) {
+      evtcal[i].resize(nevtday);
+      idx_t arrival;
+      for (std::size_t e = 0; e < evtflat[i].size(); ++e) {
+        // Add to event queue or spillover
+        arrival = (idx_t) (evtflat[i][e].diffuse/tstep);
+        CkAssert(arrival >= iter);
+        if (arrival - iter < nevtday) {
+          evtcal[i][(arrival)%nevtday].push_back(evtflat[i][e]);
+        }
+        else {
+          evtcol[i].push_back(evtflat[i][e]);
+        }
+      }
+    }
+    // Clear finished data structs
+    vtxprted.clear();
+    evtflat.clear();
+    adjcyreord.clear();
+    edgmodidxreord.clear();
+    statereord.clear();
+    stickreord.clear();
+    eventindexreord.clear();
+    eventsourcereord.clear();
     /*
     // Print memory allocated
     int adjcysize = 0;
@@ -428,17 +558,19 @@ void Netdata::Reorder(mReorder *msg) {
       edgmodsize += edgmodidx[i].size();
       edgmodcap += edgmodidx[i].capacity();
     }
-    CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
+    CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", prtidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     */
 
-    // Build parts from file-based network information
-    BuildParts();
-
-    // return control to main when done
-    contribute(0, NULL, CkReduction::nop);
+    if (tsim > 0) {
+      contribute(0, NULL, CkReduction::nop, maincheck);
+    }
+    else {
+      // return control to main when done
+      contribute(0, NULL, CkReduction::nop);
+    }
   }
   // Broadcast ordering in order of file
-  else if (cpdat == datidx) {
+  else if (cpprt == prtidx) {
     mReorder *morder = BuildReorder();
     thisProxy.Reorder(morder);
   }
@@ -446,62 +578,51 @@ void Netdata::Reorder(mReorder *msg) {
 
 // Reordering indices based on given ordering
 //
-void Netdata::ReordEdg(mReorder *msg) {
-  // Add to vtxmetis
-  vtxmetis[cpdat+1] = vtxmetis[cpdat] + msg->nvtx;
-  int ndiv = netparts/netfiles;
-  int nrem = netparts%netfiles;
-  int xdatprt = cpdat*ndiv + (cpdat < nrem ? cpdat : nrem);
-  // add to vtxdist
-  for (idx_t k = 0; k < msg->nprt; ++k) {
-    vtxdist[xdatprt+k+1] = vtxdist[xdatprt+k] + msg->vtxdist[k];
-  }
+void Network::ReordEdg(mReorder *msg) {
+  // Add to vtxdist
+  vtxdist[cpprt+1] = vtxdist[cpprt] + msg->nvtx;
 
   // create map
   std::unordered_map<idx_t, idx_t> oldtonew;
   for (idx_t i = 0; i < msg->nvtx; ++i) {
-    oldtonew[msg->vtxidxold[i]] = vtxmetis[cpdat] + msg->vtxidxnew[i];
+    oldtonew[msg->vtxidxold[i]] = vtxdist[cpprt] + msg->vtxidxnew[i];
   }
 
   // cleanup
   delete msg;
 
   // Reorder edges
-  idx_t xvtx = 0;
-  for (idx_t jprt = 0; jprt < nprt; ++jprt) {
-    for (idx_t i = 0; i < norderprt[jprt]; ++i) {
-      edgreord.clear();
-      for (std::size_t j = 0; j < adjcyreord[jprt][i].size(); ++j) {
-        if (oldtonew.find(adjcyreord[jprt][i][j]) == oldtonew.end()) {
-          continue;
-        }
-        else {
-          edgreord.push_back(edgreord_t());
-          edgreord.back().edgidx = oldtonew[adjcyreord[jprt][i][j]];
-          edgreord.back().modidx = edgmodidxreord[jprt][i][j];
-          edgreord.back().state = statereord[jprt][i][j+1];
-          edgreord.back().stick = stickreord[jprt][i][j+1];
-          edgreord.back().evtidx = j+1;
-          // resource events
-          for (std::size_t e = 0; e < eventsourcereord[xvtx+i].size(); ++e) {
-            if (eventsourcereord[xvtx+i][e] == adjcyreord[jprt][i][j]) {
-              event[xvtx+i][e].source = oldtonew[eventsourcereord[xvtx+i][e]];
-            }
+  for (idx_t i = 0; i < norderprt; ++i) {
+    edgreord.clear();
+    for (std::size_t j = 0; j < adjcyreord[i].size(); ++j) {
+      if (oldtonew.find(adjcyreord[i][j]) == oldtonew.end()) {
+        continue;
+      }
+      else {
+        edgreord.push_back(edgreord_t());
+        edgreord.back().edgidx = oldtonew[adjcyreord[i][j]];
+        edgreord.back().modidx = edgmodidxreord[i][j];
+        edgreord.back().state = statereord[i][j+1];
+        edgreord.back().stick = stickreord[i][j+1];
+        edgreord.back().evtidx = j+1;
+        // resource events
+        for (std::size_t e = 0; e < eventsourcereord[i].size(); ++e) {
+          if (eventsourcereord[i][e] == adjcyreord[i][j]) {
+            evtflat[i][e].source = oldtonew[eventsourcereord[i][e]];
           }
         }
       }
-      // sort newly added indices
-      std::sort(edgreord.begin(), edgreord.end());
-      // add indices to data structures
-      for (std::size_t j = 0; j < edgreord.size(); ++j) {
-        adjcy[xvtx+i].push_back(edgreord[j].edgidx);
-        edgmodidx[xvtx+i].push_back(edgreord[j].modidx);
-        state[xvtx+i].push_back(edgreord[j].state);
-        stick[xvtx+i].push_back(edgreord[j].stick);
-        eventindexreord[xvtx+i].push_back(edgreord[j].evtidx);
-      }
     }
-    xvtx += norderprt[jprt];
+    // sort newly added indices
+    std::sort(edgreord.begin(), edgreord.end());
+    // add indices to data structures
+    for (std::size_t j = 0; j < edgreord.size(); ++j) {
+      adjcy[i].push_back(edgreord[j].edgidx);
+      edgmodidx[i].push_back(edgreord[j].modidx);
+      state[i].push_back(edgreord[j].state);
+      stick[i].push_back(edgreord[j].stick);
+      eventindexreord[i].push_back(edgreord[j].evtidx);
+    }
   }
 }
 
@@ -512,242 +633,28 @@ void Netdata::ReordEdg(mReorder *msg) {
 
 // Build Reorder (from old vertices to new indices)
 //
-mReorder* Netdata::BuildReorder() {
+mReorder* Network::BuildReorder() {
   // Initialize connection message
   int msgSize[MSG_Reorder];
-  msgSize[0] = nprt;        // vtxdist
-  msgSize[1] = norderdat;   // vtxidxold
-  msgSize[2] = norderdat;   // vtxidxnew
+  msgSize[0] = norderprt;   // vtxidxold
+  msgSize[1] = norderprt;   // vtxidxnew
   mReorder *morder = new(msgSize, 0) mReorder;
   // sizes
-  morder->datidx = datidx;
-  morder->nvtx = norderdat;
-  morder->nprt = nprt;
+  morder->prtidx = prtidx;
+  morder->nvtx = norderprt;
+  //CkPrintf("build reorder %" PRIidx "\n",norderprt);
 
   // set up counters
   idx_t jvtxidx = 0;
 
   // load data
-  for (idx_t jprt = 0; jprt < nprt; ++jprt) {
-    morder->vtxdist[jprt] = norderprt[jprt];
-    for (idx_t i = 0; i < norderprt[jprt]; ++i) {
-      morder->vtxidxold[jvtxidx] = vtxprted[jprt][i].vtxidx;
-      morder->vtxidxnew[jvtxidx] = jvtxidx;
-      ++jvtxidx;
-    }
+  for (idx_t i = 0; i < norderprt; ++i) {
+    morder->vtxidxold[jvtxidx] = vtxprted[i].vtxidx;
+    morder->vtxidxnew[jvtxidx] = jvtxidx;
+    ++jvtxidx;
   }
-  CkAssert(jvtxidx == norderdat);
+  CkAssert(jvtxidx == norderprt);
 
   return morder;
 }
 
-// Build part message
-//
-mPart* Network::BuildRepart() {
-  /* Bookkeeping */
-  idx_t nadjcy;
-  idx_t nstate;
-  idx_t nstick;
-  idx_t nevent;
-  
-  // Get total size of adjcy
-  // TODO: for structural plasticity, keep track of vertices/edges that
-  //       have been created or need to be purged (e.g. reprtidx = -1)
-  nadjcy = 0;
-  nstate = 0;
-  nstick = 0;
-  nevent = 0;
-  for (std::size_t i = 0; i < adjcy.size(); ++i) {
-    nadjcy += adjcy[i].size();
-    for (std::size_t j = 0; j < adjcy[i].size()+1; ++j) {
-      nstate += state[i][j].size();
-      nstick += stick[i][j].size();
-    }
-    for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
-      nevent += evtcal[i][j].size();
-    }
-    nevent += evtcol[i].size();
-  }
-
-  // Initialize partition data message
-  int msgSize[MSG_Part];
-  msgSize[0] = adjcy.size();  // reprtidx (as vtxdist)
-  msgSize[1] = adjcy.size();  // vtxidx (explicit)
-  msgSize[2] = adjcy.size();  // vtxmodidx
-  msgSize[3] = adjcy.size()*3;// xyz
-  msgSize[4] = adjcy.size()+1;// xadj
-  msgSize[5] = nadjcy;        // adjcy
-  msgSize[6] = nadjcy;        // edgmodidx
-  msgSize[7] = nstate;        // state
-  msgSize[8] = nstick;        // stick
-  msgSize[9] = adjcy.size()+1;// xevent
-  msgSize[10] = nevent;        // diffuse
-  msgSize[11] = nevent;       // type
-  msgSize[12] = nevent;       // source
-  msgSize[13] = nevent;       // index
-  msgSize[14] = nevent;       // data
-  mPart *mpart = new(msgSize, 0) mPart;
-
-  // Data sizes
-  mpart->nvtx = adjcy.size();
-  mpart->nedg = nadjcy;
-  mpart->nstate = nstate;
-  mpart->nstick = nstick;
-  mpart->nevent = nevent;
-  mpart->prtidx = prtidx;
-
-  // Vertex and Edge Information
-  idx_t jstate = 0;
-  idx_t jstick = 0;
-  idx_t jevent = 0;
-  mpart->xadj[0] = 0;
-  mpart->xevent[0] = 0;
-  for (std::size_t i = 0; i < adjcy.size(); ++i) {
-    // reprtidx (for now keep all vertices on same partition)
-    mpart->vtxdist[i] = reprtidx[i];
-    // vtxidx
-    mpart->vtxidx[i] = vtxidx[i];
-    // vtxmodidx
-    mpart->vtxmodidx[i] = vtxmodidx[i];
-    // xyz
-    mpart->xyz[i*3+0] = xyz[i*3+0];
-    mpart->xyz[i*3+1] = xyz[i*3+1];
-    mpart->xyz[i*3+2] = xyz[i*3+2];
-    // vertex state
-    for (std::size_t s = 0; s < state[i][0].size(); ++s) {
-      mpart->state[jstate++] = state[i][0][s];
-    }
-    for (std::size_t s = 0; s < stick[i][0].size(); ++s) {
-      mpart->stick[jstick++] = stick[i][0][s];
-    }
-
-    // xadj
-    mpart->xadj[i+1] = mpart->xadj[i] + adjcy[i].size();
-    for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
-      // adjcy
-      mpart->adjcy[mpart->xadj[i] + j] = adjcy[i][j];
-      // edgmodidx
-      mpart->edgmodidx[mpart->xadj[i] + j] = edgmodidx[i][j];
-      // state
-      for (std::size_t s = 0; s < state[i][j+1].size(); ++s) {
-        mpart->state[jstate++] = state[i][j+1][s];
-      }
-      for (std::size_t s = 0; s < stick[i][j+1].size(); ++s) {
-        mpart->stick[jstick++] = stick[i][j+1][s];
-      }
-    }
-
-    // events
-    for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
-      for (std::size_t e = 0; e < evtcal[i][j].size(); ++e) {
-        mpart->diffuse[jevent] = evtcal[i][j][e].diffuse;// - tsim;
-        mpart->type[jevent] = evtcal[i][j][e].type;
-        mpart->source[jevent] = evtcal[i][j][e].source;
-        mpart->index[jevent] = evtcal[i][j][e].index;
-        mpart->data[jevent++] = evtcal[i][j][e].data;
-      }
-    }
-    // events spillover
-    for (std::size_t e = 0; e < evtcol[i].size(); ++e) {
-      mpart->diffuse[jevent] = evtcol[i][e].diffuse;// - tsim;
-      mpart->type[jevent] = evtcol[i][e].type;
-      mpart->source[jevent] = evtcol[i][e].source;
-      mpart->index[jevent] = evtcol[i][e].index;
-      mpart->data[jevent++] = evtcol[i][e].data;
-    }
-    // xevent
-    mpart->xevent[i+1] = jevent;
-  }
-  CkAssert(jstate == nstate);
-  CkAssert(jstick == nstick);
-  CkAssert(jevent == nevent);
-
-  return mpart;
-}
-
-/**************************************************************************
-* Convert built network part message to repart state
-**************************************************************************/
-
-void Netdata::BuildRepart() {
-  // Loop through parts
-  for (int k = 0; k < nprt; ++k) {
-    idx_t jstate = 0;
-    idx_t jstick = 0;
-    for (idx_t i = 0; i < parts[k]->nvtx; ++i) {
-      // reprt (as vtxdist)
-      idx_t reprt = parts[k]->vtxdist[i];
-      CkAssert(reprt < netparts);
-      // vtxidx (global)
-      vtxidxreprt[reprt].push_back(parts[k]->vtxidx[i]);
-      // xyz
-      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+0]);
-      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+1]);
-      xyzreprt[reprt].push_back(parts[k]->xyz[i*3+2]);
-      // vtxmodidx
-      vtxmodidxreprt[reprt].push_back(parts[k]->vtxmodidx[i]);
-      // state (vertex)
-      statereprt[reprt].push_back(std::vector<real_t>());
-      stickreprt[reprt].push_back(std::vector<tick_t>());
-      for (idx_t s = 0; s < model[parts[k]->vtxmodidx[i]]->getNState(); ++s) {
-        statereprt[reprt].back().push_back(parts[k]->state[jstate++]);
-      }
-      for (idx_t s = 0; s < model[parts[k]->vtxmodidx[i]]->getNStick(); ++s) {
-        stickreprt[reprt].back().push_back(parts[k]->stick[jstick++]);
-      }
-      // adjcy
-      adjcyreprt[reprt].push_back(std::vector<idx_t>());
-      edgmodidxreprt[reprt].push_back(std::vector<idx_t>());
-      for (idx_t j = parts[k]->xadj[i]; j < parts[k]->xadj[i+1]; ++j) {
-        adjcyreprt[reprt].back().push_back(parts[k]->adjcy[j]);
-        edgmodidxreprt[reprt].back().push_back(parts[k]->edgmodidx[j]);
-        // state (edge)
-        for (idx_t s = 0; s < model[parts[k]->edgmodidx[j]]->getNState(); ++s) {
-          statereprt[reprt].back().push_back(parts[k]->state[jstate++]);
-        }
-        for (idx_t s = 0; s < model[parts[k]->edgmodidx[j]]->getNStick(); ++s) {
-          stickreprt[reprt].back().push_back(parts[k]->stick[jstick++]);
-        }
-      }
-      // event
-      eventreprt[reprt].push_back(std::vector<event_t>());
-      for (idx_t e = parts[k]->xevent[i]; e < parts[k]->xevent[i+1]; ++e) {
-        event_t evtpre;
-        evtpre.diffuse = parts[k]->diffuse[e];
-        evtpre.type = parts[k]->type[e];
-        evtpre.source = parts[k]->source[e];
-        evtpre.index = parts[k]->index[e];
-        evtpre.data = parts[k]->data[e];
-        eventreprt[reprt].back().push_back(evtpre);
-      }
-    }
-    CkAssert(jstate == parts[k]->nstate);
-    CkAssert(jstick == parts[k]->nstick);
-  }
-  // Prepare for reording partitions
-  cpdat = 0;
-  cpprt = 0;
-  norderdat = 0;
-  vtxprted.resize(nprt);
-  xyzprted.resize(nprt);
-  adjcyprted.resize(nprt);
-  edgmodidxprted.resize(nprt);
-  stateprted.resize(nprt);
-  stickprted.resize(nprt);
-  eventprted.resize(nprt);
-  adjcyreord.resize(nprt);
-  edgmodidxreord.resize(nprt);
-  statereord.resize(nprt);
-  stickreord.resize(nprt);
-  norderprt.resize(nprt);
-  for (idx_t i = 0; i < nprt; ++i) {
-    norderprt[i] = 0;
-  }
-  // Reset the vtxdist
-  vtxdist.clear();
-  vtxdist.resize(netparts+1);
-  vtxdist[0] = 0;
-  vtxmetis.clear();
-  vtxmetis.resize(netfiles+1);
-  vtxmetis[0] = 0;
-}

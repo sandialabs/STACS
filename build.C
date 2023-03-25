@@ -13,15 +13,16 @@
 extern /*readonly*/ unsigned randseed;
 extern /*readonly*/ int netparts;
 extern /*readonly*/ int netfiles;
+extern /*readonly*/ idx_t nevtday;
 
 
 /**************************************************************************
 * Build
 **************************************************************************/
 
-// Build Network
+// Build Network (initialize order)
 //
-void Netdata::Build(mGraph *msg) {
+void Network::OrderGraph(mGraph *msg) {
   /* Bookkeeping */
   idx_t jvtxparam;
   idx_t jedgtarget;
@@ -33,7 +34,6 @@ void Netdata::Build(mGraph *msg) {
   // initialize counters
   jvtxparam = 0;
   norder = 0;
-
   // Vertices
   vertices.resize(msg->nvtx);
   for (std::size_t i = 0; i < vertices.size(); ++i) {
@@ -104,7 +104,7 @@ void Netdata::Build(mGraph *msg) {
   delete msg;
 
   // Print out some information
-  if (datidx == 0) {
+  if (prtidx == 0) {
     for (std::size_t i = 0; i < vertices.size(); ++i) {
       CkPrintf("Vertex: %" PRIidx "   Order: %" PRIidx"\n", vertices[i].modidx, vertices[i].order);
     }
@@ -142,7 +142,6 @@ void Netdata::Build(mGraph *msg) {
       }
     }
   }
-
 
   // Bookkeeping to see how much each chare builds
   // Taking into account the different parts too
@@ -183,146 +182,134 @@ void Netdata::Build(mGraph *msg) {
     }
     xglbvtxidxprt[i][netparts] = norder;
   }
-  // Note: xglbvtxidxprt[0][xprt] gives the global vtx offset for datidx
+  // Note: xglbvtxidxprt[0][xprt] gives the global vtx offset for prtidx
   vtxdist.resize(netparts+1);
   for (int k = 0; k < netparts; ++k) {
     vtxdist[k] = xglbvtxidxprt[0][k];
   }
   vtxdist[netparts] = norder;
-  xorderdat.resize(netfiles+1);
-  for (int k = 0; k < netfiles; ++k) {
-    int ndiv = netparts/netfiles;
-    int nrem = netparts%netfiles;
-    int xprt = k*ndiv + (k < nrem ? k : nrem);
-    xorderdat[k] = xglbvtxidxprt[0][xprt];
-  }
-  xorderdat[netfiles] = norder;
 
   // Compute how much this chare builds
-  norderdat = 0;
-  norderprt.resize(nprt);
+  norderprt = 0;
   // population specific sizes
-  std::vector<std::vector<idx_t>> nordervtx;
-  std::vector<std::vector<idx_t>> xordervtx;
-  nordervtx.resize(nprt);
-  xordervtx.resize(nprt);
-  for (idx_t k = 0; k < nprt; ++k) {
-    norderprt[k] = 0;
-    nordervtx[k].resize(vertices.size());
-    xordervtx[k].resize(vertices.size());
-    for (std::size_t i = 0; i < vertices.size(); ++i) {
-      nordervtx[k][i] = xpopvtxidxprt[i][xprt+k+1] - xpopvtxidxprt[i][xprt+k];
-      xordervtx[k][i] = xpopvtxidxprt[i][xprt+k];
-      norderprt[k] += nordervtx[k][i];
-    }
-    norderdat += norderprt[k];
+  nordervtx.resize(vertices.size());
+  xordervtx.resize(vertices.size());
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    nordervtx[i] = xpopvtxidxprt[i][prtidx+1] - xpopvtxidxprt[i][prtidx];
+    xordervtx[i] = xpopvtxidxprt[i][prtidx];
+    norderprt += nordervtx[i];
   }
   
+  // return control to main
+  contribute(0, NULL, CkReduction::nop);
+}
+
+// Build Network
+//
+void Network::Build() {
   // Print out vertex distribution information
   std::string orderprts;
   // collect order parts
-  for (idx_t k = 0; k < nprt; ++k) {
-    std::ostringstream orderprt;
-    orderprt << " " << norderprt[k];
-    orderprts.append(orderprt.str());
-    orderprts.append(" [");
-    for (std::size_t i = 0; i < vertices.size(); ++i) {
-      std::ostringstream ordervtx;
-      ordervtx << " " << nordervtx[k][i] << "(" << xordervtx[k][i] << ", " << xglbvtxidxprt[i][xprt+k] << ")";
-      orderprts.append(ordervtx.str());
-    }
-    orderprts.append(" ]");
+  std::ostringstream orderprt;
+  orderprt << " " << norderprt;
+  orderprts.append(orderprt.str());
+  orderprts.append(" [");
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    std::ostringstream ordervtx;
+    ordervtx << " " << nordervtx[i] << "(" << xordervtx[i] << ", " << xglbvtxidxprt[i][prtidx] << ")";
+    orderprts.append(ordervtx.str());
   }
-  CkPrintf("  Building File: %d   Vertices: %" PRIidx " {%s }\n", datidx, norderdat, orderprts.c_str());
+  orderprts.append(" ]");
+  CkPrintf("  Building Part: %d (%d)   Vertices: %" PRIidx " {%s }\n", prtidx, datidx, norderprt, orderprts.c_str());
 
   // From here, work in terms of the netfiles instead of by netparts
   // But keep in mind the per part artificial splitting
 
   // Create model indices
-  vtxmodidx.resize(norderdat);
-  vtxordidx.resize(norderdat);
-  edgmodidx.resize(norderdat);
-  xyz.resize(norderdat*3);
-  adjcy.resize(norderdat);
-  adjcyset.resize(norderdat);
-  nadjcysample.resize(norderdat);
+  vtxmodidx.resize(norderprt);
+  vtxordidx.resize(norderprt);
+  edgmodidx.resize(norderprt);
+  xyz.resize(norderprt*3);
+  adjcy.resize(norderprt);
+  adjcyset.resize(norderprt);
+  nadjcysample.resize(norderprt);
   idx_t jvtxidx = 0;
-  for (idx_t k = 0; k < nprt; ++k) {
-    // set with modidx
-    for (std::size_t i = 0; i < vertices.size(); ++i) {
-      for (idx_t j = 0; j < nordervtx[k][i]; ++j) {
-        // Set the model index
-        vtxmodidx[jvtxidx] = vertices[i].modidx;
-        vtxordidx[jvtxidx] = xordervtx[k][i] + j;
-        edgmodidx[jvtxidx].clear();
-        adjcy[jvtxidx].clear();
-        adjcyset[jvtxidx].clear();
-        // Generate coordinates
-        if (vertices[i].shape == VTXSHAPE_POINT) {
-          // at a point
-          xyz[jvtxidx*3+0] = vertices[i].coord[0];
-          xyz[jvtxidx*3+1] = vertices[i].coord[1];
-          xyz[jvtxidx*3+2] = vertices[i].coord[2];
-        }
-        else if (vertices[i].shape == VTXSHAPE_CIRCLE) {
-          // uniformly inside circle
-          real_t t = 2*M_PI*((*unifdist)(rngine));
-          real_t r = vertices[i].param[0] * std::sqrt((*unifdist)(rngine));
-          xyz[jvtxidx*3+0] = vertices[i].coord[0] + r*std::cos(t);
-          xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*std::sin(t);
-          xyz[jvtxidx*3+2] = vertices[i].coord[2] + 0;
-        }
-        else if (vertices[i].shape == VTXSHAPE_SPHERE) {
-          // uniformly inside sphere
-          real_t u = ((*unifdist)(rngine));
-          real_t x = ((*normdist)(rngine));
-          real_t y = ((*normdist)(rngine));
-          real_t z = ((*normdist)(rngine));
-          real_t r = vertices[i].param[0] * std::cbrt(u) / std::sqrt(x*x+y*y+z*z);
-          xyz[jvtxidx*3+0] = vertices[i].coord[0] + r*x;
-          xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*y;
-          xyz[jvtxidx*3+2] = vertices[i].coord[2] + r*z;
-        }
-        else if (vertices[i].shape == VTXSHAPE_SPHERE_SURFACE) {
-          // uniformly on surface of sphere
-          real_t x = ((*normdist)(rngine));
-          real_t y = ((*normdist)(rngine));
-          real_t z = ((*normdist)(rngine));
-          real_t r = vertices[i].param[0] / std::sqrt(x*x+y*y+z*z);
-          xyz[jvtxidx*3+0] = vertices[i].coord[0] + r*x;
-          xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*y;
-          xyz[jvtxidx*3+2] = vertices[i].coord[2] + r*z;
-        }
-        else if (vertices[i].shape == VTXSHAPE_LINE) {
-          // uniformly along a line
-          real_t l = vertices[i].param[0]*((*unifdist)(rngine));
-          xyz[jvtxidx*3+0] = vertices[i].coord[0] + l;
-          xyz[jvtxidx*3+1] = vertices[i].coord[1];
-          xyz[jvtxidx*3+2] = vertices[i].coord[2];
-        }
-        else if (vertices[i].shape == VTXSHAPE_RECT) {
-          // uniformly inside rectangle
-          real_t w = vertices[i].param[0]*((*unifdist)(rngine));
-          real_t h = vertices[i].param[1]*((*unifdist)(rngine));
-          xyz[jvtxidx*3+0] = vertices[i].coord[0] + w;
-          xyz[jvtxidx*3+1] = vertices[i].coord[1] + h;
-          xyz[jvtxidx*3+2] = vertices[i].coord[2];
-        }
-        // Increment for the next vertex
-        ++jvtxidx;
+  // set with modidx
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    for (idx_t j = 0; j < nordervtx[i]; ++j) {
+      // Set the model index
+      vtxmodidx[jvtxidx] = vertices[i].modidx;
+      vtxordidx[jvtxidx] = xordervtx[i] + j;
+      edgmodidx[jvtxidx].clear();
+      adjcy[jvtxidx].clear();
+      adjcyset[jvtxidx].clear();
+      // Generate coordinates
+      if (vertices[i].shape == VTXSHAPE_POINT) {
+        // at a point
+        xyz[jvtxidx*3+0] = vertices[i].coord[0];
+        xyz[jvtxidx*3+1] = vertices[i].coord[1];
+        xyz[jvtxidx*3+2] = vertices[i].coord[2];
       }
+      else if (vertices[i].shape == VTXSHAPE_CIRCLE) {
+        // uniformly inside circle
+        real_t t = 2*M_PI*((*unifdist)(rngine));
+        real_t r = vertices[i].param[0] * std::sqrt((*unifdist)(rngine));
+        xyz[jvtxidx*3+0] = vertices[i].coord[0] + r*std::cos(t);
+        xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*std::sin(t);
+        xyz[jvtxidx*3+2] = vertices[i].coord[2] + 0;
+      }
+      else if (vertices[i].shape == VTXSHAPE_SPHERE) {
+        // uniformly inside sphere
+        real_t u = ((*unifdist)(rngine));
+        real_t x = ((*normdist)(rngine));
+        real_t y = ((*normdist)(rngine));
+        real_t z = ((*normdist)(rngine));
+        real_t r = vertices[i].param[0] * std::cbrt(u) / std::sqrt(x*x+y*y+z*z);
+        xyz[jvtxidx*3+0] = vertices[i].coord[0] + r*x;
+        xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*y;
+        xyz[jvtxidx*3+2] = vertices[i].coord[2] + r*z;
+      }
+      else if (vertices[i].shape == VTXSHAPE_SPHERE_SURFACE) {
+        // uniformly on surface of sphere
+        real_t x = ((*normdist)(rngine));
+        real_t y = ((*normdist)(rngine));
+        real_t z = ((*normdist)(rngine));
+        real_t r = vertices[i].param[0] / std::sqrt(x*x+y*y+z*z);
+        xyz[jvtxidx*3+0] = vertices[i].coord[0] + r*x;
+        xyz[jvtxidx*3+1] = vertices[i].coord[1] + r*y;
+        xyz[jvtxidx*3+2] = vertices[i].coord[2] + r*z;
+      }
+      else if (vertices[i].shape == VTXSHAPE_LINE) {
+        // uniformly along a line
+        real_t l = vertices[i].param[0]*((*unifdist)(rngine));
+        xyz[jvtxidx*3+0] = vertices[i].coord[0] + l;
+        xyz[jvtxidx*3+1] = vertices[i].coord[1];
+        xyz[jvtxidx*3+2] = vertices[i].coord[2];
+      }
+      else if (vertices[i].shape == VTXSHAPE_RECT) {
+        // uniformly inside rectangle
+        real_t w = vertices[i].param[0]*((*unifdist)(rngine));
+        real_t h = vertices[i].param[1]*((*unifdist)(rngine));
+        xyz[jvtxidx*3+0] = vertices[i].coord[0] + w;
+        xyz[jvtxidx*3+1] = vertices[i].coord[1] + h;
+        xyz[jvtxidx*3+2] = vertices[i].coord[2];
+      }
+      // Increment for the next vertex
+      ++jvtxidx;
     }
   }
-  CkAssert(jvtxidx == norderdat);
+  CkAssert(jvtxidx == norderprt);
 
   // At this point vtxmodidx should have the modidx of all the vertices
   // TODO: enable edges connecting to edges at some point (by vertex id?)
 
   // Build vertices from model
-  state.resize(norderdat);
-  stick.resize(norderdat);
-  event.resize(norderdat);
-  for (idx_t i = 0; i < norderdat; ++i) {
+  state.resize(norderprt);
+  stick.resize(norderprt);
+  evtflat.resize(norderprt);
+  evtcal.resize(norderprt);
+  evtcol.resize(norderprt);
+  for (idx_t i = 0; i < norderprt; ++i) {
     // Sanity check
     // 0 is reserved for 'none' edge type
     CkAssert(vtxmodidx[i] > 0);
@@ -387,14 +374,19 @@ void Netdata::Build(mGraph *msg) {
     state[i].push_back(rngstate);
     stick[i].push_back(rngstick);
     // Empty events
-    event[i].clear();
+    evtflat[i].clear();
+    evtcal[i].resize(nevtday);
+    for (std::size_t j = 0; j < evtcal[i].size(); ++j) {
+      evtcal[i][j].clear();
+    }
+    evtcol[i].clear();
   }
 
   // Any index-based sample connectivity occurs first
   // for each vertex
   std::set<idx_t>::iterator jedg;
-  for (idx_t i = 0; i < norderdat; ++i) {
-    idx_t glbtargetidx = xorderdat[datidx] + i;
+  for (idx_t i = 0; i < norderprt; ++i) {
+    idx_t glbtargetidx = vtxdist[prtidx] + i;
     for (jedg = connsampleset[vtxmodidx[i]].begin(); jedg != connsampleset[vtxmodidx[i]].end(); ++jedg) {
       idx_t edg = *jedg;
       for (std::size_t k = 0; k < edges[edg].conntype.size(); ++k) {
@@ -504,18 +496,18 @@ void Netdata::Build(mGraph *msg) {
   }
   
   // Prepare for connection
-  cpdat = 0;
+  cpprt = 0;
 
   // Sample-based connectivity w.r.t. the source (without distance information) is done
   // TODO: still need sample-based w.r.t. the target
   // Connect to this part
-  if (cpdat == datidx) {
-    mConn *mconn = BuildConnVtx(datidx);
-    thisProxy(cpdat).ConnectVtx(mconn);
+  if (cpprt == prtidx) {
+    mConn *mconn = BuildConnVtx(prtidx);
+    thisProxy(cpprt).ConnectVtx(mconn);
   }
   // Request data from remote part
   else {
-    thisProxy(cpdat).RequestConnVtx(datidx);
+    thisProxy(cpprt).RequestConnVtx(prtidx);
   }
 }
 
@@ -526,18 +518,18 @@ void Netdata::Build(mGraph *msg) {
 
 // Connect Network: distance-based connections
 //
-void Netdata::ConnectVtx(mConn *msg) {
+void Network::ConnectVtx(mConn *msg) {
   // Sanity check
-  CkAssert(msg->datidx == cpdat);
+  CkAssert(msg->prtidx == cpprt);
   // Some basic information on what's being connected
-  //CkPrintf("  Connecting %d to %d, backlog: %d\n", datidx, msg->datidx, connvtxreq.size());
+  //CkPrintf("  Connecting %d to %d, backlog: %d\n", prtidx, msg->prtidx, connvtxreq.size());
   
   // Go through the incoming state and reparameterize the state/sticks if needed
-  for (idx_t i = 0; i < norderdat; ++i) {
+  for (idx_t i = 0; i < norderprt; ++i) {
     for (idx_t j = 0; j < nadjcysample[i]; ++j) {
-      if (xorderdat[msg->datidx] <= adjcy[i][j] && adjcy[i][j] < xorderdat[msg->datidx+1]) {
+      if (vtxdist[msg->prtidx] <= adjcy[i][j] && adjcy[i][j] < vtxdist[msg->prtidx+1]) {
         // Reparameterize with information
-        idx_t locsourceidx = adjcy[i][j] - xorderdat[msg->datidx];
+        idx_t locsourceidx = adjcy[i][j] - vtxdist[msg->prtidx];
         idx_t edg = connmodmap[msg->vtxmodidx[locsourceidx]*edges.size()+vtxmodidx[i]];
         //CkPrintf("%" PRIidx ", %" PRIidx ": %" PRIidx ", %" PRIidx"\n", i, adjcy[i][j], locsourceidx, edg);
         real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+locsourceidx*3, edges[edg].distparam.data());
@@ -549,14 +541,14 @@ void Netdata::ConnectVtx(mConn *msg) {
 
   // Build connections from j to i (only)
   //
-  for (idx_t i = 0; i < norderdat; ++i) {
+  for (idx_t i = 0; i < norderprt; ++i) {
     for (idx_t j = 0; j < msg->nvtx; ++j) {
       // Skip unconnected populations
       if (connmodmap.find(msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]) == connmodmap.end()) {
         continue;
       }
       // Skip same index i == j
-      else if (!selfconn && xorderdat[datidx]+i == xorderdat[msg->datidx]+j) {
+      else if (!selfconn && vtxdist[prtidx]+i == vtxdist[msg->prtidx]+j) {
         continue;
       }
       // Evaluate connection between i and j
@@ -567,8 +559,8 @@ void Netdata::ConnectVtx(mConn *msg) {
         idx_t modidx = MakeConnection(edg, msg->vtxordidx[j], vtxordidx[i], distance);
         // check possible connections from j (source) to i (target)
         if (modidx) {
-          adjcy[i].push_back(xorderdat[msg->datidx]+j);
-          adjcyset[i].insert(xorderdat[msg->datidx]+j); // The set is useful for faster searching of edge existence
+          adjcy[i].push_back(vtxdist[msg->prtidx]+j);
+          adjcyset[i].insert(vtxdist[msg->prtidx]+j); // The set is useful for faster searching of edge existence
           edgmodidx[i].push_back(modidx);
           // build state from j to i
           state[i].push_back(BuildEdgState(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
@@ -589,29 +581,29 @@ void Netdata::ConnectVtx(mConn *msg) {
   }
 
   // Move to next part
-  ++cpdat;
+  ++cpprt;
   // return control to main when done
-  if (cpdat == netfiles) {
+  if (cpprt == netparts) {
     // Go to checkpoint now
     thisProxy.ConnectHandover();
   }
   // Connect to curr part
-  else if (cpdat == datidx) {
-    mConn *mconn = BuildConnVtx(datidx);
-    thisProxy(cpdat).ConnectVtx(mconn);
+  else if (cpprt == prtidx) {
+    mConn *mconn = BuildConnVtx(prtidx);
+    thisProxy(cpprt).ConnectVtx(mconn);
   }
   // Request data from next part
   else {
-    thisProxy(cpdat).RequestConnVtx(datidx);
+    thisProxy(cpprt).RequestConnVtx(prtidx);
   }
 }
 
 // Connect Network Request Data
 //
-void Netdata::RequestConnVtx(int reqidx) {
+void Network::RequestConnVtx(int reqidx) {
   // send data adjacency and vertex info to requesting part
   // check if vertex is built
-  //CkPrintf("  Request on %d from %d\n", datidx, reqidx);
+  //CkPrintf("  Request on %d from %d\n", prtidx, reqidx);
   if (vtxmodidx.size()) {
     mConn *mconn = BuildConnVtx(reqidx);
     thisProxy(reqidx).ConnectVtx(mconn);
@@ -624,38 +616,38 @@ void Netdata::RequestConnVtx(int reqidx) {
 
 // Handover between sample and distance-based connectivity
 //
-void Netdata::ConnectHandover() {
+void Network::ConnectHandover() {
   ++cphnd;
   // return control to main when done
-  if (cphnd == netfiles) {
-    cpdat = 0;
-    cphnd = 0; // maybe use again?
+  if (cphnd == netparts) {
+    cphnd = 0;
+    cpprt = 0;
     //CkPrintf("Build Handover\n");
     /*
     idx_t nadjcy = 0;
-    for (int i = 0; i < norderdat; ++i) {
+    for (int i = 0; i < norderprt; ++i) {
       nadjcy += adjcyset[i].size();
     }
-    CkPrintf("File: %d, directed edges: %" PRIidx "\n", datidx, nadjcy);
+    CkPrintf("File: %d, directed edges: %" PRIidx "\n", prtidx, nadjcy);
     */
-    if (cpdat == datidx) {
-      mConn *mconn = BuildConnEdg(datidx);
-      thisProxy(cpdat).ConnectEdg(mconn);
+    if (cpprt == prtidx) {
+      mConn *mconn = BuildConnEdg(prtidx);
+      thisProxy(cpprt).ConnectEdg(mconn);
     }
     // Work on connecting none edges now
     else {
-      thisProxy(cpdat).RequestConnEdg(datidx);
+      thisProxy(cpprt).RequestConnEdg(prtidx);
     }
   }
 }
 
 // Connect Network (directed to undirected edges)
 //
-void Netdata::ConnectEdg(mConn *msg) {
+void Network::ConnectEdg(mConn *msg) {
   // Sanity check
-  CkAssert(msg->datidx == cpdat);
+  CkAssert(msg->prtidx == cpprt);
   // Some basic information on what's being connected
-  //CkPrintf("  Connecting %d to %d\n", datidx, msg->datidx);
+  //CkPrintf("  Connecting %d to %d\n", prtidx, msg->prtidx);
   
   // Go through the vertices
   for (idx_t j = 0; j < msg->nvtx; ++j) {
@@ -677,12 +669,12 @@ void Netdata::ConnectEdg(mConn *msg) {
   delete msg;
 
   // Move to next part
-  ++cpdat;
+  ++cpprt;
   // return control to main when done
-  if (cpdat == netfiles) {
+  if (cpprt == netparts) {
     // We can reorder all the edges by global ordering now
     // Reorder edges vertex-by-vertex
-    for (idx_t i = 0; i < norderdat; ++i) {
+    for (idx_t i = 0; i < norderprt; ++i) {
       edgreord.clear();
       for (std::size_t j = 0; j < adjcy[i].size(); ++j) {
         edgreord.push_back(edgreord_t());
@@ -715,29 +707,26 @@ void Netdata::ConnectEdg(mConn *msg) {
       edgmodsize += edgmodidx[i].size();
       edgmodcap += edgmodidx[i].capacity();
     }
-    CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", datidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
+    CkPrintf("Part %d size/cap: adjcy: %d , %d edgmodidx: %d , %d\n", prtidx, adjcysize, adjcycap, edgmodsize, edgmodcap);
     */
-
-    // Build parts from file-based network information
-    BuildParts();
     
     // Done building all edges, return control to main
     contribute(0, NULL, CkReduction::nop);
   }
   // Connect to curr part
-  else if (cpdat == datidx) {
-    mConn *mconn = BuildConnEdg(datidx);
-    thisProxy(cpdat).ConnectEdg(mconn);
+  else if (cpprt == prtidx) {
+    mConn *mconn = BuildConnEdg(prtidx);
+    thisProxy(cpprt).ConnectEdg(mconn);
   }
   // Request data from next part
   else {
-    thisProxy(cpdat).RequestConnEdg(datidx);
+    thisProxy(cpprt).RequestConnEdg(prtidx);
   }
 }
 
 // Connect Network Finished
 //
-void Netdata::RequestConnEdg(int reqidx) {
+void Network::RequestConnEdg(int reqidx) {
   // send data adjacency info to requesting part
   mConn *mconn = BuildConnEdg(reqidx);
   thisProxy(reqidx).ConnectEdg(mconn);
@@ -751,22 +740,22 @@ void Netdata::RequestConnEdg(int reqidx) {
 
 // Build Vertices
 //
-mConn* Netdata::BuildConnVtx(int reqidx) {
+mConn* Network::BuildConnVtx(int reqidx) {
   // Initialize connection message
   int msgSize[MSG_Conn];
-  msgSize[0] = norderdat;   // vtxmodidx
-  msgSize[1] = norderdat;   // vtxordidx
-  msgSize[2] = norderdat*3; // xyz
+  msgSize[0] = norderprt;   // vtxmodidx
+  msgSize[1] = norderprt;   // vtxordidx
+  msgSize[2] = norderprt*3; // xyz
   msgSize[3] = 0;           // vtxidx
   msgSize[4] = 0;           // xadj
   msgSize[5] = 0;           // adjcy
   mConn *mconn = new(msgSize, 0) mConn;
   // Sizes
-  mconn->datidx = datidx;
-  mconn->nvtx = norderdat;
+  mconn->prtidx = prtidx;
+  mconn->nvtx = norderprt;
 
   // Build message
-  for (idx_t i = 0; i < norderdat; ++i) {
+  for (idx_t i = 0; i < norderprt; ++i) {
     mconn->vtxmodidx[i] = vtxmodidx[i];
     mconn->vtxordidx[i] = vtxordidx[i];
     mconn->xyz[i*3+0] = xyz[i*3+0];
@@ -779,43 +768,43 @@ mConn* Netdata::BuildConnVtx(int reqidx) {
 
 // Build Edge (includes vertices and adjacency)
 //
-mConn* Netdata::BuildConnEdg(int reqidx) {
+mConn* Network::BuildConnEdg(int reqidx) {
   /* Bookkeeping */
   idx_t nsizedat;
   idx_t jadjcyidx;
 
   std::vector<std::vector<idx_t>> adjcyconn;
-  adjcyconn.resize(norderdat);
+  adjcyconn.resize(norderprt);
 
   // Count the sizes
   nsizedat = 0;
-  for (idx_t i = 0; i < norderdat; ++i) {
+  for (idx_t i = 0; i < norderprt; ++i) {
     adjcyconn[i].clear();
     std::set<idx_t>::iterator jadjcy;
     // Loop through the directed afferent edges
     for (jadjcy = adjcyset[i].begin(); jadjcy != adjcyset[i].end(); ++jadjcy) {
-      if (xorderdat[reqidx] <= *jadjcy && *jadjcy < xorderdat[reqidx+1]) {
+      if (vtxdist[reqidx] <= *jadjcy && *jadjcy < vtxdist[reqidx+1]) {
         // global source idx to local
-        adjcyconn[i].push_back(*jadjcy - xorderdat[reqidx]);
+        adjcyconn[i].push_back(*jadjcy - vtxdist[reqidx]);
       }
     }
     // Add none connections to size
     nsizedat += adjcyconn[i].size();
   }
-  //CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx ", adj: %" PRIidx "\n", reqidx, xorderdat[reqidx], xorderdat[reqidx+1], nsizedat);
+  //CkPrintf("   reqidx: %" PRIidx ", min: %" PRIidx ", max: %" PRIidx ", adj: %" PRIidx "\n", reqidx, vtxdist[reqidx], vtxdist[reqidx+1], nsizedat);
 
   // Initialize connection message
   int msgSize[MSG_Conn];
   msgSize[0] = 0;           // vtxmodidx
   msgSize[1] = 0;           // vtxordidx
   msgSize[2] = 0;           // xyz
-  msgSize[3] = norderdat;   // vtxidx
-  msgSize[4] = norderdat+1; // xadj
+  msgSize[3] = norderprt;   // vtxidx
+  msgSize[4] = norderprt+1; // xadj
   msgSize[5] = nsizedat;    // adjcy
   mConn *mconn = new(msgSize, 0) mConn;
   // Sizes
-  mconn->datidx = datidx;
-  mconn->nvtx = norderdat;
+  mconn->prtidx = prtidx;
+  mconn->nvtx = norderprt;
 
   // Prefix zero is zero
   mconn->xadj[0] = 0;
@@ -823,8 +812,8 @@ mConn* Netdata::BuildConnEdg(int reqidx) {
   jadjcyidx = 0;
   
   // Build message
-  for (idx_t i = 0; i < norderdat; ++i) {
-    mconn->vtxidx[i] = xorderdat[datidx]+i; // need to convert from local to global
+  for (idx_t i = 0; i < norderprt; ++i) {
+    mconn->vtxidx[i] = vtxdist[prtidx]+i; // need to convert from local to global
     // xadj
     mconn->xadj[i+1] = mconn->xadj[i] + adjcyconn[i].size();
     for (std::size_t j = 0; j < adjcyconn[i].size(); ++j) {
@@ -842,7 +831,7 @@ mConn* Netdata::BuildConnEdg(int reqidx) {
 * Connection Construction
 **************************************************************************/
 
-idx_t Netdata::MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_t dist) {
+idx_t Network::MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_t dist) {
   // test for cutoff
   if (edges[edg].cutoff != 0.0 && dist > edges[edg].cutoff) {
     return 0;
@@ -875,11 +864,15 @@ idx_t Netdata::MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_
       // TODO: make sure file-based connections completely override
       //       other connection types (or make them mutually exclusive)
       // TODO: split up files in dCSR order as well
-      if ((std::size_t) targetidx >= datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix.size()) {
+      // convert targetidx from global to local
+      CkAssert(targetidx >= datafiles[(idx_t) (edges[edg].probparam[k][0])].xrow);
+      idx_t targetidxloc = targetidx - datafiles[(idx_t) (edges[edg].probparam[k][0])].xrow;
+      if ((std::size_t) targetidxloc >= datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix.size()) {
         CkPrintf("  error: datafile %s does not have row for %" PRIidx "\n",
             datafiles[(idx_t) (edges[edg].probparam[k][0])].filename.c_str(), targetidx);
-      } else if (datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidx].find((real_t) sourceidx) ==
-          datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidx].end()) {
+        CkExit();
+      } else if (datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidxloc].find((real_t) sourceidx) ==
+          datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidxloc].end()) {
         prob = 0.0;
         mask = 0;
       } else {
@@ -909,7 +902,7 @@ idx_t Netdata::MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_
 
 // States
 //
-std::vector<real_t> Netdata::BuildEdgState(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx) {
+std::vector<real_t> Network::BuildEdgState(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx) {
   // Sanity check
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
@@ -964,7 +957,7 @@ std::vector<real_t> Netdata::BuildEdgState(idx_t modidx, real_t dist, idx_t sour
 
 // Sticks
 //
-std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx) {
+std::vector<tick_t> Network::BuildEdgStick(idx_t modidx, real_t dist, idx_t sourceidx, idx_t targetidx) {
   // Sanity check
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
@@ -1024,7 +1017,7 @@ std::vector<tick_t> Netdata::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
 
 // States
 //
-void Netdata::ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rngstate) {
+void Network::ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rngstate) {
   // Sanity check
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
@@ -1046,7 +1039,7 @@ void Netdata::ReBuildEdgState(idx_t modidx, real_t dist, std::vector<real_t>& rn
 
 // Sticks
 //
-void Netdata::ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick) {
+void Network::ReBuildEdgStick(idx_t modidx, real_t dist, std::vector<tick_t>& rngstick) {
   // Sanity check
   // 0 is reserved for 'none' edge type
   CkAssert(modidx > 0);
