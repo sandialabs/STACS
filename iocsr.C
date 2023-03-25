@@ -369,18 +369,9 @@ void Netdata::ReadNetwork() {
 
 // Read network parts (reordering)
 //
-void Netdata::ReadPart() {
-  /* Bookkeeping */
-  idx_t nsizedat;
-  idx_t nstatedat;
-  idx_t nstickdat;
-  idx_t neventdat;
+void Netdata::ReadNetpart() {
   /* File operations */
   FILE *pPart;
-  FILE *pCoord;
-  FILE *pAdjcy;
-  FILE *pState;
-  FILE *pEvent;
   char csrfile[100];
   char *line;
   char *oldstr, *newstr;
@@ -391,16 +382,7 @@ void Netdata::ReadPart() {
   // Open files for reading
   sprintf(csrfile, "%s/%s.part.%d", netwkdir.c_str(), filebase.c_str(), datidx);
   pPart = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.coord.%d", netwkdir.c_str(), filebase.c_str(), datidx);
-  pCoord = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), datidx);
-  pAdjcy = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.state.%d", netwkdir.c_str(), filebase.c_str(), datidx);
-  pState = fopen(csrfile,"r");
-  sprintf(csrfile, "%s/%s.event.%d", netwkdir.c_str(), filebase.c_str(), datidx);
-  pEvent = fopen(csrfile,"r");
-  if (pPart == NULL || pCoord == NULL || pAdjcy == NULL ||
-      pState == NULL || pEvent == NULL) {
+  if (pPart == NULL) {
     CkPrintf("Error opening files for reading\n");
     CkExit();
   }
@@ -410,179 +392,23 @@ void Netdata::ReadPart() {
   }
 
   // Initialize sizes
-  std::vector<idx_t> reprt(vtxmetis[datidx+1] - vtxmetis[datidx]);
-  nsizedat = 0;
-  nstatedat = 0;
-  nstickdat = 0;
-  neventdat = 0;
+  reprtidx.clear();
 
   // Read in graph information
-  for (std::size_t i = 0; i < reprt.size(); ++i) {
+  for (idx_t i = 0;; ++i) {
     while(fgets(line, MAXLINE, pPart) && line[0] == '%');
+    if (feof(pPart)) { break; }
     oldstr = line;
     newstr = NULL;
     // reprt
-    reprt[i] = strtoidx(oldstr, &newstr, 10);
-    CkAssert(reprt[i] < netparts);
-    vtxidxreprt[reprt[i]].push_back(vtxmetis[datidx]+i);
-    adjcyreprt[reprt[i]].push_back(std::vector<idx_t>());
-
-    // Read in line (coordinates)
-    while(fgets(line, MAXLINE, pCoord) && line[0] == '%');
-    oldstr = line;
-    newstr = NULL;
-    // xyz
-    for (idx_t j = 0; j < 3; ++j) {
-      real_t coord = strtoreal(oldstr, &newstr);
-      oldstr = newstr;
-      xyzreprt[reprt[i]].push_back(coord);
-    }
-
-    // Read line (per vertex)
-    while(fgets(line, MAXLINE, pAdjcy) && line[0] == '%');
-    oldstr = line;
-    newstr = NULL;
-    for(;;) {
-      idx_t edg = strtoidx(oldstr, &newstr, 10);
-      // check for end of line
-      if (edg == 0 && oldstr != line)
-        break;
-      oldstr = newstr;
-      // adjcy
-      adjcyreprt[reprt[i]].back().push_back(edg);
-      ++nsizedat;
-    }
-
-    // Extract State Information
-    // Read line (vertex)
-    while(fgets(line, MAXLINE, pState) && line[0] == '%');
-    oldstr = line;
-    newstr = NULL;
-    // extract model index from name
-    idx_t modidx = strtomodidx(oldstr, &newstr);
-    CkAssert(modidx != IDX_T_MAX);
-    oldstr = newstr;
-    // vtxmodidx
-    vtxmodidxreprt[reprt[i]].push_back(modidx);
-    statereprt[reprt[i]].push_back(std::vector<real_t>());
-    stickreprt[reprt[i]].push_back(std::vector<tick_t>());
-    CkAssert(modidx > 0);
-    for(std::size_t s = 0; s < modelconf[modidx-1].stateinit.size(); ++s) {
-      real_t stt = strtoreal(oldstr, &newstr);
-      oldstr = newstr;
-      // state
-      statereprt[reprt[i]].back().push_back(stt);
-      ++nstatedat;
-    }
-    for(std::size_t s = 0; s < modelconf[modidx-1].stickinit.size(); ++s) {
-      tick_t stt = strtotick(oldstr, &newstr, 16);
-      oldstr = newstr;
-      // state
-      stickreprt[reprt[i]].back().push_back(stt);
-      ++nstickdat;
-    }
-
-    // edgmodidx
-    modidx = strtomodidx(oldstr, &newstr);
-    oldstr = newstr;
-    edgmodidxreprt[reprt[i]].push_back(std::vector<idx_t>());
-    while (modidx != IDX_T_MAX) {
-      // modidx
-      edgmodidxreprt[reprt[i]].back().push_back(modidx);
-      statereprt[reprt[i]].push_back(std::vector<real_t>());
-      stickreprt[reprt[i]].push_back(std::vector<tick_t>());
-      // only push edge state if model and not 'none'
-      if (modidx > 0) {
-        for(std::size_t s = 0; s < modelconf[modidx-1].stateinit.size(); ++s) {
-          real_t stt = strtoreal(oldstr, &newstr);
-          oldstr = newstr;
-          // state
-          statereprt[reprt[i]].back().push_back(stt);
-          ++nstatedat;
-        }
-        for(std::size_t s = 0; s < modelconf[modidx-1].stickinit.size(); ++s) {
-          tick_t stt = strtotick(oldstr, &newstr, 16);
-          oldstr = newstr;
-          // state
-          stickreprt[reprt[i]].back().push_back(stt);
-          ++nstickdat;
-        }
-      }
-      modidx = strtomodidx(oldstr, &newstr);
-      oldstr = newstr;
-    }
-
-    // Extract event information
-    // Read line (per vertex)
-    while(fgets(line, MAXLINE, pEvent) && line[0] == '%');
-    oldstr = line;
-    newstr = NULL;
-    // number of events
-    idx_t jevent = strtoidx(oldstr, &newstr, 10);
-    oldstr = newstr;
-    eventreprt[reprt[i]].push_back(std::vector<event_t>());
-    event_t eventpre;
-    for (idx_t j = 0; j < jevent; ++j) {
-      // diffuse
-      eventpre.diffuse = strtotick(oldstr, &newstr, 16);
-      oldstr = newstr;
-      // type
-      idx_t type = strtoidx(oldstr, &newstr, 10);
-      oldstr = newstr;
-      eventpre.type = type;
-      // source
-      eventpre.source = strtoidx(oldstr, &newstr, 10);
-      oldstr = newstr;
-      // index
-      eventpre.index = strtoidx(oldstr, &newstr, 10);
-      oldstr = newstr;
-      // data
-      if (type == EVENT_SPIKE) {
-        eventpre.data = 0.0;
-      }
-      else {
-        eventpre.data = strtoreal(oldstr, &newstr);
-        oldstr = newstr;
-      }
-      eventreprt[reprt[i]].back().push_back(eventpre);
-    }
-    neventdat += jevent;
-    CkAssert(eventreprt[reprt[i]].back().size() == (std::size_t) jevent);
+    idx_t reprt = strtoidx(oldstr, &newstr, 10);
+    CkAssert(reprt < netparts);
+    reprtidx.push_back(reprt);
   }
 
   // Cleanup
   fclose(pPart);
-  fclose(pCoord);
-  fclose(pAdjcy);
-  fclose(pState);
-  fclose(pEvent);
   delete[] line;
-
-  // Print out some information
-  CkPrintf("  File: %d   Vertices: %zu   Edges: %" PRIidx "   States: %" PRIidx "   Sticks: %" PRIidx"   Events: %" PRIidx"\n",
-      datidx, reprt.size(), nsizedat, nstatedat, nstickdat, neventdat);
-
-  // Prepare for reording partitions
-  cpdat = 0;
-  cpprt = 0;
-  norderdat = 0;
-  vtxprted.resize(nprt);
-  xyzprted.resize(nprt);
-  adjcyprted.resize(nprt);
-  edgmodidxprted.resize(nprt);
-  stateprted.resize(nprt);
-  stickprted.resize(nprt);
-  eventprted.resize(nprt);
-  adjcyreord.resize(nprt);
-  edgmodidxreord.resize(nprt);
-  statereord.resize(nprt);
-  stickreord.resize(nprt);
-  norderprt.resize(nprt);
-  for (idx_t i = 0; i < nprt; ++i) {
-    norderprt[i] = 0;
-  }
-  vtxdist.resize(netparts+1);
-  vtxdist[0] = 0;
 }
     
 // Write out network files
@@ -920,163 +746,3 @@ void Netdata::WriteEstimate() {
   }
 }
 
-/**************************************************************************
-* GeNet (network data files) (dense)
-**************************************************************************/
-
-
-// Read data file (csv)
-//
-int Netdata::ReadDataCSV(datafile_t &datafile) {
-  FILE *pData;
-  char csvfile[100];
-  char *line;
-  char *oldstr, *newstr;
-
-  // Prepare buffer
-  line = new char[MAXLINE];
-
-  // Open files for reading
-  // TODO: single-node file reads instead of per-process
-  //       integrate this with MPI-IO?
-  sprintf(csvfile, "%s/%s", netwkdir.c_str(), datafile.filename.c_str());
-  pData = fopen(csvfile,"r");
-  if (pData == NULL || line == NULL) {
-    CkPrintf("Error opening file for reading\n");
-    return 1;
-  }
-
-  // Initialize matrix
-  datafile.matrix.clear();
-
-  // Read csv into matrix
-  // Dimensions are stored: targetdim x sourcedim
-  // TODO: transpose the input file when reading?
-  //       storage in csr-target-major order makes a
-  //       single-threaded read-distribute more practical
-  for (idx_t j = 0;; ++j) {
-    // read in row
-    while(fgets(line, MAXLINE, pData) && line[0] == '%');
-    if (feof(pData)) { break; }
-    oldstr = line;
-    newstr = NULL;
-    std::unordered_map<idx_t, real_t> row;
-    // read in columns (comma delimited)
-    idx_t i = 0;
-    for (;;) {
-      // check for empty element at beginning of file
-      // TODO: is this robust enough?
-      while (isspace(oldstr[0])) { ++oldstr; }
-      while (oldstr[0] == ',') { ++oldstr; ++i; }
-      // check for end of line (added by fgets)
-      if (oldstr[0] == '\0') { break; }
-      // element
-      real_t element;
-      element = strtoreal(oldstr, &newstr);
-      oldstr = newstr;
-      // Add element to row
-      row.emplace(i, element);
-      //CkPrintf("  %" PRIidx ", %" PRIidx ": %" PRIreal "\n", i, j, element);
-      // check for empty element (again)
-      while (isspace(oldstr[0])) { ++oldstr; }
-      while (oldstr[0] == ',') { ++oldstr; ++i; }
-      // check for end of line (added by fgets)
-      if (oldstr[0] == '\0') { break; }
-    }
-    // Add to matrix
-    datafile.matrix.push_back(row);
-  }
-
-  // Cleanup
-  fclose(pData);
-  delete[] line;
-
-  return 0;
-}
-
-/**************************************************************************
-* GeNet (network data files) (sparse)
-**************************************************************************/
-
-
-// Read data file (csv)
-//
-int Netdata::ReadDataCSVSparse(datafile_t &datafile) {
-  FILE *pData;
-  char csvfile[100];
-  char *line;
-  char *oldstr, *newstr;
-
-  // Prepare buffer
-  line = new char[MAXLINE];
-
-  // Open files for reading
-  // TODO: single-node file reads instead of per-process
-  //       integrate this with MPI-IO?
-  sprintf(csvfile, "%s/%s", netwkdir.c_str(), datafile.filename.c_str());
-  pData = fopen(csvfile,"r");
-  if (pData == NULL || line == NULL) {
-    CkPrintf("Error opening file for reading\n");
-    return 1;
-  }
-
-  // Initialize matrix
-  datafile.matrix.clear();
-
-  // Read csv into matrix
-  // Dimensions are stored: targetdim x condensed sparse rows of source
-  //                        as sourceidx:datavalue (data is optional)
-  // TODO: transpose the input file when reading?
-  //       storage in csr-target-major order makes a
-  //       single-threaded read-distribute more practical
-  for (idx_t j = 0;; ++j) {
-    // read in row
-    while(fgets(line, MAXLINE, pData) && line[0] == '%');
-    if (feof(pData)) { break; }
-    oldstr = line;
-    newstr = NULL;
-    std::unordered_map<idx_t, real_t> row;
-    for (;;) {
-      // check for empty element at beginning of file
-      // TODO: is this robust enough?
-      while (isspace(oldstr[0])) { ++oldstr; }
-      while (oldstr[0] == ',') { ++oldstr; }
-      // check for end of line (added by fgets)
-      if (oldstr[0] == '\0') { break; }
-      // source index
-      idx_t sourceidx;
-      sourceidx = strtoidx(oldstr, &newstr, 10);
-      oldstr = newstr;
-      // Skip the colon
-      while (isspace(oldstr[0])) { ++oldstr; }
-      while (oldstr[0] == ':') { ++oldstr; }
-      while (isspace(oldstr[0])) { ++oldstr; }
-      // element
-      real_t element;
-      // also handle no element case
-      if (oldstr[0] == ',' || oldstr[0] == '\0') {
-        element = 0.0;
-      }
-      else {
-        element = strtoreal(oldstr, &newstr);
-        oldstr = newstr;
-      }
-      // Add element to row
-      row.emplace(sourceidx, element);
-      //CkPrintf("  %" PRIidx ", %" PRIidx ": %" PRIreal "\n", sourceidx, j, element);
-      // check for empty element (again)
-      while (isspace(oldstr[0])) { ++oldstr; }
-      while (oldstr[0] == ',') { ++oldstr; }
-      // check for end of line (added by fgets)
-      if (oldstr[0] == '\0') { break; }
-    }
-    // Add to matrix
-    datafile.matrix.push_back(row);
-  }
-
-  // Cleanup
-  fclose(pData);
-  delete[] line;
-
-  return 0;
-}

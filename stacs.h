@@ -153,6 +153,7 @@ class Main : public CBase_Main {
 
     /* Chare Messages */
     mDist* BuildDist();
+    mModname* BuildModname();
     mModel* BuildModel();
     mGraph* BuildGraph();
     mGroup* BuildGroup();
@@ -161,16 +162,13 @@ class Main : public CBase_Main {
 #endif
 
     /* Stacs */
-    void Control();
     void Init();
-    void Check();
-    void Cont();
     void Start();
+    void Check();
     void Stop();
     void Halt();
     
     /* Network Distribution */
-    // TODO: Consolidate the distribution writing
     void SaveDist(CkReductionMsg *msg);
     void SaveInitDist(CkReductionMsg *msg);
     void SaveFinalDist(CkReductionMsg *msg);
@@ -181,7 +179,6 @@ class Main : public CBase_Main {
     CProxy_Netdata netdata;
     CProxy_Network network;
     CkCallback netcycle;
-    CkCallback netcont;
     /* Network */
     std::vector<dist_t> netdist;
     /* Model Information */
@@ -216,9 +213,10 @@ class Main : public CBase_Main {
     /* Bookkeeping */
     int ninit, cinit;
     int nhalt, chalt;
-    bool buildflag;
-    bool repartflag;
     bool readflag;
+    bool loadflag;
+    bool buildflag;
+    bool moveflag;
     bool writeflag;
     bool lbflag;
 #ifdef STACS_WITH_YARP

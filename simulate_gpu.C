@@ -30,23 +30,6 @@ extern CkReduction::reducerType max_idx;
 
 
 /**************************************************************************
-* Network Simulation Initialization
-**************************************************************************/
-
-// Coordination with NetData chare array
-//
-void Network::InitSimGPU(CProxy_Netdata cpdata) {
-  // Set proxies
-  netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleSim(), thisProxy(prtidx));
-
-  // Request network part from input
-  netdata(datidx).LoadNetwork(prtidx,
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(prtidx)));
-}
-
-
-/**************************************************************************
 * Network Simulation Cycle
 **************************************************************************/
 
@@ -146,7 +129,6 @@ void Network::CycleSimGPU() {
 
     // Clear event buffer
     evtext.clear();
-    //idx_t nevent = 0;
     // Redistribute any events (on new year)
     if (evtday == 0) {
       SortEventCalendar();
@@ -164,7 +146,6 @@ void Network::CycleSimGPU() {
 
       // Sort events
       std::sort(evtcal[i][evtday].begin(), evtcal[i][evtday].end());
-      //nevent += evtcal[i][evtday].size();
 
       // Perform events starting at beginning of step
       std::vector<event_t>::iterator event = evtcal[i][evtday].begin();
@@ -209,10 +190,8 @@ void Network::CycleSimGPU() {
       }
 
       // Clear event queue
-      //CkAssert(event == event[i][evtday].end());
       evtcal[i][evtday].clear();
     }
-    //CkPrintf("    Events on %d: %d\n", prtidx, nevent);
 
     // Send messages to neighbors
     mEvent *mevent = BuildEvent();

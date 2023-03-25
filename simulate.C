@@ -49,30 +49,6 @@ CkReductionMsg *maxIdx(int nMsg, CkReductionMsg **msgs) {
 
 
 /**************************************************************************
-* Network Simulation Initialization
-**************************************************************************/
-
-// Coordination with NetData chare array
-//
-void Network::InitSim(CProxy_Netdata cpdata) {
-  // Set proxies
-  netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleSim(), thisProxy(prtidx));
-
-  // Request network part from input
-  netdata(datidx).LoadNetwork(prtidx,
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(prtidx)));
-}
-
-// Return after repartitioning
-//
-void Network::ContSim() {
-  netdata(datidx).LoadNetwork(prtidx,
-      CkCallback(CkIndex_Network::ReloadNetwork(NULL), thisProxy(prtidx)));
-}
-
-
-/**************************************************************************
 * Network Simulation Cycle
 **************************************************************************/
 

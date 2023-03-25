@@ -44,24 +44,6 @@ CkReductionMsg *netEvent(int nMsg, CkReductionMsg **msgs) {
 
 
 /**************************************************************************
-* Network Estimation Initialization
-**************************************************************************/
-
-// Coordination with NetData chare array
-//
-void Network::InitEst(CProxy_Netdata cpdata) {
-  // Set proxies
-  netdata = cpdata;
-  //cyclepart = CkCallback(CkIndex_Network::CycleEst(), prtidx, thisProxy);
-  cyclepart = CkCallback(CkIndex_Network::CycleEst(), thisProxy(prtidx));
-  
-  // Request network part from input
-  netdata(datidx).LoadNetwork(prtidx,
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(prtidx)));
-}
-
-
-/**************************************************************************
 * Estimation Recording
 **************************************************************************/
 

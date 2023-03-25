@@ -49,6 +49,26 @@ CkReductionMsg *netGroup(int nMsg, CkReductionMsg **msgs) {
 // Polychronization Configuration
 //
 void Network::LoadGroup(mGroup *msg) {
+  idx_t nvtx = msg->vtxdist[prtidx+1] - msg->vtxdist[prtidx];
+  // Local to global vertex index
+  // This duplicates the computation in LoadData,
+  // but is needed for ReadGroup below
+  // TODO: figure out a better way to load data
+  vtxidx.resize(nvtx);
+  for (idx_t i = 0; (std::size_t) i < nvtx; ++i) {
+    vtxidx[i] = msg->vtxdist[prtidx] + i;
+  }
+  // Polychronization
+  grpstamps.resize(nvtx);
+  grpdur.resize(nvtx);
+  grpmap.clear();
+  grpwindow.resize(nvtx);
+  grplog.clear();
+  grpseeds.clear();
+  grptraces.resize(nvtx);
+  grpleg.clear();
+  grproute.clear();
+  grproutes.clear();
   // polychronization models
   grpactives.resize(msg->nmodel+1);
   grpmothers.resize(msg->nmodel+1);
@@ -66,36 +86,23 @@ void Network::LoadGroup(mGroup *msg) {
   // cleanup
   delete msg;
 
-  for (idx_t i = 0; (std::size_t) i < adjcy.size(); ++i) {
+  for (idx_t i = 0; (std::size_t) i < nvtx; ++i) {
     // initialize polychronization
     grpstamps[i].clear();
     grpdur[i].clear();
     grpwindow[i].clear();
     ReadGroup(i);
   }
-
-  // return control to main
-  contribute(0, NULL, CkReduction::nop);
-}
-
-
-// Coordination with NetData chare array
-//
-void Network::InitGroup(CProxy_Netdata cpdata) {
-  // Set proxies
-  netdata = cpdata;
-  cyclepart = CkCallback(CkIndex_Network::CycleGroup(), thisProxy(prtidx));
-
+  
   // Initialization
   tcomp = 0;
   compidx = grpvtxmin;
   ccomp = 0;
   ncomp = 0;
   compart = 0;
-  
-  // Request network part from input
-  netdata(datidx).LoadNetwork(prtidx, 
-      CkCallback(CkIndex_Network::LoadNetwork(NULL), thisProxy(prtidx)));
+
+  // return control to main
+  contribute(0, NULL, CkReduction::nop);
 }
 
 
