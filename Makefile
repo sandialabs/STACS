@@ -32,7 +32,7 @@ projections: $(DECL) $(DEF) $(OBJ)
 	$(CHARMC) $(CFLAGS) $(PROJFLAGS) $(CHARMFLAGS) $(OBJ) $(LDLIB) -o $(OUT)
 
 %.o: %.C
-	$(CHARMC) $(CFLAGS) $(CHARMFLAGS) $(INC) $(LIB) $< -o $@
+	$(CHARMC) $(CFLAGS) $(CHARMFLAGS) $(INC) $(LIB) $< -c -o $@
 
 $(DECL) $(DEF): $(SRC_CI)
 	$(CHARMC) $(CFLAGS) $(SRC_CI)
