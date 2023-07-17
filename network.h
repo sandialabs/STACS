@@ -503,8 +503,9 @@ class NetModel {
     // TODO: Move polychronization stuff out of model
     bool getPlastic() const { return plastic; }
     /* Setters */
-    void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
+    void setRandom(std::uniform_real_distribution<real_t> *u, std::normal_distribution<real_t> *n, std::mt19937 *r) {
       unifdist = u;
+      normdist = n;
       rngine = r;
     }
     void setParam(real_t *p) {
@@ -540,6 +541,7 @@ class NetModel {
     /* Random Number Generation */
     std::mt19937 *rngine;
     std::uniform_real_distribution<real_t> *unifdist;
+    std::normal_distribution<real_t> *normdist;
     /* Model Information */
     idx_t modtype;
     std::vector<std::string> paramlist;

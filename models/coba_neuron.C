@@ -86,15 +86,15 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
   real_t tstep = ((real_t) tickstep)/TICKS_PER_MS;
 
   // random initial event
-  if ((*unifdist)(*rngine) < 0.00001) {
+  if ((*unifdist)(*rngine) < 0.005 && tdrift == 0 && param[14] > 4.0) {
     // reset
     state[0] = param[0];
     // capture time of spike
     stick[0] = tdrift + tdiff;
     // Reset conductances too?
     // Update refractory period randomly
-    //real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
-    //stick[1] = ((tick_t) trefract * TICKS_PER_MS);
+    real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
+    stick[1] = ((tick_t) trefract * TICKS_PER_MS);
 
     // generate events
     event_t event;
@@ -116,7 +116,7 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
     real_t I_gaba = (state[5] - state[6]) * (state[0] - param[11]); // gaba
     real_t I_leak = param[2] * (state[0] - param[0]); // leak
     // update voltages (with leak)
-    state[0] = state[0] - (tstep/param[3]) * (I_leak + I_ampa + I_nmda + I_gaba) / 100.0;
+    state[0] = state[0] - (tstep/param[3]) * (I_leak + I_ampa + I_nmda + I_gaba);
     // update the various conductances
     //state[1] = state[1]*exp(-(tstep/param[5])); // ampa_rise
     //state[2] = state[2]*exp(-(tstep/param[6])); // ampa_fall
@@ -138,8 +138,8 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
       // capture time of spike
       stick[0] = tdrift + tdiff;
       // Update refractory period randomly
-      //real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
-      //stick[1] = ((tick_t) trefract * TICKS_PER_MS);
+      real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
+      stick[1] = ((tick_t) trefract * TICKS_PER_MS);
 
       // generate events
       event_t event;
@@ -153,7 +153,7 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
   }
   // Refractory period
   else {
-    state[0] = param[0];
+    //state[0] = param[0];
     // TODO: Conductances set to zero or continually decay?
     state[1] = 0;
     state[2] = 0;

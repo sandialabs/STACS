@@ -99,7 +99,7 @@ Network::Network(mModel *msg) {
     modname[i] = std::string(msg->modname + msg->xmodname[i-1], msg->modname + msg->xmodname[i]);
     modmap[modname[i]] = i;
     model[i]->setPort(msg->port + msg->xport[i-1]);
-    model[i]->setRandom(unifdist, &rngine);
+    model[i]->setRandom(unifdist, normdist, &rngine);
     model[i]->setPlastic(msg->plastic);
     // names (may be in a different order than implemented model)
     // Find the mapping from user-provided param names to the implemented param names
