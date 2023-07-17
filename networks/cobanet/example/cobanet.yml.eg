@@ -1,0 +1,26 @@
+# simulation
+runmode : "simulate"
+randseed: 2032
+plastic : yes
+episodic: no
+loadbal : no
+rpcport : "/stacs/rpc"
+rpcpause: no
+
+# network
+netwkdir: "networks/cobanet"
+netparts: 8 # 8 network partitions
+netfiles: 1 # 4 network data files
+filebase: "cobanet"
+fileload: ""
+filesave: ".out"
+recordir: "record"
+groupdir: "group"
+
+# timing
+tstep   : 0.1 # 0.1 millisecond
+teventq : 5.0 # 5 milliseconds
+tdisplay: 100.0 # 1 second
+trecord : 1000.0 # 10 second
+tsave   : 60000.0 # 1 minute
+tmax    : 10000.0 # 3 minutes
