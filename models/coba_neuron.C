@@ -14,7 +14,7 @@ class LIFNeuronCoba : public ModelTmpl < 70, LIFNeuronCoba > {
     /* Constructor */
     LIFNeuronCoba() {
       // parameters
-      paramlist.resize(16);
+      paramlist.resize(17);
       paramlist[0] = "v_reset";
       paramlist[1] = "v_thresh";
       paramlist[2] = "g_leak";
@@ -31,6 +31,7 @@ class LIFNeuronCoba : public ModelTmpl < 70, LIFNeuronCoba > {
       paramlist[13] = "tau_gaba_fall";
       paramlist[14] = "t_ref_min";
       paramlist[15] = "t_ref_max";
+      paramlist[16] = "ex_neuron";
       // states
       statelist.resize(7);
       statelist[0] = "v";
@@ -75,7 +76,7 @@ void LIFNeuronCoba::Reset(std::vector<real_t>& state, std::vector<tick_t>& stick
     state[4] = 0;
     state[5] = 0;
     state[6] = 0;
-    stick[0] = 0; // TODO: should be -inf
+    stick[0] = 0;
 }
 
 // Simulation step
@@ -86,14 +87,21 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
   real_t tstep = ((real_t) tickstep)/TICKS_PER_MS;
 
   // random initial event
-  if ((*unifdist)(*rngine) < 0.005 && tdrift == 0 && param[14] > 4.0) {
+  // Only for excitatory neurons
+  if ((*unifdist)(*rngine) < 0.05 && tdrift == 0 && param[16] > 0.0) {
     // reset
     state[0] = param[0];
-    // capture time of spike
+    state[1] = 0;
+    state[2] = 0;
+    state[3] = 0;
+    state[4] = 0;
+    state[5] = 0;
+    state[6] = 0;
+    // capture time of spike (t_last)
     stick[0] = tdrift + tdiff;
-    // Reset conductances too?
     // Update refractory period randomly
-    real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
+    //real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
+    real_t trefract = (param[14] + (*unifdist)(*rngine) * (param[15] - param[14]));
     stick[1] = ((tick_t) trefract * TICKS_PER_MS);
 
     // generate events
@@ -107,8 +115,11 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
   }
   
   // Normal current integration
+  // timestep - t_last > t_refract || t_last is 0
   if ((tdrift - stick[0]) > stick[1] || stick[0] == 0) {
     // compute the various currents
+    // General formula is:
+    //     (g_rise - g_fall) * (V - E_rev)
     real_t I_ampa = (state[1] - state[2]) * (state[0] - param[4]); // ampa
     real_t mg_block = 1.0 / (1.0 + (param[10] / 3.57) * exp(-0.062 * state[0]));
     real_t I_nmda = (state[3] - state[4]) * (state[0] - param[7]); // nmda
@@ -135,10 +146,17 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
     if (state[0] >= param[1]) {
       // reset
       state[0] = param[0];
+      state[1] = 0;
+      state[2] = 0;
+      state[3] = 0;
+      state[4] = 0;
+      state[5] = 0;
+      state[6] = 0;
       // capture time of spike
       stick[0] = tdrift + tdiff;
       // Update refractory period randomly
-      real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
+      //real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
+      real_t trefract = (param[14] + (*unifdist)(*rngine) * (param[15] - param[14]));
       stick[1] = ((tick_t) trefract * TICKS_PER_MS);
 
       // generate events
@@ -153,20 +171,13 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
   }
   // Refractory period
   else {
-    //state[0] = param[0];
-    // TODO: Conductances set to zero or continually decay?
+    state[0] = param[0];
     state[1] = 0;
     state[2] = 0;
     state[3] = 0;
     state[4] = 0;
     state[5] = 0;
     state[6] = 0;
-    //state[1] = state[1]*exp(-(tstep/param[5])); // ampa_rise
-    //state[2] = state[2]*exp(-(tstep/param[6])); // ampa_fall
-    //state[3] = state[3]*exp(-(tstep/param[8])); // nmda_rise
-    //state[4] = state[4]*exp(-(tstep/param[9])); // nmda_fall
-    //state[5] = state[5]*exp(-(tstep/param[12])); // gaba_rise
-    //state[6] = state[6]*exp(-(tstep/param[13])); // gaba_fall
   }
 
   return tickstep;

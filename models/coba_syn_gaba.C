@@ -61,15 +61,20 @@ void LIFSynCobaGaba::Jump(const event_t& event, std::vector<std::vector<real_t>>
   if (event.type == EVENT_SPIKE && event.source >= 0) {
     if (plastic) {
       // Short-term plasticity
+      // R_1 = 1.0 - U
       if (stick[event.index][1] == 0) {
         stick[event.index][1] = event.diffuse;
-        state[event.index][2] = param[2];
-        state[event.index][1] = 1.0 - param[2];
+        state[event.index][2] = param[1];
+        state[event.index][1] = 1.0 - param[1];
       }
       else {
+        // Get t_delta and t_last
         real_t t_delta = ((real_t) (event.diffuse - stick[event.index][1]))/ TICKS_PER_MS;
         stick[event.index][1] = event.diffuse;
+        // Update R and u
+        // u_{n+1} = u_n * exp( - t_delta / tau_facil) + U * ( 1 - u_n * exp( - t_delta / tau_facil))
         state[event.index][2] = state[event.index][2]*exp(-(t_delta/param[2])) + param[1] * (1.0 - state[event.index][2]*exp(-(t_delta/param[2])));
+        // R_{n+1} = R_n * ( 1 - u_{n+1} ) * exp( - t_delta / tau_rec) + 1 - exp( - t_delta / tau_rec)
         state[event.index][1] = state[event.index][1]*(1.0 - state[event.index][2])*exp(-(t_delta/param[3])) + 1.0 - exp(-(t_delta/param[3]));
       }
       
