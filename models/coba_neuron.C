@@ -98,7 +98,7 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
     state[5] = 0;
     state[6] = 0;
     // capture time of spike (t_last)
-    stick[0] = tdrift + tdiff;
+    stick[0] = tdrift + tickstep;
     // Update refractory period randomly
     //real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
     real_t trefract = (param[14] + (*unifdist)(*rngine) * (param[15] - param[14]));
@@ -113,10 +113,39 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
     event.data = 0.0;
     events.push_back(event);
   }
+
+  // Only for excitatory neurons
+  /*
+  if ((*unifdist)(*rngine) < 0.000001 && param[16] > 0.0) {
+    // reset
+    state[0] = param[0];
+    state[1] = 0;
+    state[2] = 0;
+    state[3] = 0;
+    state[4] = 0;
+    state[5] = 0;
+    state[6] = 0;
+    // capture time of spike (t_last)
+    stick[0] = tdrift + tickstep;
+    // Update refractory period randomly
+    //real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
+    real_t trefract = (param[14] + (*unifdist)(*rngine) * (param[15] - param[14]));
+    stick[1] = ((tick_t) trefract * TICKS_PER_MS);
+
+    // generate events
+    event_t event;
+    event.diffuse = tdrift + tickstep;
+    event.type = EVENT_SPIKE;
+    event.source = REMOTE_EDGES | LOCAL_EDGES;
+    event.index = 0;
+    event.data = 0.0;
+    events.push_back(event);
+  }
+  */
   
   // Normal current integration
   // timestep - t_last > t_refract || t_last is 0
-  if ((tdrift - stick[0]) > stick[1] || stick[0] == 0) {
+  if ((tdrift + tickstep - stick[0]) > stick[1] || stick[0] == 0) {
     // compute the various currents
     // General formula is:
     //     (g_rise - g_fall) * (V - E_rev)
@@ -153,7 +182,7 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
       state[5] = 0;
       state[6] = 0;
       // capture time of spike
-      stick[0] = tdrift + tdiff;
+      stick[0] = tdrift + tickstep;
       // Update refractory period randomly
       //real_t trefract = (param[14] + round((*unifdist)(*rngine) * (param[15] - param[14])));
       real_t trefract = (param[14] + (*unifdist)(*rngine) * (param[15] - param[14]));

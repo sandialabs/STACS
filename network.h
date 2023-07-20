@@ -865,9 +865,9 @@ class Network : public CBase_Network {
     // RNG State lower bounded lognorm
     real_t rnglblognorm(real_t *param) {
       real_t mu = param[3]*param[0];
-      real_t var = std::sqrt(std::log(param[1]/(mu*mu) + 1));
-      real_t state = std::log(mu*mu/std::sqrt(mu*mu + param[1]));
-      state = std::exp(state + var*(*normdist)(rngine));
+      real_t std = std::sqrt(std::log(param[1]*param[1]/(mu*mu) + 1));
+      real_t state = std::log(mu*mu/std::sqrt(mu*mu + param[1]*param[1]));
+      state = std::exp(state + std*(*normdist)(rngine));
       if (state < param[2]) { state = param[2]; }
       return state;
     }

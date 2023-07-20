@@ -86,7 +86,7 @@ void LIFSynCobaAmpaNmda::Jump(const event_t& event, std::vector<std::vector<real
         }
         
         // variable conductance
-        real_t g_act = state[event.index][0] + ((*normdist)(*rngine)) / (0.22 * sqrt(state[event.index][0]));
+        real_t g_act = state[event.index][0] + ((*normdist)(*rngine)) * (0.22 * sqrt(state[event.index][0]));
 
         // probability of transmission (otherwise, do nothing)
         if ((*unifdist)(*rngine) < (1.0 - exp(-12.3*state[event.index][0]))) {

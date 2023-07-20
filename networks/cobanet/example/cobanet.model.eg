@@ -35,13 +35,15 @@ param:
     value: 25.0
   - name: t_ref_max
     value: 40.0
+  - name: ex_neuron
+    value: 1.0
 state:
   - name: v
-#    init: constant
-#    value: -70.0
-    init: uniform
-    min: -70.0
-    max: -54.8
+    init: constant
+    value: -70.0
+#    init: uniform
+#    min: -70.0
+#    max: -56.0
   - name: g_ampa_rise
     init: constant
     value: 0.0
@@ -66,12 +68,12 @@ state:
     value: 0.0
   - name: t_refract
     rep: tick
-#    init: constant
-#    value: 0.0
-    init: uniform interval
-    min: 25.0
-    max: 40.0
-    int: 1.0
+    init: constant
+    value: 0.0
+#    init: uniform interval
+#    min: 25.0
+#    max: 40.0
+#    int: 1.0
 ...
 
 ---
@@ -111,13 +113,15 @@ param:
     value: 2.0
   - name: t_ref_max
     value: 4.0
+  - name: ex_neuron
+    value: 0.0
 state:
   - name: v
-#    init: constant
-#    value: -70.0
-    init: uniform
-    min: -70.0
-    max: -54.8
+    init: constant
+    value: -70.0
+#    init: uniform
+#    min: -70.0
+#    max: -56.0
   - name: g_ampa_rise
     init: constant
     value: 0.0
@@ -142,12 +146,12 @@ state:
     value: 0.0
   - name: t_refract
     rep: tick
-#    init: constant
-#    value: 0.0
-    init: uniform interval
-    min: 2.0
-    max: 4.0
-    int: 1.0
+    init: constant
+    value: 0.0
+#    init: uniform interval
+#    min: 2.0
+#    max: 4.0
+#    int: 1.0
 ...
 
 ---
@@ -157,23 +161,25 @@ modtype: 74
 param:
   - name: R_ss
     value: 0.9
-  - name: ampa_nmda_ratio
-    value: 1.0
   - name: U_stp
     value: 0.5
   - name: tau_facil
     value: 10.0 #ms
   - name: tau_rec
     value: 500.0 #ms
+  - name: ampa_nmda_ratio
+    value: 1.0
 state:
   - name: delay
-    init: constant
     rep: tick
+    init: constant
     value: 1.0
   - name: g_ampa_nmda
     init: lower bounded normal
-    mean: 0.4897788193684462 # 10e-0.31
-    std: 0.5011872336272722 # 10e-0.30
+#    mean: 0.4897788193684462 # 10e-0.31
+#    std: 0.5011872336272722 # 10e-0.30
+    mean: 0.47
+    std: 0.44
     bound: 0.0
     scale: 1.0
   - name: R_stp
@@ -195,18 +201,18 @@ modtype: 74
 param:
   - name: R_ss
     value: 0.9
-  - name: ampa_nmda_ratio
-    value: 1.0
   - name: U_stp
     value: 0.5
   - name: tau_facil
     value: 10.0 #ms
   - name: tau_rec
     value: 500.0 #ms
+  - name: ampa_nmda_ratio
+    value: 1.0
 state:
   - name: delay
-    init: constant
     rep: tick
+    init: constant
     value: 1.0
   - name: g_ampa_nmda
     init: constant
@@ -238,12 +244,12 @@ param:
     value: 700.0 #ms
 state:
   - name: delay
-    init: constant
     rep: tick
+    init: constant
     value: 2.0
   - name: g_gaba
     init: constant
-    value: 2.0 #nS
+    value: 4.0 #nS
   - name: R_stp
     init: constant
     value: 1.0
@@ -271,12 +277,12 @@ param:
     value: 700.0 #ms
 state:
   - name: delay
-    init: constant
     rep: tick
+    init: constant
     value: 2.0
   - name: g_gaba
     init: constant
-    value: 2.5 #nS
+    value: 5.0 #nS
   - name: R_stp
     init: constant
     value: 1.0
