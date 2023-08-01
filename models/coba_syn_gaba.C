@@ -33,7 +33,9 @@ class LIFSynCobaGaba : public ModelTmpl < 73, LIFSynCobaGaba > {
       auxstate[0] = "g_gaba_rise";
       auxstate[1] = "g_gaba_fall";
       // auxiliary sticks
-      auxstick.resize(0);
+      auxstick.resize(2);
+      auxstick[0] = "t_last";
+      auxstick[1] = "t_refract";
       // ports
       portlist.resize(0);
     }
@@ -59,7 +61,9 @@ tick_t LIFSynCobaGaba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& st
 //
 void LIFSynCobaGaba::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   if (event.type == EVENT_SPIKE && event.source >= 0) {
-    if (plastic) {
+    //if (plastic) {
+    // if within t_refract
+    if (plastic && event.diffuse - stick[0][auxidx[0].stickidx[0]] > stick[0][auxidx[0].stickidx[0]]) {
       // Short-term plasticity
       // R_1 = 1.0 - U
       if (stick[event.index][1] == 0) {
@@ -86,6 +90,16 @@ void LIFSynCobaGaba::Jump(const event_t& event, std::vector<std::vector<real_t>>
       // Apply effect to neuron (vertex)
       state[0][auxidx[0].stateidx[0]] += param[0] * state[event.index][0]; // gaba_rise
       state[0][auxidx[0].stateidx[1]] += param[0] * state[event.index][0]; // gaba_fall
+    }
+  }
+  if (event.type == EVENT_SPIKE && event.source < 0) {
+    if (plastic) {
+      // Short-term plasticity
+      // R_1 = 1.0 - U
+      if (stick[event.index][1] == 0) {
+        //state[event.index][2] = param[1];
+        //state[event.index][1] = 1.0 - param[1];
+      }
     }
   }
 }

@@ -175,7 +175,7 @@ state:
     init: constant
     value: 1.0
   - name: g_ampa_nmda
-    init: lower bounded normal
+    init: lower bounded lognorm
 #    mean: 0.4897788193684462 # 10e-0.31
 #    std: 0.5011872336272722 # 10e-0.30
     mean: 0.47

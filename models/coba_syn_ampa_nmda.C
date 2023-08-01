@@ -37,7 +37,9 @@ class LIFSynCobaAmpaNmda : public ModelTmpl < 74, LIFSynCobaAmpaNmda > {
       auxstate[3] = "g_nmda_fall";
       auxstate[4] = "ex_neuron";
       // auxiliary sticks
-      auxstick.resize(0);
+      auxstick.resize(2);
+      auxstick[0] = "t_last";
+      auxstick[1] = "t_refract";
       // ports
       portlist.resize(0);
     }
@@ -64,7 +66,9 @@ tick_t LIFSynCobaAmpaNmda::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>
 void LIFSynCobaAmpaNmda::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   // Incoming spike
   if (event.type == EVENT_SPIKE && event.source >= 0) {
-    if (plastic) {
+    //if (plastic) {
+    // if within t_refract
+    if (plastic && event.diffuse - stick[0][auxidx[0].stickidx[0]] > stick[0][auxidx[0].stickidx[0]]) {
       // ex to ex
       if (state[0][auxidx[0].stateidx[4]] > 0.0) {
         // Short-term plasticity
@@ -130,6 +134,16 @@ void LIFSynCobaAmpaNmda::Jump(const event_t& event, std::vector<std::vector<real
       state[0][auxidx[0].stateidx[1]] += param[0] * state[event.index][0]; // ampa_fall
       state[0][auxidx[0].stateidx[2]] += param[0] * param[4] * state[event.index][0]; // nmda_rise
       state[0][auxidx[0].stateidx[3]] += param[0] * param[4] * state[event.index][0]; // nmda_fall
+    }
+  }
+  if (event.type == EVENT_SPIKE && event.source < 0) {
+    if (plastic) {
+      // Short-term plasticity
+      // R_1 = 1.0 - U
+      if (stick[event.index][1] == 0) {
+        //state[event.index][2] = param[1];
+        //state[event.index][1] = 1.0 - param[1];
+      }
     }
   }
 }

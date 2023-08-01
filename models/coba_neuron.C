@@ -88,7 +88,7 @@ tick_t LIFNeuronCoba::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& sta
 
   // random initial event
   // Only for excitatory neurons
-  if ((*unifdist)(*rngine) < 0.05 && tdrift == 0 && param[16] > 0.0) {
+  if ((*unifdist)(*rngine) < 0.01 && tdrift == 0 && param[16] > 0.0) {
     // reset
     state[0] = param[0];
     state[1] = 0;
