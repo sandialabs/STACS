@@ -464,6 +464,7 @@ void Network::LoadNetwork(mPart *msg) {
     edgmodidx[i].resize(msg->xadj[i+1] - msg->xadj[i]);
     state[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
     stick[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
+    evtcal[i].resize(nevtday);
     nadjcy += adjcy[i].size();
     // copy over vertex data
     state[i][0] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + model[vtxmodidx[i]]->getNState());
