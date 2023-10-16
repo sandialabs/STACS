@@ -64,7 +64,8 @@ tick_t FuguNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
   real_t tstep = ((real_t) tickstep)/TICKS_PER_MS;
 
   // update state (tstep will mostly just be 1)
-  state[0] = (state[0] * state[4]) + state[3] + state[6];
+  //state[0] = (state[0] * state[4]) + state[3] + state[6];
+  state[0] = state[0] + state[3] + state[6];
   
   // Clear transient current for next time
   state[6] = 0;
@@ -78,7 +79,8 @@ tick_t FuguNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
     
     // generate events
     event_t event;
-    event.diffuse = tdrift + tickstep;
+    //event.diffuse = tdrift + tickstep;
+    event.diffuse = tdrift; // same timestep
     event.type = EVENT_SPIKE;
     event.source = REMOTE_EDGES;
     event.index = 0;
@@ -93,12 +95,17 @@ tick_t FuguNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
 
       // generate events
       event_t event;
-      event.diffuse = tdrift + tickstep;
+      //event.diffuse = tdrift + tickstep;
+      event.diffuse = tdrift; // same timestep
       event.type = EVENT_SPIKE;
       event.source = REMOTE_EDGES;
       event.index = 0;
       event.data = 0.0;
       events.push_back(event);
+    }
+    else {
+      // decay the membrane
+      state[0] = state[0] * (1 - state[4]);
     }
   }
   else { // I_clamp < 0.0
