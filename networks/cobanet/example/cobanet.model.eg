@@ -1,0 +1,296 @@
+---
+type: vertex
+modname: coba_ex
+modtype: 70
+param:
+  - name: v_reset
+    value: -70.0 #mV
+  - name: v_thresh
+    value: -55.0 #mV
+  - name: g_leak
+    value: 4.5 #nS
+  - name: C
+    value: 100.0 #pF
+  - name: E_rev_ampa
+    value: 0.0 #mV
+  - name: tau_ampa_rise
+    value: 8.0 #ms
+  - name: tau_ampa_fall
+    value: 1.0 #ms
+  - name: E_rev_nmda
+    value: 0.0 #mV
+  - name: tau_nmda_rise
+    value: 300.0 #ms
+  - name: tau_nmda_fall
+    value: 3.0 #ms
+  - name: mg_block_nmda
+    value: 1.0 #mM
+  - name: E_rev_gaba
+    value: -80.0 #mV
+  - name: tau_gaba_rise
+    value: 8.0 #ms
+  - name: tau_gaba_fall
+    value: 1.0 #ms
+  - name: t_ref_min
+    value: 25.0
+  - name: t_ref_max
+    value: 40.0
+  - name: ex_neuron
+    value: 1.0
+state:
+  - name: v
+    init: constant
+    value: -70.0
+#    init: uniform
+#    min: -70.0
+#    max: -56.0
+  - name: g_ampa_rise
+    init: constant
+    value: 0.0
+  - name: g_ampa_fall
+    init: constant
+    value: 0.0
+  - name: g_nmda_rise
+    init: constant
+    value: 0.0
+  - name: g_nmda_fall
+    init: constant
+    value: 0.0
+  - name: g_gaba_rise
+    init: constant
+    value: 0.0
+  - name: g_gaba_fall
+    init: constant
+    value: 0.0
+  - name: t_last
+    rep: tick
+    init: constant
+    value: 0.0
+  - name: t_refract
+    rep: tick
+    init: constant
+    value: 0.0
+#    init: uniform interval
+#    min: 25.0
+#    max: 40.0
+#    int: 1.0
+...
+
+---
+type: vertex
+modname: coba_in
+modtype: 70
+param:
+  - name: v_reset
+    value: -70.0 #mV
+  - name: v_thresh
+    value: -55.0 #mV
+  - name: g_leak
+    value: 4.5 #nS
+  - name: C
+    value: 100.0 #pF
+  - name: E_rev_ampa
+    value: 0.0 #mV
+  - name: tau_ampa_rise
+    value: 8.0 #ms
+  - name: tau_ampa_fall
+    value: 1.0 #ms
+  - name: E_rev_nmda
+    value: 0.0 #mV
+  - name: tau_nmda_rise
+    value: 300.0 #ms
+  - name: tau_nmda_fall
+    value: 3.0 #ms
+  - name: mg_block_nmda
+    value: 1.0 #mM
+  - name: E_rev_gaba
+    value: -80.0 #mV
+  - name: tau_gaba_rise
+    value: 8.0 #ms
+  - name: tau_gaba_fall
+    value: 1.0 #ms
+  - name: t_ref_min
+    value: 2.0
+  - name: t_ref_max
+    value: 4.0
+  - name: ex_neuron
+    value: 0.0
+state:
+  - name: v
+    init: constant
+    value: -70.0
+#    init: uniform
+#    min: -70.0
+#    max: -56.0
+  - name: g_ampa_rise
+    init: constant
+    value: 0.0
+  - name: g_ampa_fall
+    init: constant
+    value: 0.0
+  - name: g_nmda_rise
+    init: constant
+    value: 0.0
+  - name: g_nmda_fall
+    init: constant
+    value: 0.0
+  - name: g_gaba_rise
+    init: constant
+    value: 0.0
+  - name: g_gaba_fall
+    init: constant
+    value: 0.0
+  - name: t_last
+    rep: tick
+    init: constant
+    value: 0.0
+  - name: t_refract
+    rep: tick
+    init: constant
+    value: 0.0
+#    init: uniform interval
+#    min: 2.0
+#    max: 4.0
+#    int: 1.0
+...
+
+---
+type: edge
+modname: syn_ex_ex
+modtype: 74
+param:
+  - name: R_ss
+    value: 0.9
+  - name: U_stp
+    value: 0.5
+  - name: tau_facil
+    value: 10.0 #ms
+  - name: tau_rec
+    value: 500.0 #ms
+  - name: ampa_nmda_ratio
+    value: 1.0
+state:
+  - name: delay
+    rep: tick
+    init: constant
+    value: 1.0
+  - name: g_ampa_nmda
+    init: lower bounded lognorm
+#    mean: 0.4897788193684462 # 10e-0.31
+#    std: 0.5011872336272722 # 10e-0.30
+    mean: 0.47
+    std: 0.44
+    bound: 0.0
+    scale: 1.0
+  - name: R_stp
+    init: constant
+    value: 1.0
+  - name: u_stp
+    init: constant
+    value: 1.0
+  - name: t_last
+    rep: tick
+    init: constant
+    value: 0
+...
+
+---
+type: edge
+modname: syn_ex_in
+modtype: 74
+param:
+  - name: R_ss
+    value: 0.9
+  - name: U_stp
+    value: 0.5
+  - name: tau_facil
+    value: 10.0 #ms
+  - name: tau_rec
+    value: 500.0 #ms
+  - name: ampa_nmda_ratio
+    value: 1.0
+state:
+  - name: delay
+    rep: tick
+    init: constant
+    value: 1.0
+  - name: g_ampa_nmda
+    init: constant
+    value: 1.0 #nS
+  - name: R_stp
+    init: constant
+    value: 1.0
+  - name: u_stp
+    init: constant
+    value: 1.0
+  - name: t_last
+    rep: tick
+    init: constant
+    value: 0
+...
+
+---
+type: edge
+modname: syn_in_ex
+modtype: 73
+param:
+  - name: R_ss
+    value: 0.5
+  - name: U_stp
+    value: 0.25
+  - name: tau_facil
+    value: 20.0 #ms
+  - name: tau_rec
+    value: 700.0 #ms
+state:
+  - name: delay
+    rep: tick
+    init: constant
+    value: 2.0
+  - name: g_gaba
+    init: constant
+    value: 4.0 #nS
+  - name: R_stp
+    init: constant
+    value: 1.0
+  - name: u_stp
+    init: constant
+    value: 1.0
+  - name: t_last
+    rep: tick
+    init: constant
+    value: 0
+...
+
+---
+type: edge
+modname: syn_in_in
+modtype: 73
+param:
+  - name: R_ss
+    value: 0.5
+  - name: U_stp
+    value: 0.25
+  - name: tau_facil
+    value: 20.0 #ms
+  - name: tau_rec
+    value: 700.0 #ms
+state:
+  - name: delay
+    rep: tick
+    init: constant
+    value: 2.0
+  - name: g_gaba
+    init: constant
+    value: 5.0 #nS
+  - name: R_stp
+    init: constant
+    value: 1.0
+  - name: u_stp
+    init: constant
+    value: 1.0
+  - name: t_last
+    rep: tick
+    init: constant
+    value: 0
+...

@@ -99,7 +99,7 @@ Network::Network(mModel *msg) {
     modname[i] = std::string(msg->modname + msg->xmodname[i-1], msg->modname + msg->xmodname[i]);
     modmap[modname[i]] = i;
     model[i]->setPort(msg->port + msg->xport[i-1]);
-    model[i]->setRandom(unifdist, &rngine);
+    model[i]->setRandom(unifdist, normdist, &rngine);
     model[i]->setPlastic(msg->plastic);
     // names (may be in a different order than implemented model)
     // Find the mapping from user-provided param names to the implemented param names
@@ -464,6 +464,7 @@ void Network::LoadNetwork(mPart *msg) {
     edgmodidx[i].resize(msg->xadj[i+1] - msg->xadj[i]);
     state[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
     stick[i].resize(msg->xadj[i+1] - msg->xadj[i] + 1);
+    evtcal[i].resize(nevtday);
     nadjcy += adjcy[i].size();
     // copy over vertex data
     state[i][0] = std::vector<real_t>(msg->state + jstate, msg->state + jstate + model[vtxmodidx[i]]->getNState());

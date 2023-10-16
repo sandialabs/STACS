@@ -342,8 +342,8 @@ void Main::Start() {
                  "  Time per Episode    (tepisode): %" PRIrealms "ms\n"
                  "  Number of Episodes  (episodes): %" PRIidx "\n",
                  randseed, (plastic ? "yes" : "no"),
-                 ((real_t)(tstep/TICKS_PER_MS)), teventq,
-                 ((real_t)(tepisode/TICKS_PER_MS)), episodes);
+                 (((real_t) tstep)/TICKS_PER_MS), teventq,
+                 (((real_t) tepisode)/TICKS_PER_MS), episodes);
       }
       else {
         CkPrintf("  Random Number Seed  (randseed): %u\n"
@@ -356,8 +356,8 @@ void Main::Start() {
                  "  Save State Interval    (tsave): %" PRIrealms "ms\n"
                  "  Max Simulation Time     (tmax): %" PRIrealms "ms\n",
                  randseed, (plastic ? "yes" : "no"),
-                 ((real_t)(tstep/TICKS_PER_MS)), teventq, tdisplay,
-                 trecord, tbalance, tsave, ((real_t)(tmax/TICKS_PER_MS)));
+                 (((real_t) tstep)/TICKS_PER_MS), teventq, tdisplay,
+                 trecord, tbalance, tsave, (((real_t) tmax)/TICKS_PER_MS));
       }
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleSim(), network);
@@ -371,8 +371,8 @@ void Main::Start() {
                  "  Time per Episode    (tepisode): %" PRIrealms "ms\n"
                  "  Number of Episodes  (episodes): %" PRIidx "\n",
                  randseed, (plastic ? "yes" : "no"),
-                 ((real_t)(tstep/TICKS_PER_MS)), teventq,
-                 ((real_t)(tepisode/TICKS_PER_MS)), episodes);
+                 (((real_t) tstep)/TICKS_PER_MS), teventq,
+                 (((real_t) tepisode)/TICKS_PER_MS), episodes);
       }
       else {
         CkPrintf("  Random Number Seed  (randseed): %u\n"
@@ -384,8 +384,8 @@ void Main::Start() {
                  "  Save State Interval    (tsave): %" PRIrealms "ms\n"
                  "  Max Simulation Time     (tmax): %" PRIrealms "ms\n",
                  randseed, (plastic ? "yes" : "no"),
-                 ((real_t)(tstep/TICKS_PER_MS)), teventq, tdisplay,
-                 trecord, tsave, ((real_t)(tmax/TICKS_PER_MS)));
+                 (((real_t) tstep)/TICKS_PER_MS), teventq, tdisplay,
+                 trecord, tsave, (((real_t) tmax)/TICKS_PER_MS));
       }
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleSimGPU(), network);
@@ -424,9 +424,9 @@ void Main::Start() {
                "                     (grpmaxdur): %" PRIrealms "ms\n"
                "  Evaluated Vertices (grpvtxmin): %.6g (%" PRIidx ")\n"
                "                     (grpvtxmax): %.6g (%" PRIidx ")\n",
-               randseed, groupdir.c_str(), ((real_t)(tstep/TICKS_PER_MS)), teventq,
+               randseed, groupdir.c_str(), (((real_t) tstep)/TICKS_PER_MS), teventq,
                grpactivestring.c_str(), grpmotherstring.c_str(), grpanchorstring.c_str(),
-               grpminlen, ((real_t)(grpmaxdur/TICKS_PER_MS)),
+               grpminlen, (((real_t) grpmaxdur)/TICKS_PER_MS),
                ((real_t)grpvtxminreal), grpvtxmin, ((real_t)grpvtxmaxreal), grpvtxmax);
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleGroup(), network);
@@ -439,8 +439,8 @@ void Main::Start() {
                  "  Event Queue Length   (teventq): %" PRIrealms "ms\n"
                  "  Time per Episode    (tepisode): %" PRIrealms "ms\n"
                  "  Number of Episodes  (episodes): %" PRIidx "\n",
-                 randseed, groupdir.c_str(), ((real_t)(tstep/TICKS_PER_MS)), teventq,
-                 ((real_t)(tepisode/TICKS_PER_MS)), episodes);
+                 randseed, groupdir.c_str(), (((real_t) tstep)/TICKS_PER_MS), teventq,
+                 (((real_t) tepisode)/TICKS_PER_MS), episodes);
       }
       else {
         CkPrintf("  Random Number Seed  (randseed): %u\n"
@@ -450,8 +450,8 @@ void Main::Start() {
                  "  Display Interval    (tdisplay): %" PRIrealms "ms\n"
                  "  Recording Interval   (trecord): %" PRIrealms "ms\n"
                  "  Max Simulation Time     (tmax): %" PRIrealms "ms\n",
-                 randseed, groupdir.c_str(), ((real_t)(tstep/TICKS_PER_MS)), teventq,
-                 tdisplay, trecord, ((real_t)(tmax/TICKS_PER_MS)));
+                 randseed, groupdir.c_str(), (((real_t) tstep)/TICKS_PER_MS), teventq,
+                 tdisplay, trecord, (((real_t) tmax)/TICKS_PER_MS));
       }
       // Set compute cycle
       netcycle = CkCallback(CkIndex_Network::CycleEst(), network);

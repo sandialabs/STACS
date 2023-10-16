@@ -1,0 +1,41 @@
+vertex:
+  - modname: coba_ex
+    order: 4000
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+  - modname: coba_in
+    order: 1000
+    shape: circle  # uniform circle
+    radius: 50.0  # of radius 50
+    coord: [0.0, 0.0, 0.0]
+
+edge:
+  - source: coba_ex
+    target: [coba_ex]
+    modname: syn_ex_ex
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: coba_ex
+    target: [coba_in]
+    modname: syn_ex_in
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: coba_in
+    target: [coba_ex]
+    modname: syn_in_ex
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.1
+  - source: coba_in
+    target: [coba_in]
+    modname: syn_in_in
+    cutoff: 0.0
+    connect:
+      - type: uniform
+        prob: 0.1

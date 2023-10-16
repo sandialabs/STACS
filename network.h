@@ -503,8 +503,9 @@ class NetModel {
     // TODO: Move polychronization stuff out of model
     bool getPlastic() const { return plastic; }
     /* Setters */
-    void setRandom(std::uniform_real_distribution<real_t> *u, std::mt19937 *r) {
+    void setRandom(std::uniform_real_distribution<real_t> *u, std::normal_distribution<real_t> *n, std::mt19937 *r) {
       unifdist = u;
+      normdist = n;
       rngine = r;
     }
     void setParam(real_t *p) {
@@ -540,6 +541,7 @@ class NetModel {
     /* Random Number Generation */
     std::mt19937 *rngine;
     std::uniform_real_distribution<real_t> *unifdist;
+    std::normal_distribution<real_t> *normdist;
     /* Model Information */
     idx_t modtype;
     std::vector<std::string> paramlist;
@@ -863,9 +865,9 @@ class Network : public CBase_Network {
     // RNG State lower bounded lognorm
     real_t rnglblognorm(real_t *param) {
       real_t mu = param[3]*param[0];
-      real_t var = std::sqrt(std::log(param[1]/(mu*mu) + 1));
-      real_t state = std::log(mu*mu/std::sqrt(mu*mu + param[1]));
-      state = std::exp(state + var*(*normdist)(rngine));
+      real_t std = std::sqrt(std::log(param[1]*param[1]/(mu*mu) + 1));
+      real_t state = std::log(mu*mu/std::sqrt(mu*mu + param[1]*param[1]));
+      state = std::exp(state + std*(*normdist)(rngine));
       if (state < param[2]) { state = param[2]; }
       return state;
     }
