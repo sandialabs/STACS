@@ -89,7 +89,7 @@ tick_t FuguNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state,
   }
   else if (state[7] == 0.0) {
     // Regular spiking event (with stochasticity)
-    if (state[0] > state[1] && (state[5] > (*unifdist)(*rngine))) {
+    if (state[0] > state[1] && state[5] >= (*unifdist)(*rngine)) {
       // reset
       state[0] = state[2];
 
