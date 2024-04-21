@@ -1,0 +1,35 @@
+# simulation
+runmode : "buildsim"
+randseed: 2032
+plastic : yes 
+episodic: no
+loadbal : no
+rpcport : "/stacs/rpc"
+rpcpause: no
+
+# network
+netwkdir: "networks/polynet"
+netparts: 8 # 8 network partitions
+netfiles: 4 # 4 network data files
+filebase: "polynet"
+fileload: ""
+filesave: ".out"
+recordir: "record"
+groupdir: "group"
+
+# timing
+tstep   : 1.0 # 1 millisecond
+teventq : 20.0 # 20 milliseconds
+tdisplay: 1000.0 # 1 second
+trecord : 10000.0 # 10 seconds
+tsave   : 30000.0 # 30 seconds
+tmax    : 60000.0 # 1 minute
+
+# groups
+grpactive: [izhiex, izhiin]
+grpmother: [izhiex]
+grpanchor: [exnostdp]
+grpminlen: 7
+grpmaxdur: 150.0
+grpvtxmin: 0.0 
+grpvtxmax: 1.0
