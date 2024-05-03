@@ -256,7 +256,7 @@ void Netdata::ReadNetwork() {
       // check for empty line (just the newline character)
       if (line[0] == '\n') {
         // warn the user
-        CkPrintf("Vertex %" PRIidx " has no edges\n", vtxdist[xprt+k] + i);
+        CkPrintf("  Warning: vertex %" PRIidx " has no edges\n", vtxdist[xprt+k] + i);
       }
       else {
         oldstr = line;
