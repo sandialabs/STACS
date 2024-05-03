@@ -253,16 +253,23 @@ void Netdata::ReadNetwork() {
 
       // Read line (vertex adjacency)
       while(fgets(line, MAXLINE, pAdjcy) && line[0] == '%');
-      oldstr = line;
-      newstr = NULL;
-      for(;;) {
-        idx_t edg = strtoidx(oldstr, &newstr, 10);
-        // check for end of line
-        if (edg == 0 && oldstr != line)
-          break;
-        oldstr = newstr;
-        // adjcy
-        parts[k]->adjcy[jadjcy++] = edg;
+      // check for empty line (just the newline character)
+      if (line[0] == '\n') {
+        // warn the user
+        CkPrintf("Vertex %" PRIidx " has no edges\n", vtxdist[xprt+k] + i);
+      }
+      else {
+        oldstr = line;
+        newstr = NULL;
+        for(;;) {
+          idx_t edg = strtoidx(oldstr, &newstr, 10);
+          // check for end of line
+          if (edg == 0 && oldstr != line)
+            break;
+          oldstr = newstr;
+          // adjcy
+          parts[k]->adjcy[jadjcy++] = edg;
+        }
       }
       // xadj
       parts[k]->xadj[i+1] = jadjcy;
