@@ -36,6 +36,7 @@
 #define EPISODIC_DEFAULT false // Episodes off
 #define LOADBAL_DEFAULT  false // Load balancing
 #define SELFCONN_DEFAULT false // Self connections (building)
+#define FILEINIT_DEFAULT false // File only init (building)
 #define RPCPORT_DEFAULT "/stacs/rpc"
 #define RPCPAUSE_DEFAULT true // Start paused
 
@@ -198,6 +199,7 @@ class Main : public CBase_Main {
     bool episodic;
     bool loadbal;
     bool selfconn;
+    bool fileinit;
     real_t teventq;
     real_t tdisplay;
     real_t trecord;

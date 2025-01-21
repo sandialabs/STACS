@@ -136,7 +136,8 @@ void Network::OrderGraph(mGraph *msg) {
       for (std::size_t k = 0; k < edges[e].conntype.size(); ++k) {
         if (edges[e].conntype[k] == CONNTYPE_SMPL ||
             edges[e].conntype[k] == CONNTYPE_SMPL_NORM ||
-            edges[e].conntype[k] == CONNTYPE_SMPL_ANORM) {
+            edges[e].conntype[k] == CONNTYPE_SMPL_ANORM ||
+            edges[e].conntype[k] == CONNTYPE_FILE) {
           connsampleset[edges[e].target[t]].insert((idx_t) e);
         }
       }
@@ -489,6 +490,33 @@ void Network::Build() {
             }
           }
         }
+        // instantiating the connections from file
+        else if (edges[edg].conntype[k] == CONNTYPE_FILE) {
+          CkAssert(vtxordidx[i] >= datafiles[(idx_t) (edges[edg].probparam[k][0])].xrow);
+          idx_t targetidxloc = vtxordidx[i] - datafiles[(idx_t) (edges[edg].probparam[k][0])].xrow;
+          // loop through the row
+          std::unordered_map<idx_t, real_t>::iterator jfile;
+          for (jfile = datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidxloc].begin();
+              jfile != datafiles[(idx_t) (edges[edg].probparam[k][0])].matrix[targetidxloc].end(); ++jfile) {
+            // Convert from population index to global index
+            idx_t sourceordix = jfile->first;
+            std::vector<idx_t>::iterator iprt;
+            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source-1].begin(), xpopvtxidxprt[edges[edg].source-1].end(), sourceordix);
+            int prt = (iprt - xpopvtxidxprt[edges[edg].source-1].begin()) - 1;
+            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source-1][prt] + (sourceordix - xpopvtxidxprt[edges[edg].source-1][prt]);
+            // Check for self connections
+            if (!selfconn && glbsourceidx == glbtargetidx) {
+              continue;
+            } else {
+              adjcy[i].push_back(glbsourceidx);
+              adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
+              edgmodidx[i].push_back(edges[edg].modidx);
+              // The state/stick will need to be reparameterized with correct distance information later
+              state[i].push_back(BuildEdgState(edges[edg].modidx, 0.0, sourceordix, vtxordidx[i]));
+              stick[i].push_back(BuildEdgStick(edges[edg].modidx, 0.0, sourceordix, vtxordidx[i]));
+            }
+          }
+        }
       }
     }
     // Count of adjcy from just index-based connections
@@ -541,30 +569,35 @@ void Network::ConnectVtx(mConn *msg) {
 
   // Build connections from j to i (only)
   //
-  for (idx_t i = 0; i < norderprt; ++i) {
-    for (idx_t j = 0; j < msg->nvtx; ++j) {
-      // Skip unconnected populations
-      if (connmodmap.find(msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]) == connmodmap.end()) {
-        continue;
-      }
-      // Skip same index i == j
-      else if (!selfconn && vtxdist[prtidx]+i == vtxdist[msg->prtidx]+j) {
-        continue;
-      }
-      // Evaluate connection between i and j
-      else {
-        idx_t edg = connmodmap[msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]];
-        real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+j*3, edges[edg].distparam.data());
-        CkAssert(distance >= 0.0);
-        idx_t modidx = MakeConnection(edg, msg->vtxordidx[j], vtxordidx[i], distance);
-        // check possible connections from j (source) to i (target)
-        if (modidx) {
-          adjcy[i].push_back(vtxdist[msg->prtidx]+j);
-          adjcyset[i].insert(vtxdist[msg->prtidx]+j); // The set is useful for faster searching of edge existence
-          edgmodidx[i].push_back(modidx);
-          // build state from j to i
-          state[i].push_back(BuildEdgState(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
-          stick[i].push_back(BuildEdgStick(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
+  if (!fileinit) {
+    for (idx_t i = 0; i < norderprt; ++i) {
+      for (idx_t j = 0; j < msg->nvtx; ++j) {
+        // Skip unconnected populations
+        if (connmodmap.find(msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]) == connmodmap.end()) {
+          continue;
+        }
+        // Skip same index i == j
+        else if (!selfconn && vtxdist[prtidx]+i == vtxdist[msg->prtidx]+j) {
+          continue;
+        }
+        // Evaluate connection between i and j
+        else {
+          idx_t edg = connmodmap[msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]];
+          // file-based edges already computed
+          if (edges[edg].conntype[0] != CONNTYPE_FILE) {
+            real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+j*3, edges[edg].distparam.data());
+            CkAssert(distance >= 0.0);
+            idx_t modidx = MakeConnection(edg, msg->vtxordidx[j], vtxordidx[i], distance);
+            // check possible connections from j (source) to i (target)
+            if (modidx) {
+              adjcy[i].push_back(vtxdist[msg->prtidx]+j);
+              adjcyset[i].insert(vtxdist[msg->prtidx]+j); // The set is useful for faster searching of edge existence
+              edgmodidx[i].push_back(modidx);
+              // build state from j to i
+              state[i].push_back(BuildEdgState(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
+              stick[i].push_back(BuildEdgStick(modidx, distance, msg->vtxordidx[j], vtxordidx[i]));
+            }
+          }
         }
       }
     }
@@ -853,17 +886,19 @@ idx_t Network::MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_
     // TODO: we want to enable a weighting of the indices w.r.t. distance
     else if (edges[edg].conntype[k] == CONNTYPE_SMPL ||
         edges[edg].conntype[k] == CONNTYPE_SMPL_NORM ||
-        edges[edg].conntype[k] == CONNTYPE_SMPL_ANORM) {
+        edges[edg].conntype[k] == CONNTYPE_SMPL_ANORM ||
+        edges[edg].conntype[k] == CONNTYPE_FILE) {
       // sample-based edges already computed
+      // file-based edges already computed
       return 0;
     }
+    /*
     else if (edges[edg].conntype[k] == CONNTYPE_FILE) {
       // Check to see if it's in the file list
       // Dimensions are stored: targetdim x sourcedim
       // set mask to 1 if there is a non-zero entry
       // TODO: make sure file-based connections completely override
       //       other connection types (or make them mutually exclusive)
-      // TODO: split up files in dCSR order as well
       // convert targetidx from global to local
       CkAssert(targetidx >= datafiles[(idx_t) (edges[edg].probparam[k][0])].xrow);
       idx_t targetidxloc = targetidx - datafiles[(idx_t) (edges[edg].probparam[k][0])].xrow;
@@ -879,6 +914,7 @@ idx_t Network::MakeConnection(idx_t edg, idx_t sourceidx, idx_t targetidx, real_
         mask = 1;
       }
     }
+    */
     else {
       // Shouldn't reach here due to prior error checking
       CkPrintf("  error: connection type %" PRIidx " undefined\n", edges[edg].conntype[k]);

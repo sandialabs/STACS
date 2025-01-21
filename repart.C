@@ -485,7 +485,7 @@ void Network::Reorder(mReorder *msg) {
   // Save message for processing
   reordlist.push_back(msg);
 
-  if (adjcy.size()) {
+  if (adjcy.size() || norderprt == 0) {
     // Go through ordering list
     for (std::list<mReorder *>::iterator iordidx = reordlist.begin(); iordidx != reordlist.end(); ++iordidx) {
       if ((*iordidx)->prtidx == cpprt) {

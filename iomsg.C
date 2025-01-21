@@ -239,6 +239,7 @@ mModel* Main::BuildModel() {
   mmodel->episodic = episodic;
   mmodel->loadbal = loadbal;
   mmodel->selfconn = selfconn;
+  mmodel->fileinit = fileinit;
 
   // Prefixes starts with zero
   mmodel->xmodname[0] = 0;

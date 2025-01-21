@@ -274,6 +274,7 @@ class mModel : public CMessage_mModel {
     bool episodic;     // toggle for episodic simulation
     bool loadbal;      // toggle for periodic load balancing
     bool selfconn;      // toggle for self connections during build
+    bool fileinit;      // toggle for file only initialization during build
 };
 
 // Network graph information
@@ -1063,6 +1064,7 @@ class Network : public CBase_Network {
     int cphnd, cpprt;
     int cfile, nfile;
     bool selfconn; // toggle for self connections
+    bool fileinit; // toggle for file only build
     /* Configuration */
     bool plastic;
     bool episodic;

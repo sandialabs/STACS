@@ -11,7 +11,8 @@
 #include "network.h"
 
 // Maximum size of input line (bytes)
-#define MAXLINE 2560000
+//#define MAXLINE 2560000
+#define MAXLINE 10240000
 
 /**************************************************************************
 * Charm++ Read-Only Variables
@@ -281,6 +282,9 @@ void Netdata::ReadNetwork() {
       // extract model index from name
       idx_t modidx = strtomodidx(oldstr, &newstr);
       oldstr = newstr;
+      if (modidx == IDX_T_MAX) {
+        CkPrintf("vtx: %" PRIidx ", mod: %" PRIidx ", %s \n", i, modidx, line);
+      }
 
       // first one is the vertex
       CkAssert(modidx != IDX_T_MAX);
@@ -358,6 +362,7 @@ void Netdata::ReadNetwork() {
         }
       }
     }
+    //CkPrintf("file: %d, part: %d, jadjcy %" PRIidx ", nedg %" PRIidx "\n", datidx, k, jadjcy, nedg);
     // Sanity check
     CkAssert(jadjcy == nedg);
     CkAssert(jedgmodidx == nedg);

@@ -75,6 +75,7 @@ Network::Network(mModel *msg) {
   episodic = msg->episodic;
   loadbal = msg->loadbal;
   selfconn = msg->selfconn;
+  fileinit = msg->fileinit;
 
   // Network Models
   for (std::size_t i = 0; i < model.size(); ++i) {

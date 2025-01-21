@@ -119,6 +119,13 @@ int Main::ReadConfig(std::string configfile) {
     selfconn = SELFCONN_DEFAULT;
     //CkPrintf("  selfconn not defined, defaulting to: %s\n", (selfconn ? "true" : "false"));
   }
+  // File only build
+  try {
+    fileinit = config["fileinit"].as<bool>();
+  } catch (YAML::RepresentationException& e) {
+    fileinit = FILEINIT_DEFAULT;
+    //CkPrintf("  fileinit not defined, defaulting to: %s\n", (fileinit ? "true" : "false"));
+  }
 #ifdef STACS_WITH_YARP
   // RPC port
   try {

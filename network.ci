@@ -65,6 +65,8 @@ module network {
     bool plastic;
     bool episodic;
     bool loadbal;
+    bool selfconn;
+    bool fileinit;
   };
   
   message mGraph {
