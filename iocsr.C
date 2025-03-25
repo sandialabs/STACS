@@ -36,7 +36,7 @@ extern /*readonly*/ std::string groupdir;
 int Main::ReadDist() {
   /* File operations */
   FILE *pDist;
-  char csrfile[100];
+  char csrfile[1024];
   char *line;
   char *oldstr, *newstr;
 
@@ -90,7 +90,7 @@ int Main::WriteDist(int checkflag) {
   /* File operations */
   FILE *pDist;
   FILE *pMetis;
-  char csrfile[100];
+  char csrfile[1024];
   /* Bookkeeping */
   idx_t nvtx;
   idx_t nedg;
@@ -160,7 +160,7 @@ void Netdata::ReadNetwork() {
   FILE *pAdjcy;
   FILE *pState;
   FILE *pEvent;
-  char csrfile[100];
+  char csrfile[1024];
   char *line;
   char *oldstr, *newstr;
   /* Bookkeeping */
@@ -384,7 +384,7 @@ void Netdata::ReadNetwork() {
 void Netdata::ReadNetpart() {
   /* File operations */
   FILE *pPart;
-  char csrfile[100];
+  char csrfile[1024];
   char *line;
   char *oldstr, *newstr;
 
@@ -431,7 +431,7 @@ void Netdata::WriteNetwork(int checkflag) {
   FILE *pAdjcy;
   FILE *pState;
   FILE *pEvent;
-  char csrfile[100];
+  char csrfile[1024];
 
   std::string filecheck = (checkflag ? filesave : "");
   // Open files for writing
@@ -539,7 +539,7 @@ void Netdata::WriteRecord() {
   /* File operations */
   FILE *pEvtlog;
   FILE *pRecord;
-  char recfile[100];
+  char recfile[1024];
 
   // Only save when data exists
   idx_t nevtlog = 0;
@@ -629,7 +629,7 @@ void Network::WriteGroup(idx_t groupidx) {
   /* File operations */
   FILE *pStamp;
   FILE *pRoute;
-  char grpfile[100];
+  char grpfile[1024];
 
   // Open File
   sprintf(grpfile, "%s/%s/%s.stamp.%" PRIidx "", netwkdir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[groupidx]);
@@ -670,7 +670,7 @@ void Network::WriteGroup(idx_t groupidx) {
 void Network::ReadGroup(idx_t groupidx) {
   /* File operations */
   FILE *pStamp;
-  char grpfile[100];
+  char grpfile[1024];
   char *line;
   char *oldstr, *newstr;
 
@@ -735,7 +735,7 @@ void Network::ReadGroup(idx_t groupidx) {
 void Netdata::WriteEstimate() {
   /* File operations */
   FILE *pGrplog;
-  char recfile[100];
+  char recfile[1024];
 
   // Only save when data exists
   if (grplog.size() > 1) {
