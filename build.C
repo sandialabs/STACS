@@ -227,6 +227,7 @@ void Network::Build() {
   // But keep in mind the per part artificial splitting
 
   // Create model indices
+  vtxidx.resize(norderprt); // this too?
   vtxmodidx.resize(norderprt);
   vtxordidx.resize(norderprt);
   edgmodidx.resize(norderprt);
@@ -239,6 +240,7 @@ void Network::Build() {
   for (std::size_t i = 0; i < vertices.size(); ++i) {
     for (idx_t j = 0; j < nordervtx[i]; ++j) {
       // Set the model index
+      vtxidx[jvtxidx] = vtxdist[prtidx] + jvtxidx;
       vtxmodidx[jvtxidx] = vertices[i].modidx;
       vtxordidx[jvtxidx] = xordervtx[i] + j;
       edgmodidx[jvtxidx].clear();

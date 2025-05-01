@@ -470,8 +470,8 @@ void Netdata::WriteNetwork(int checkflag) {
     for (idx_t i = 0; i < parts[k]->nvtx; ++i) {
       // xyz
       // vertex coordinates
-      fprintf(pCoord, " %" PRIrealfull " %" PRIrealfull " %" PRIrealfull "\n",
-          parts[k]->xyz[i*3+0], parts[k]->xyz[i*3+1], parts[k]->xyz[i*3+2]);
+      fprintf(pCoord, " %" PRIrealfull " %" PRIrealfull " %" PRIrealfull " %" PRIidx "\n",
+          parts[k]->xyz[i*3+0], parts[k]->xyz[i*3+1], parts[k]->xyz[i*3+2], parts[k]->vtxidx[i]);
 
       // vertex state
       CkAssert(parts[k]->vtxmodidx[i] > 0);

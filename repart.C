@@ -643,12 +643,14 @@ mReorder* Network::BuildReorder() {
   morder->prtidx = prtidx;
   morder->nvtx = norderprt;
   //CkPrintf("build reorder %" PRIidx "\n",norderprt);
+  vtxidx.resize(norderprt);
 
   // set up counters
   idx_t jvtxidx = 0;
 
   // load data
   for (idx_t i = 0; i < norderprt; ++i) {
+    vtxidx[i] = vtxprted[i].vtxidx; // store old for printing
     morder->vtxidxold[jvtxidx] = vtxprted[i].vtxidx;
     morder->vtxidxnew[jvtxidx] = jvtxidx;
     ++jvtxidx;

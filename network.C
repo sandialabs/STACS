@@ -900,7 +900,7 @@ mPart* Network::BuildPart() {
   // Initialize partition data message
   int msgSize[MSG_Part];
   msgSize[0] = netparts+1;    // vtxdist
-  msgSize[1] = 0;             // vtxidx (implicit)
+  msgSize[1] = adjcy.size();             // vtxidx (implicit)
   msgSize[2] = adjcy.size();  // vtxmodidx
   msgSize[3] = adjcy.size()*3;// xyz
   msgSize[4] = adjcy.size()+1;// xadj
@@ -937,6 +937,7 @@ mPart* Network::BuildPart() {
   mpart->xadj[0] = 0;
   mpart->xevent[0] = 0;
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
+    mpart->vtxidx[i] = vtxidx[i]; // save this too
     // vtxmodidx
     mpart->vtxmodidx[i] = vtxmodidx[i];
     // xyz
