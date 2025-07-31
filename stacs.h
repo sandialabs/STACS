@@ -90,6 +90,7 @@ struct model_t {
 // Vertices
 //
 struct vertex_t {
+  std::string vtxname;
   idx_t modidx;
   idx_t order;
   idx_t shape;
@@ -185,6 +186,7 @@ class Main : public CBase_Main {
     /* Model Information */
     std::vector<model_t> modelconf;
     std::unordered_map<std::string, std::size_t> modmap; // maps model name to object index
+    std::unordered_map<std::string, std::size_t> vtxmap; // maps vertex name to object index
     std::vector<std::string> datafiles;
     std::vector<idx_t> datatypes;
     /* Recording */

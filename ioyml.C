@@ -500,7 +500,12 @@ int Main::ReadModel() {
     // Concrete model
     else {
       // Create list of model indices (for composite models)
-      modmap[modelconf[jmod].modname] = jmod+1;
+      if (modmap.find(modelconf[jmod].modname) == modmap.end()) {
+        modmap[modelconf[jmod].modname] = jmod+1;
+      } else {
+        CkPrintf("  error: duplicate model name: %s\n", modelconf[jmod].modname.c_str());
+        return 1;
+      }
 
       // Params are their own 'node'
       YAML::Node param = modfile[i]["param"];
@@ -1301,6 +1306,8 @@ int Main::ReadGraph() {
   idx_t nvtx = vertex.size() + stream.size();
   vertices.clear();
   vertices.resize(nvtx);
+  // Vertex name map
+  vtxmap.clear();
   
   // loop through the streams
   for (std::size_t i = 0; i < stream.size(); ++i) {
@@ -1318,6 +1325,25 @@ int Main::ReadGraph() {
     }
     else {
       vertices[jvtx].modidx = modmap[name];
+    }
+    if (stream[i]["name"]) {
+      try {
+        // vtxname
+        name = stream[i]["name"].as<std::string>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  error: stream name: %s\n", e.what());
+        return 1;
+      }
+    } else {
+      CkPrintf("  warning: stream name defaulting to model name:  %s\n", name.c_str());
+    }
+    // add to vertex list and check for duplicates
+    if (vtxmap.find(name) == vtxmap.end()) {
+      vtxmap[name] = jvtx;
+      vertices[jvtx].vtxname = name;
+    } else {
+      CkPrintf("  error: duplicate stream name: %s\n", name.c_str());
+      return 1;
     }
     // order
     vertices[jvtx].order = 1;
@@ -1354,6 +1380,25 @@ int Main::ReadGraph() {
     }
     else {
       vertices[jvtx].modidx = modmap[name];
+    }
+    if (vertex[i]["name"]) {
+      try {
+        // vtxname
+        name = vertex[i]["name"].as<std::string>();
+      } catch (YAML::RepresentationException& e) {
+        CkPrintf("  error: vertex name: %s\n", e.what());
+        return 1;
+      }
+    } else {
+      CkPrintf("  warning: vertex name defaulting to model name:  %s\n", name.c_str());
+    }
+    // add to vertex list and check for duplicates
+    if (vtxmap.find(name) == vtxmap.end()) {
+      vtxmap[name] = jvtx;
+      vertices[jvtx].vtxname = name;
+    } else {
+      CkPrintf("  error: duplicate vertex name: %s\n", name.c_str());
+      return 1;
     }
     try {
       // order
