@@ -427,6 +427,7 @@ void Netdata::ReadNetpart() {
 //
 void Netdata::WriteNetwork(int checkflag) {
   /* File operations */
+  FILE *pIndex;
   FILE *pCoord;
   FILE *pAdjcy;
   FILE *pState;
@@ -436,6 +437,8 @@ void Netdata::WriteNetwork(int checkflag) {
   std::string filecheck = (checkflag ? filesave : "");
   // Open files for writing
   CkPrintf("Writing network data files %d\n", datidx);
+  sprintf(csrfile, "%s/%s%s.index.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
+  pIndex = fopen(csrfile,"w");
   sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pCoord = fopen(csrfile,"w");
   sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
@@ -468,10 +471,14 @@ void Netdata::WriteNetwork(int checkflag) {
 
     // Graph adjacency information
     for (idx_t i = 0; i < parts[k]->nvtx; ++i) {
+      // vertex name (and index)
+      fprintf(pIndex, " %" PRIidx "\n",
+          parts[k]->vtxidx[i]);
+
       // xyz
       // vertex coordinates
-      fprintf(pCoord, " %" PRIrealfull " %" PRIrealfull " %" PRIrealfull " %" PRIidx "\n",
-          parts[k]->xyz[i*3+0], parts[k]->xyz[i*3+1], parts[k]->xyz[i*3+2], parts[k]->vtxidx[i]);
+      fprintf(pCoord, " %" PRIrealfull " %" PRIrealfull " %" PRIrealfull "\n",
+          parts[k]->xyz[i*3+0], parts[k]->xyz[i*3+1], parts[k]->xyz[i*3+2]);
 
       // vertex state
       CkAssert(parts[k]->vtxmodidx[i] > 0);

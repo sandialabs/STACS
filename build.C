@@ -227,7 +227,7 @@ void Network::Build() {
   // But keep in mind the per part artificial splitting
 
   // Create model indices
-  vtxidx.resize(norderprt); // this too?
+  vtxidx.resize(norderprt);
   vtxmodidx.resize(norderprt);
   vtxordidx.resize(norderprt);
   edgmodidx.resize(norderprt);
