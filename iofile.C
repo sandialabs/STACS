@@ -217,7 +217,7 @@ void Network::LoadMatrix(mMatrix *msg) {
 //
 int Netdata::ReadFileCSV(datafile_t &datafile) {
   FILE *pData;
-  char csvfile[100];
+  char csvfile[1024];
   char *line;
   char *oldstr, *newstr;
 
@@ -291,7 +291,7 @@ int Netdata::ReadFileCSV(datafile_t &datafile) {
 //
 int Netdata::ReadFileCSVSparse(datafile_t &datafile) {
   FILE *pData;
-  char csvfile[100];
+  char csvfile[1024];
   char *line;
   char *oldstr, *newstr;
 
