@@ -1521,12 +1521,14 @@ int Main::ReadGraph() {
       CkPrintf("  edge source: %s\n", e.what());
       return 1;
     }
-    if (modmap.find(name) == modmap.end()) {
-      CkPrintf("  error: model %s not defined\n", name.c_str());
+    //if (modmap.find(name) == modmap.end()) {
+    if (vtxmap.find(name) == vtxmap.end()) {
+      CkPrintf("  error: vertex group %s not defined\n", name.c_str());
       return 1;
     }
     else {
-      edges[i].source = modmap[name];
+      //edges[i].source = modmap[name];
+      edges[i].source = vtxmap[name];
     }
     edges[i].target.clear();
     try {
@@ -1537,12 +1539,14 @@ int Main::ReadGraph() {
       return 1;
     }
     for (std::size_t j = 0; j < names.size(); ++j) {
-      if (modmap.find(names[j]) == modmap.end()) {
-        CkPrintf("  error: model %s not defined\n", name.c_str());
+      //if (modmap.find(names[j]) == modmap.end()) {
+      if (vtxmap.find(names[j]) == vtxmap.end()) {
+        CkPrintf("  error: vertex group %s not defined\n", name.c_str());
         return 1;
       }
       else {
-        edges[i].target.push_back(modmap[names[j]]);
+        //edges[i].target.push_back(modmap[names[j]]);
+        edges[i].target.push_back(vtxmap[names[j]]);
       }
     }
     try {

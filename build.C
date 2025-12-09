@@ -106,7 +106,7 @@ void Network::OrderGraph(mGraph *msg) {
   // Print out some information
   if (prtidx == 0) {
     for (std::size_t i = 0; i < vertices.size(); ++i) {
-      CkPrintf("Vertex: %" PRIidx "   Order: %" PRIidx"\n", vertices[i].modidx, vertices[i].order);
+      CkPrintf("Vertex: %d   Model: %" PRIidx "   Order: %" PRIidx"\n", i, vertices[i].modidx, vertices[i].order);
     }
     for (std::size_t i = 0; i < edges.size(); ++i) {
       std::string edgetargets;
@@ -116,7 +116,7 @@ void Network::OrderGraph(mGraph *msg) {
         edgetarget << " " << edges[i].target[j];
         edgetargets.append(edgetarget.str());
       }
-      CkPrintf("Edges:  %" PRIidx "   Source: %" PRIidx"   Targets:%s\n", edges[i].modidx, edges[i].source, edgetargets.c_str());
+      CkPrintf("Edges:  %d   Model: %" PRIidx "   Source: %" PRIidx"   Targets:%s\n", i, edges[i].modidx, edges[i].source, edgetargets.c_str());
     }
   }
 
@@ -131,7 +131,8 @@ void Network::OrderGraph(mGraph *msg) {
   for (std::size_t e = 0; e < edges.size(); ++e) {
     for (std::size_t t = 0; t < edges[e].target.size(); ++t) {
       // general connections
-      connmodmap[edges[e].source*edges.size() + edges[e].target[t]] = (idx_t) e;
+      //connmodmap[edges[e].source*edges.size() + edges[e].target[t]] = (idx_t) e;
+      connmodmap[edges[e].source*vertices.size() + edges[e].target[t]] = (idx_t) e;
       // sample-based connections
       for (std::size_t k = 0; k < edges[e].conntype.size(); ++k) {
         if (edges[e].conntype[k] == CONNTYPE_SMPL ||
