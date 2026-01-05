@@ -39,6 +39,7 @@ charmrun
 # Graph Files
 *.dist*
 *.metis*
+*.index.*
 *.coord.*
 *.adjcy.*
 *.state.*

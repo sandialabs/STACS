@@ -447,7 +447,7 @@ void Netdata::WriteNetwork(int checkflag) {
   pState = fopen(csrfile,"w");
   sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), filecheck.c_str(), datidx);
   pEvent = fopen(csrfile,"w");
-  if (pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
+  if (pIndex == NULL || pCoord == NULL || pAdjcy == NULL || pState == NULL || pEvent == NULL) {
     CkPrintf("Error opening files for writing %d\n", datidx);
     CkExit();
   }
@@ -529,6 +529,7 @@ void Netdata::WriteNetwork(int checkflag) {
   }
 
   // Cleanup
+  fclose(pIndex);
   fclose(pCoord);
   fclose(pAdjcy);
   fclose(pState);
