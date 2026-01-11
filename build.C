@@ -107,7 +107,7 @@ void Network::OrderGraph(mGraph *msg) {
   // Print out some information
   if (prtidx == 0) {
     for (std::size_t i = 0; i < vertices.size(); ++i) {
-      CkPrintf("  Vertex: %d   Model: %" PRIidx "   Order: %" PRIidx"\n", i, vertices[i].modidx, vertices[i].order);
+      CkPrintf("  Vertex: %d   Model: %" PRIidx "   Order: %" PRIidx"\n", i+1, vertices[i].modidx, vertices[i].order);
     }
     for (std::size_t i = 0; i < edges.size(); ++i) {
       std::string edgetargets;
@@ -564,7 +564,7 @@ void Network::ConnectVtx(mConn *msg) {
       if (vtxdist[msg->prtidx] <= adjcy[i][j] && adjcy[i][j] < vtxdist[msg->prtidx+1]) {
         // Reparameterize with information
         idx_t locsourceidx = adjcy[i][j] - vtxdist[msg->prtidx];
-        idx_t edg = connmodmap[msg->vtxnameidx[locsourceidx]*edges.size()+vtxnameidx[i]];
+        idx_t edg = connmodmap[msg->vtxnameidx[locsourceidx]*vertices.size()+vtxnameidx[i]];
         //CkPrintf("%" PRIidx ", %" PRIidx ": %" PRIidx ", %" PRIidx"\n", i, adjcy[i][j], locsourceidx, edg);
         real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+locsourceidx*3, edges[edg].distparam.data());
         ReBuildEdgState(edgmodidx[i][j], distance, state[i][j+1]);
@@ -579,7 +579,7 @@ void Network::ConnectVtx(mConn *msg) {
     for (idx_t i = 0; i < norderprt; ++i) {
       for (idx_t j = 0; j < msg->nvtx; ++j) {
         // Skip unconnected populations
-        if (connmodmap.find(msg->vtxnameidx[j]*edges.size()+vtxnameidx[i]) == connmodmap.end()) {
+        if (connmodmap.find(msg->vtxnameidx[j]*vertices.size()+vtxnameidx[i]) == connmodmap.end()) {
           continue;
         }
         // Skip same index i == j
@@ -588,7 +588,7 @@ void Network::ConnectVtx(mConn *msg) {
         }
         // Evaluate connection between i and j
         else {
-          idx_t edg = connmodmap[msg->vtxnameidx[j]*edges.size()+vtxnameidx[i]];
+          idx_t edg = connmodmap[msg->vtxnameidx[j]*vertices.size()+vtxnameidx[i]];
           // file-based edges already computed
           if (edges[edg].conntype[0] != CONNTYPE_FILE) {
             real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+j*3, edges[edg].distparam.data());
