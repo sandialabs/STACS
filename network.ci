@@ -130,6 +130,8 @@ module network {
   message mPart {
     idx_t vtxdist[];
     idx_t vtxidx[];
+    idx_t vtxnameidx[];
+    idx_t vtxordidx[];
     idx_t vtxmodidx[];
     real_t xyz[];
     idx_t xadj[];

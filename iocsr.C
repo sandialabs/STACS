@@ -156,6 +156,7 @@ int Main::WriteDist(int checkflag) {
 //
 void Netdata::ReadNetwork() {
   /* File operations */
+  FILE *pIndex;
   FILE *pCoord;
   FILE *pAdjcy;
   FILE *pState;
@@ -174,6 +175,8 @@ void Netdata::ReadNetwork() {
   line = new char[MAXLINE];
   
   // Open files for reading
+  sprintf(csrfile, "%s/%s%s.index.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
+  pIndex = fopen(csrfile,"r");
   sprintf(csrfile, "%s/%s%s.coord.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pCoord = fopen(csrfile,"r");
   sprintf(csrfile, "%s/%s%s.adjcy.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
@@ -182,7 +185,7 @@ void Netdata::ReadNetwork() {
   pState = fopen(csrfile,"r");
   sprintf(csrfile, "%s/%s%s.event.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pEvent = fopen(csrfile,"r");
-  if (pCoord == NULL || pAdjcy == NULL || pState == NULL ||
+  if (pIndex == NULL || pCoord == NULL || pAdjcy == NULL || pState == NULL ||
       pEvent == NULL || line == NULL) {
     CkPrintf("Error opening graph files on %d\n", datidx);
     CkExit();
@@ -200,19 +203,21 @@ void Netdata::ReadNetwork() {
     int msgSize[MSG_Part];
     msgSize[0] = netparts+1;    // vtxdist
     msgSize[1] = 0;             // vtxidx (implicit)
-    msgSize[2] = nvtx;          // vtxmodidx
-    msgSize[3] = nvtx*3;        // xyz
-    msgSize[4] = nvtx+1;        // xadj
-    msgSize[5] = nedg;          // adjcy
-    msgSize[6] = nedg;          // edgmodidx
-    msgSize[7] = nstate;        // state
-    msgSize[8] = nstick;        // stick
-    msgSize[9] = nvtx+1;        // xevent
-    msgSize[10] = nevent;       // diffuse
-    msgSize[11] = nevent;       // type
-    msgSize[12] = nevent;       // source
-    msgSize[13] = nevent;       // index
-    msgSize[14] = nevent;       // data
+    msgSize[2] = nvtx;          // vtxnameidx
+    msgSize[3] = nvtx;          // vtxordidx
+    msgSize[4] = nvtx;          // vtxmodidx
+    msgSize[5] = nvtx*3;        // xyz
+    msgSize[6] = nvtx+1;        // xadj
+    msgSize[7] = nedg;          // adjcy
+    msgSize[8] = nedg;          // edgmodidx
+    msgSize[9] = nstate;        // state
+    msgSize[10] = nstick;        // stick
+    msgSize[11] = nvtx+1;        // xevent
+    msgSize[12] = nevent;       // diffuse
+    msgSize[13] = nevent;       // type
+    msgSize[14] = nevent;       // source
+    msgSize[15] = nevent;       // index
+    msgSize[16] = nevent;       // data
     parts[k] = new(msgSize, 0) mPart;
     
     // Data sizes
@@ -241,6 +246,25 @@ void Netdata::ReadNetwork() {
 
     // Extract Graph Information
     for (idx_t i = 0; i < nvtx; ++i) {
+      // Read in line (model indexes)
+      while(fgets(line, MAXLINE, pIndex) && line[0] == '%');
+      oldstr = line;
+      newstr = NULL;
+      {
+        // vtxidx
+        idx_t index = strtoidx(oldstr, &newstr, 10);
+        oldstr = newstr;
+        parts[k]->vtxidx[i] = index;
+        // vtxnameidx
+        index = strtoidx(oldstr, &newstr, 10);
+        oldstr = newstr;
+        parts[k]->vtxnameidx[i] = index;
+        // vtxordidx
+        index = strtoidx(oldstr, &newstr, 10);
+        oldstr = newstr;
+        parts[k]->vtxordidx[i] = index;
+      }
+
       // Read in line (coordinates)
       while(fgets(line, MAXLINE, pCoord) && line[0] == '%');
       oldstr = line;
@@ -372,6 +396,7 @@ void Netdata::ReadNetwork() {
   }
 
   // Cleanup
+  fclose(pIndex);
   fclose(pCoord);
   fclose(pAdjcy);
   fclose(pState);
@@ -472,8 +497,8 @@ void Netdata::WriteNetwork(int checkflag) {
     // Graph adjacency information
     for (idx_t i = 0; i < parts[k]->nvtx; ++i) {
       // vertex name (and index)
-      fprintf(pIndex, " %" PRIidx "\n",
-          parts[k]->vtxidx[i]);
+      fprintf(pIndex, " %" PRIidx " %" PRIidx " %" PRIidx "\n",
+          parts[k]->vtxidx[i], parts[k]->vtxnameidx[i], parts[k]->vtxordidx[i]);
 
       // xyz
       // vertex coordinates

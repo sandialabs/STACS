@@ -428,6 +428,8 @@ void Network::LoadNetwork(mPart *msg) {
   // Setup data vectors
   vtxdist.resize(netparts+1);
   vtxidx.resize(msg->nvtx);
+  vtxnameidx.resize(msg->nvtx);
+  vtxordidx.resize(msg->nvtx);
   vtxmodidx.resize(msg->nvtx);
   xyz.resize(msg->nvtx*3);
   adjcy.resize(msg->nvtx);
@@ -456,6 +458,8 @@ void Network::LoadNetwork(mPart *msg) {
   // Get adjacency matrix
   for (idx_t i = 0; (std::size_t) i < adjcy.size(); ++i) {
     vtxidx[i] = vtxdist[prtidx] + i;
+    vtxnameidx[i] = msg->vtxnameidx[i];
+    vtxordidx[i] = msg->vtxordidx[i];
     vtxmodidx[i] = msg->vtxmodidx[i];
     xyz[i*3+0] = msg->xyz[i*3+0];
     xyz[i*3+1] = msg->xyz[i*3+1];
@@ -900,20 +904,22 @@ mPart* Network::BuildPart() {
   // Initialize partition data message
   int msgSize[MSG_Part];
   msgSize[0] = netparts+1;    // vtxdist
-  msgSize[1] = adjcy.size();             // vtxidx (implicit)
-  msgSize[2] = adjcy.size();  // vtxmodidx
-  msgSize[3] = adjcy.size()*3;// xyz
-  msgSize[4] = adjcy.size()+1;// xadj
-  msgSize[5] = nadjcy;        // adjcy
-  msgSize[6] = nadjcy;        // edgmodidx
-  msgSize[7] = nstate;        // state
-  msgSize[8] = nstick;        // stick
-  msgSize[9] = adjcy.size()+1;// xevent
-  msgSize[10] = nevent;        // diffuse
-  msgSize[11] = nevent;       // type
-  msgSize[12] = nevent;       // source
-  msgSize[13] = nevent;       // index
-  msgSize[14] = nevent;       // data
+  msgSize[1] = adjcy.size();  // vtxidx (implicit)
+  msgSize[2] = adjcy.size();  // vtxnameidx
+  msgSize[3] = adjcy.size();  // vtxordidx
+  msgSize[4] = adjcy.size();  // vtxmodidx
+  msgSize[5] = adjcy.size()*3;// xyz
+  msgSize[6] = adjcy.size()+1;// xadj
+  msgSize[7] = nadjcy;        // adjcy
+  msgSize[8] = nadjcy;        // edgmodidx
+  msgSize[9] = nstate;        // state
+  msgSize[10] = nstick;        // stick
+  msgSize[11] = adjcy.size()+1;// xevent
+  msgSize[12] = nevent;        // diffuse
+  msgSize[13] = nevent;       // type
+  msgSize[14] = nevent;       // source
+  msgSize[15] = nevent;       // index
+  msgSize[16] = nevent;       // data
   mPart *mpart = new(msgSize, 0) mPart;
 
   // Data sizes
@@ -938,6 +944,8 @@ mPart* Network::BuildPart() {
   mpart->xevent[0] = 0;
   for (std::size_t i = 0; i < adjcy.size(); ++i) {
     mpart->vtxidx[i] = vtxidx[i]; // save this too
+    mpart->vtxnameidx[i] = vtxnameidx[i];
+    mpart->vtxordidx[i] = vtxordidx[i];
     // vtxmodidx
     mpart->vtxmodidx[i] = vtxmodidx[i];
     // xyz

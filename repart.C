@@ -119,6 +119,8 @@ void Network::RebalNetwork() {
 void Network::Repart() {
   // Repartitioning
   vtxidxreprt.clear();
+  vtxnameidxreprt.clear();
+  vtxordidxreprt.clear();
   vtxmodidxreprt.clear();
   xyzreprt.clear();
   adjcyreprt.clear();
@@ -127,6 +129,8 @@ void Network::Repart() {
   stickreprt.clear();
   eventreprt.clear();
   vtxidxreprt.resize(netparts);
+  vtxnameidxreprt.resize(netparts);
+  vtxordidxreprt.resize(netparts);
   vtxmodidxreprt.resize(netparts);
   xyzreprt.resize(netparts);
   adjcyreprt.resize(netparts);
@@ -145,6 +149,8 @@ void Network::Repart() {
     eventreprt[reprtidx[i]].push_back(std::vector<event_t>());
     // Vertices
     vtxidxreprt[reprtidx[i]].push_back(vtxdist[prtidx] + i);
+    vtxnameidxreprt[reprtidx[i]].push_back(vtxnameidx[i]);
+    vtxordidxreprt[reprtidx[i]].push_back(vtxordidx[i]);
     vtxmodidxreprt[reprtidx[i]].push_back(vtxmodidx[i]);
     xyzreprt[reprtidx[i]].push_back(xyz[i*3+0]);
     xyzreprt[reprtidx[i]].push_back(xyz[i*3+1]);
@@ -178,6 +184,8 @@ void Network::Repart() {
     }
   }
   // Clear data once copied
+  vtxnameidx.clear();
+  vtxordidx.clear();
   vtxmodidx.clear();
   xyz.clear();
   adjcy.clear();
@@ -217,19 +225,21 @@ void Network::ScatterPart() {
     int msgSize[MSG_Part];
     msgSize[0] = 0;                              // vtxdist (to be recomputed)
     msgSize[1] = vtxidxreprt[prtprtidx].size();     // vtxidx
-    msgSize[2] = vtxidxreprt[prtprtidx].size();     // vtxmodidx
-    msgSize[3] = vtxidxreprt[prtprtidx].size() * 3; // xyz
-    msgSize[4] = vtxidxreprt[prtprtidx].size() + 1; // xadj
-    msgSize[5] = nedgidx;                       // adjcy
-    msgSize[6] = nedgidx;                       // edgmodidx
-    msgSize[7] = nstate;                        // state
-    msgSize[8] = nstick;                        // stick
-    msgSize[9] = vtxidxreprt[prtprtidx].size() + 1; // xevent
-    msgSize[10] = nevent;                        // diffuse
-    msgSize[11] = nevent;                       // type
-    msgSize[12] = nevent;                       // source
-    msgSize[13] = nevent;                       // index
-    msgSize[14] = nevent;                       // data
+    msgSize[2] = vtxidxreprt[prtprtidx].size();     // vtxnameidx
+    msgSize[3] = vtxidxreprt[prtprtidx].size();     // vtxordidx
+    msgSize[4] = vtxidxreprt[prtprtidx].size();     // vtxmodidx
+    msgSize[5] = vtxidxreprt[prtprtidx].size() * 3; // xyz
+    msgSize[6] = vtxidxreprt[prtprtidx].size() + 1; // xadj
+    msgSize[7] = nedgidx;                       // adjcy
+    msgSize[8] = nedgidx;                       // edgmodidx
+    msgSize[9] = nstate;                        // state
+    msgSize[10] = nstick;                        // stick
+    msgSize[11] = vtxidxreprt[prtprtidx].size() + 1; // xevent
+    msgSize[12] = nevent;                        // diffuse
+    msgSize[13] = nevent;                       // type
+    msgSize[14] = nevent;                       // source
+    msgSize[15] = nevent;                       // index
+    msgSize[16] = nevent;                       // data
     mPart *mpart = new(msgSize, 0) mPart;
     // Sizes
     mpart->nvtx = vtxidxreprt[prtprtidx].size();
@@ -251,6 +261,10 @@ void Network::ScatterPart() {
     for (std::size_t i = 0; i < vtxidxreprt[prtprtidx].size(); ++i) {
       // vtxidx
       mpart->vtxidx[i] = vtxidxreprt[prtprtidx][i];
+      // vtxnameidx
+      mpart->vtxnameidx[i] = vtxnameidxreprt[prtprtidx][i];
+      // vtxordidx
+      mpart->vtxordidx[i] = vtxordidxreprt[prtprtidx][i];
       // vtxmodidx
       mpart->vtxmodidx[i] = vtxmodidxreprt[prtprtidx][i];
       // xyz
@@ -320,6 +334,10 @@ void Network::GatherPart(mPart *msg) {
     // vtxidx
     vtxprted[xvtx+i].vtxidx = msg->vtxidx[i];
     // vtxmodidx
+    vtxprted[xvtx+i].nameidx = msg->vtxnameidx[i];
+    // vtxmodidx
+    vtxprted[xvtx+i].ordidx = msg->vtxordidx[i];
+    // vtxmodidx
     vtxprted[xvtx+i].modidx = msg->vtxmodidx[i];
     // localidx
     vtxprted[xvtx+i].vtxidxloc = xvtx+i;
@@ -388,6 +406,8 @@ void Network::GatherPart(mPart *msg) {
     cphnd = 0;
     // cleanup finished data structures
     vtxidxreprt.clear();
+    vtxnameidxreprt.clear();
+    vtxordidxreprt.clear();
     vtxmodidxreprt.clear();
     xyzreprt.clear();
     adjcyreprt.clear();
@@ -405,6 +425,8 @@ void Network::GatherPart(mPart *msg) {
              prtidx, datidx, norderprt);
 
     // set up containers
+    vtxnameidx.resize(norderprt);
+    vtxordidx.resize(norderprt);
     vtxmodidx.resize(norderprt);
     xyz.resize(norderprt*3);
     adjcy.resize(norderprt);
@@ -426,6 +448,10 @@ void Network::GatherPart(mPart *msg) {
 
     // add to data structures
     for (idx_t i = 0; i < norderprt; ++i) {
+      // vtxnameidx
+      vtxnameidx[i] = vtxprted[i].nameidx;
+      // vtxordidx
+      vtxordidx[i] = vtxprted[i].ordidx;
       // vtxmodidx
       vtxmodidx[i] = vtxprted[i].modidx;
       // xyz

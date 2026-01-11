@@ -54,11 +54,13 @@ struct datafile_t {
 // Vertex reordering
 //
 struct vtxreord_t {
+  idx_t nameidx;
+  idx_t ordidx;
   idx_t modidx;
   idx_t vtxidx;
   idx_t vtxidxloc; // local index of vertex
   bool operator < (const vtxreord_t& vtx) const {
-    return (modidx < vtx.modidx);
+    return (nameidx < vtx.nameidx);
   }
 };
 
@@ -354,12 +356,14 @@ class mReorder : public CMessage_mReorder {
 
 // Network partition data
 //
-#define MSG_Part 15
+#define MSG_Part 17
 class mPart : public CMessage_mPart {
   public:
     /* Data */
     idx_t *vtxdist;
     idx_t *vtxidx;
+    idx_t *vtxnameidx;
+    idx_t *vtxordidx;
     idx_t *vtxmodidx;
     real_t *xyz;
     idx_t *xadj;
@@ -1017,6 +1021,8 @@ class Network : public CBase_Network {
     /* Repartitioning */
     std::vector<idx_t> reprtidx; // partition that the vertex should move to
     std::vector<std::vector<idx_t>> vtxidxreprt; // vertex indices to go to a part
+    std::vector<std::vector<idx_t>> vtxnameidxreprt; // vertex name index to go to a part
+    std::vector<std::vector<idx_t>> vtxordidxreprt; // vertex local index to go to a part
     std::vector<std::vector<idx_t>> vtxmodidxreprt; // vertex models to go to a part
     std::vector<std::vector<real_t>> xyzreprt; // coordinates to go to a part
     std::vector<std::vector<std::vector<idx_t>>> adjcyreprt; // edge indices (by vtxidx) to go to a part
