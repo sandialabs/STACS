@@ -284,7 +284,7 @@ class mModel : public CMessage_mModel {
 #define MSG_Graph 21
 class mGraph : public CMessage_mGraph {
   public:
-    idx_t *vtxnameidx;    // Vertex group name (nameidx from vtxmap)
+    idx_t *vtxnameidx;    // Vertex group name (nameidx from vtxnamemap)
     idx_t *vtxmodidx;     // Which vertex to build (modidx from modmap)
     idx_t *vtxorder;      // How many of each vertex to build
     idx_t *vtxshape;      // What shape to build vertices
@@ -981,7 +981,7 @@ class Network : public CBase_Network {
     std::vector<idx_t> vtxordidx; // vertex index within model order
     std::vector<idx_t> nordervtx; // number of vertices built on this partition
     std::vector<idx_t> xordervtx; // offset of vertices built on this partition
-    std::unordered_map<idx_t,idx_t> connmodmap; // (source*edges.size + target) to edge
+    std::unordered_map<idx_t,idx_t> connmodmap; // (source*vertices.size + target) to edge
     std::vector<std::set<idx_t>> connsampleset; // target to edges that are sample-based for it
     std::vector<std::set<idx_t>> adjcyset; // set of directed afferent edges
     std::vector<idx_t> nadjcysample; // counts of number of adjcy for index-based connections

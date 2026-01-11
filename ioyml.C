@@ -1154,8 +1154,8 @@ int Main::ReadModel() {
       for (std::size_t j = 0; j < modelconf[i].port.size(); ++j) {
         // Get first model name out of string
         std::string modname = modelconf[i].port[j].substr(0, modelconf[i].port[j].find(' '));
-        modelconf[i].nstate += modelconf[modmap[modname]].nstate;
-        modelconf[i].nstick += modelconf[modmap[modname]].nstick;
+        modelconf[i].nstate += modelconf[modmap[modname]-1].nstate;
+        modelconf[i].nstick += modelconf[modmap[modname]-1].nstick;
         std::ostringstream part;
         part << " " << modname;
         modelparts.append(part.str());
@@ -1307,7 +1307,7 @@ int Main::ReadGraph() {
   vertices.clear();
   vertices.resize(nvtx);
   // Vertex name map
-  vtxmap.clear();
+  vtxnamemap.clear();
   
   // loop through the streams
   for (std::size_t i = 0; i < stream.size(); ++i) {
@@ -1338,10 +1338,10 @@ int Main::ReadGraph() {
       CkPrintf("  warning: stream name defaulting to model name:  %s\n", name.c_str());
     }
     // add to vertex list and check for duplicates
-    if (vtxmap.find(name) == vtxmap.end()) {
-      vtxmap[name] = jvtx+1;
+    if (vtxnamemap.find(name) == vtxnamemap.end()) {
+      vtxnamemap[name] = jvtx;
       vertices[jvtx].vtxname = name;
-      vertices[jvtx].nameidx = vtxmap[name];
+      vertices[jvtx].nameidx = vtxnamemap[name];
     } else {
       CkPrintf("  error: duplicate stream name: %s\n", name.c_str());
       return 1;
@@ -1394,10 +1394,10 @@ int Main::ReadGraph() {
       CkPrintf("  warning: vertex name defaulting to model name:  %s\n", name.c_str());
     }
     // add to vertex list and check for duplicates
-    if (vtxmap.find(name) == vtxmap.end()) {
-      vtxmap[name] = jvtx+1;
+    if (vtxnamemap.find(name) == vtxnamemap.end()) {
+      vtxnamemap[name] = jvtx;
       vertices[jvtx].vtxname = name;
-      vertices[jvtx].nameidx = vtxmap[name];
+      vertices[jvtx].nameidx = vtxnamemap[name];
     } else {
       CkPrintf("  error: duplicate vertex name: %s\n", name.c_str());
       return 1;
@@ -1524,13 +1524,13 @@ int Main::ReadGraph() {
       return 1;
     }
     //if (modmap.find(name) == modmap.end()) {
-    if (vtxmap.find(name) == vtxmap.end()) {
+    if (vtxnamemap.find(name) == vtxnamemap.end()) {
       CkPrintf("  error: vertex group %s not defined\n", name.c_str());
       return 1;
     }
     else {
       //edges[i].source = modmap[name];
-      edges[i].source = vtxmap[name];
+      edges[i].source = vtxnamemap[name];
     }
     edges[i].target.clear();
     try {
@@ -1542,13 +1542,13 @@ int Main::ReadGraph() {
     }
     for (std::size_t j = 0; j < names.size(); ++j) {
       //if (modmap.find(names[j]) == modmap.end()) {
-      if (vtxmap.find(names[j]) == vtxmap.end()) {
+      if (vtxnamemap.find(names[j]) == vtxnamemap.end()) {
         CkPrintf("  error: vertex group %s not defined\n", name.c_str());
         return 1;
       }
       else {
         //edges[i].target.push_back(modmap[names[j]]);
-        edges[i].target.push_back(vtxmap[names[j]]);
+        edges[i].target.push_back(vtxnamemap[names[j]]);
       }
     }
     try {
@@ -1694,10 +1694,10 @@ int Main::ReadGraph() {
         }
         // source and target order
         for (std::size_t v = 0; v < vertices.size(); ++v) {
-          if (edges[i].source == vertices[v].modidx) {
+          if (edges[i].source == vertices[v].nameidx) {
             edges[i].maskparam[j][0] = vertices[v].order;
           }
-          if (edges[i].target[0] == vertices[v].modidx) {
+          if (edges[i].target[0] == vertices[v].nameidx) {
             edges[i].maskparam[j][1] = vertices[v].order;
           }
         }
@@ -1728,7 +1728,7 @@ int Main::ReadGraph() {
         }
         // source order
         for (std::size_t v = 0; v < vertices.size(); ++v) {
-          if (edges[i].source == vertices[v].modidx) {
+          if (edges[i].source == vertices[v].nameidx) {
             edges[i].maskparam[j][0] = vertices[v].order;
           }
         }
@@ -1759,7 +1759,7 @@ int Main::ReadGraph() {
         }
         // source order
         for (std::size_t v = 0; v < vertices.size(); ++v) {
-          if (edges[i].source == vertices[v].modidx) {
+          if (edges[i].source == vertices[v].nameidx) {
             edges[i].maskparam[j][0] = vertices[v].order;
           }
         }
@@ -1797,7 +1797,7 @@ int Main::ReadGraph() {
         }
         // source order
         for (std::size_t v = 0; v < vertices.size(); ++v) {
-          if (edges[i].source == vertices[v].modidx) {
+          if (edges[i].source == vertices[v].nameidx) {
             edges[i].maskparam[j][0] = vertices[v].order;
           }
         }
@@ -1821,10 +1821,10 @@ int Main::ReadGraph() {
         }
         // source and target order
         for (std::size_t v = 0; v < vertices.size(); ++v) {
-          if (edges[i].source == vertices[v].modidx) {
+          if (edges[i].source == vertices[v].nameidx) {
             edges[i].maskparam[j][0] = vertices[v].order;
           }
-          if (edges[i].target[0] == vertices[v].modidx) {
+          if (edges[i].target[0] == vertices[v].nameidx) {
             edges[i].maskparam[j][1] = vertices[v].order;
           }
         }
@@ -1865,24 +1865,21 @@ int Main::ReadGraph() {
   // Check that only one type of edge may exist between any two given vertices
   // TODO: Enable multiple edges between vertices one day
   std::vector<std::vector<idx_t>> connections;
-  connections.resize(modelconf.size()+1);
+  connections.resize(vertices.size());
   for (std::size_t i = 0; i < edges.size(); ++i) {
     for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
       // add source target pairs
       connections[edges[i].source].push_back(edges[i].target[j]);
-      // Sanity check that there are no 'none' sources or targets
-      CkAssert(edges[i].source);
-      CkAssert(edges[i].target[j]);
     }
   }
   // check for duplicates (connections[0] is 'none' model)
-  for (std::size_t i = 1; i < connections.size(); ++i) {
+  for (std::size_t i = 0; i < connections.size(); ++i) {
     std::sort(connections[i].begin(), connections[i].end());
     for (std::size_t j = 1; j < connections[i].size(); ++j) {
       if (connections[i][j] == connections[i][j-1]) {
         CkPrintf("  error: multiple connection types between vertices\n"
                  "         %s to %s not allowed (yet)\n",
-                 modelconf[i-1].modname.c_str(), modelconf[connections[i][j]-1].modname.c_str());
+                 vertices[i].vtxname.c_str(), vertices[connections[i][j]].vtxname.c_str());
         return 1;
       }
     }

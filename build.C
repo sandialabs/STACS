@@ -107,7 +107,7 @@ void Network::OrderGraph(mGraph *msg) {
   // Print out some information
   if (prtidx == 0) {
     for (std::size_t i = 0; i < vertices.size(); ++i) {
-      CkPrintf("  Vertex: %d   Model: %" PRIidx "   Order: %" PRIidx"\n", i+1, vertices[i].modidx, vertices[i].order);
+      CkPrintf("  Vertex: %d   Model: %" PRIidx "   Order: %" PRIidx"\n", i, vertices[i].modidx, vertices[i].order);
     }
     for (std::size_t i = 0; i < edges.size(); ++i) {
       std::string edgetargets;
@@ -124,8 +124,8 @@ void Network::OrderGraph(mGraph *msg) {
   // Create mapping from pairs of vertices (source, target) to edge index
   connmodmap.clear();
   // Create mapping from vertices to sample-based edge sources
-  connsampleset.resize(vertices.size()+1);
-  for (std::size_t t = 0; t < vertices.size()+1; ++t) {
+  connsampleset.resize(vertices.size());
+  for (std::size_t t = 0; t < vertices.size(); ++t) {
     connsampleset[t].clear();
   }
   // populate connection maps
@@ -400,7 +400,7 @@ void Network::Build() {
         // Uniform weights is easier to compute
         if (edges[edg].conntype[k] == CONNTYPE_SMPL) {
           // Compute samples w.r.t. source population order
-          CkAssert(vertices[edges[edg].source-1].order == edges[edg].maskparam[k][0]);
+          CkAssert(vertices[edges[edg].source].order == edges[edg].maskparam[k][0]);
           std::vector<idx_t> sourceordix(edges[edg].maskparam[k][0]);
           std::iota(sourceordix.begin(), sourceordix.end(), 0);
           // pick the seed based on the targetidx so it is consistent across cores
@@ -413,9 +413,9 @@ void Network::Build() {
           for (idx_t j = 0; j < edges[edg].maskparam[k][1]; ++j) {
             // Convert from population index to global index
             std::vector<idx_t>::iterator iprt;
-            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source-1].begin(), xpopvtxidxprt[edges[edg].source-1].end(), sourceordix[j]);
-            int prt = (iprt - xpopvtxidxprt[edges[edg].source-1].begin()) - 1;
-            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source-1][prt] + (sourceordix[j] - xpopvtxidxprt[edges[edg].source-1][prt]);
+            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source].begin(), xpopvtxidxprt[edges[edg].source].end(), sourceordix[j]);
+            int prt = (iprt - xpopvtxidxprt[edges[edg].source].begin()) - 1;
+            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source][prt] + (sourceordix[j] - xpopvtxidxprt[edges[edg].source][prt]);
             // Check for self connections
             if (!selfconn && glbsourceidx == glbtargetidx) {
               continue;
@@ -433,13 +433,13 @@ void Network::Build() {
         else if (edges[edg].conntype[k] == CONNTYPE_SMPL_NORM ||
                  edges[edg].conntype[k] == CONNTYPE_SMPL_ANORM) {
           // Compute samples w.r.t. source population order
-          CkAssert(vertices[edges[edg].source-1].order == edges[edg].maskparam[k][0]);
+          CkAssert(vertices[edges[edg].source].order == edges[edg].maskparam[k][0]);
           std::vector<real_t> samplewgt(edges[edg].maskparam[k][0]);
           if (edges[edg].conntype[k] == CONNTYPE_SMPL_NORM) {
             for (idx_t j = 0; j < edges[edg].maskparam[k][0]; ++j) {
               // (x_i - x_j)^2 / var(x_ij)
               real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxnameidx[i]-1].param[0]/vertices[vtxnameidx[i]-1].order)
-                  - (((real_t) j)*vertices[edges[edg].source-1].param[0]/vertices[edges[edg].source-1].order));
+                  - (((real_t) j)*vertices[edges[edg].source].param[0]/vertices[edges[edg].source].order));
               samplewgt[j] = std::exp(-(x_ij*x_ij)/(2*edges[edg].probparam[k][0])); // Don't worry about normalizing
             }
           }
@@ -447,8 +447,8 @@ void Network::Build() {
             for (idx_t j = 0; j < edges[edg].maskparam[k][0]; ++j) {
               // ((x_i - x_j)^2 / var(x_ij)) - ((x_i - x_j)^2 / var(x_ij)/2)
               // Not using variance-y for this for now (needs additional information)
-              real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxnameidx[i]-1].param[0]/vertices[vtxnameidx[i]-1].order)
-                  - (((real_t) j)*vertices[edges[edg].source-1].param[0]/vertices[edges[edg].source-1].order));
+              real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxnameidx[i]].param[0]/vertices[vtxnameidx[i]].order)
+                  - (((real_t) j)*vertices[edges[edg].source].param[0]/vertices[edges[edg].source].order));
               real_t var = edges[edg].probparam[k][0];
               // Normalizing a bit more important here
               real_t wgt = std::exp(-(x_ij*x_ij)/(2*var))/std::sqrt(var) *
@@ -481,9 +481,9 @@ void Network::Build() {
             idx_t sourceordix = sampleprbidx[iter].first;
             // Convert from population index to global index
             std::vector<idx_t>::iterator iprt;
-            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source-1].begin(), xpopvtxidxprt[edges[edg].source-1].end(), sourceordix);
-            int prt = (iprt - xpopvtxidxprt[edges[edg].source-1].begin()) - 1;
-            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source-1][prt] + (sourceordix - xpopvtxidxprt[edges[edg].source-1][prt]);
+            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source].begin(), xpopvtxidxprt[edges[edg].source].end(), sourceordix);
+            int prt = (iprt - xpopvtxidxprt[edges[edg].source].begin()) - 1;
+            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source][prt] + (sourceordix - xpopvtxidxprt[edges[edg].source][prt]);
             if (glbsourceidx == glbtargetidx) {
               continue;
             } else {
@@ -507,9 +507,9 @@ void Network::Build() {
             // Convert from population index to global index
             idx_t sourceordix = jfile->first;
             std::vector<idx_t>::iterator iprt;
-            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source-1].begin(), xpopvtxidxprt[edges[edg].source-1].end(), sourceordix);
-            int prt = (iprt - xpopvtxidxprt[edges[edg].source-1].begin()) - 1;
-            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source-1][prt] + (sourceordix - xpopvtxidxprt[edges[edg].source-1][prt]);
+            iprt = std::upper_bound(xpopvtxidxprt[edges[edg].source].begin(), xpopvtxidxprt[edges[edg].source].end(), sourceordix);
+            int prt = (iprt - xpopvtxidxprt[edges[edg].source].begin()) - 1;
+            idx_t glbsourceidx = xglbvtxidxprt[edges[edg].source][prt] + (sourceordix - xpopvtxidxprt[edges[edg].source][prt]);
             // Check for self connections
             if (!selfconn && glbsourceidx == glbtargetidx) {
               continue;

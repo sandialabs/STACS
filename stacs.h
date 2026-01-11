@@ -187,7 +187,7 @@ class Main : public CBase_Main {
     /* Model Information */
     std::vector<model_t> modelconf;
     std::unordered_map<std::string, std::size_t> modmap; // maps model name to object index
-    std::unordered_map<std::string, std::size_t> vtxmap; // maps vertex name to object index
+    std::unordered_map<std::string, std::size_t> vtxnamemap; // maps vertex name to object index
     std::vector<std::string> datafiles;
     std::vector<idx_t> datatypes;
     /* Recording */
