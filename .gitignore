@@ -52,11 +52,18 @@ charmrun
 *.pnglog.*
 *.grplog.*
 
+# Input Files (fugu)
+files/
+
 # Polychronization Files
 *.group.*
 *.chart.*
 *.stamp.*
 *.route.*
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+.cache/
 
 # Temporary Files
 *.swp
