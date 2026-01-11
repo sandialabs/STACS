@@ -1341,6 +1341,7 @@ int Main::ReadGraph() {
     if (vtxmap.find(name) == vtxmap.end()) {
       vtxmap[name] = jvtx+1;
       vertices[jvtx].vtxname = name;
+      vertices[jvtx].nameidx = vtxmap[name];
     } else {
       CkPrintf("  error: duplicate stream name: %s\n", name.c_str());
       return 1;
@@ -1396,6 +1397,7 @@ int Main::ReadGraph() {
     if (vtxmap.find(name) == vtxmap.end()) {
       vtxmap[name] = jvtx+1;
       vertices[jvtx].vtxname = name;
+      vertices[jvtx].nameidx = vtxmap[name];
     } else {
       CkPrintf("  error: duplicate vertex name: %s\n", name.c_str());
       return 1;

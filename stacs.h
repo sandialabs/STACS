@@ -91,6 +91,7 @@ struct model_t {
 //
 struct vertex_t {
   std::string vtxname;
+  idx_t nameidx;
   idx_t modidx;
   idx_t order;
   idx_t shape;

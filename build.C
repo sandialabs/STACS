@@ -37,6 +37,7 @@ void Network::OrderGraph(mGraph *msg) {
   // Vertices
   vertices.resize(msg->nvtx);
   for (std::size_t i = 0; i < vertices.size(); ++i) {
+    vertices[i].nameidx = msg->vtxnameidx[i];
     vertices[i].modidx = msg->vtxmodidx[i];
     vertices[i].order = msg->vtxorder[i];
     norder += vertices[i].order;
@@ -106,7 +107,7 @@ void Network::OrderGraph(mGraph *msg) {
   // Print out some information
   if (prtidx == 0) {
     for (std::size_t i = 0; i < vertices.size(); ++i) {
-      CkPrintf("Vertex: %d   Model: %" PRIidx "   Order: %" PRIidx"\n", i, vertices[i].modidx, vertices[i].order);
+      CkPrintf("  Vertex: %d   Model: %" PRIidx "   Order: %" PRIidx"\n", i, vertices[i].modidx, vertices[i].order);
     }
     for (std::size_t i = 0; i < edges.size(); ++i) {
       std::string edgetargets;
@@ -116,7 +117,7 @@ void Network::OrderGraph(mGraph *msg) {
         edgetarget << " " << edges[i].target[j];
         edgetargets.append(edgetarget.str());
       }
-      CkPrintf("Edges:  %d   Model: %" PRIidx "   Source: %" PRIidx"   Targets:%s\n", i, edges[i].modidx, edges[i].source, edgetargets.c_str());
+      CkPrintf("  Edges:  %d   Model: %" PRIidx "   Source: %" PRIidx"   Targets:%s\n", i, edges[i].modidx, edges[i].source, edgetargets.c_str());
     }
   }
 
@@ -229,6 +230,7 @@ void Network::Build() {
 
   // Create model indices
   vtxidx.resize(norderprt);
+  vtxnameidx.resize(norderprt);
   vtxmodidx.resize(norderprt);
   vtxordidx.resize(norderprt);
   edgmodidx.resize(norderprt);
@@ -242,6 +244,7 @@ void Network::Build() {
     for (idx_t j = 0; j < nordervtx[i]; ++j) {
       // Set the model index
       vtxidx[jvtxidx] = vtxdist[prtidx] + jvtxidx;
+      vtxnameidx[jvtxidx] = vertices[i].nameidx;
       vtxmodidx[jvtxidx] = vertices[i].modidx;
       vtxordidx[jvtxidx] = xordervtx[i] + j;
       edgmodidx[jvtxidx].clear();
@@ -391,7 +394,7 @@ void Network::Build() {
   std::set<idx_t>::iterator jedg;
   for (idx_t i = 0; i < norderprt; ++i) {
     idx_t glbtargetidx = vtxdist[prtidx] + i;
-    for (jedg = connsampleset[vtxmodidx[i]].begin(); jedg != connsampleset[vtxmodidx[i]].end(); ++jedg) {
+    for (jedg = connsampleset[vtxnameidx[i]].begin(); jedg != connsampleset[vtxnameidx[i]].end(); ++jedg) {
       idx_t edg = *jedg;
       for (std::size_t k = 0; k < edges[edg].conntype.size(); ++k) {
         // Uniform weights is easier to compute
@@ -435,7 +438,7 @@ void Network::Build() {
           if (edges[edg].conntype[k] == CONNTYPE_SMPL_NORM) {
             for (idx_t j = 0; j < edges[edg].maskparam[k][0]; ++j) {
               // (x_i - x_j)^2 / var(x_ij)
-              real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxmodidx[i]-1].param[0]/vertices[vtxmodidx[i]-1].order)
+              real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxnameidx[i]-1].param[0]/vertices[vtxnameidx[i]-1].order)
                   - (((real_t) j)*vertices[edges[edg].source-1].param[0]/vertices[edges[edg].source-1].order));
               samplewgt[j] = std::exp(-(x_ij*x_ij)/(2*edges[edg].probparam[k][0])); // Don't worry about normalizing
             }
@@ -444,7 +447,7 @@ void Network::Build() {
             for (idx_t j = 0; j < edges[edg].maskparam[k][0]; ++j) {
               // ((x_i - x_j)^2 / var(x_ij)) - ((x_i - x_j)^2 / var(x_ij)/2)
               // Not using variance-y for this for now (needs additional information)
-              real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxmodidx[i]-1].param[0]/vertices[vtxmodidx[i]-1].order)
+              real_t x_ij = ((((real_t) vtxordidx[i])*vertices[vtxnameidx[i]-1].param[0]/vertices[vtxnameidx[i]-1].order)
                   - (((real_t) j)*vertices[edges[edg].source-1].param[0]/vertices[edges[edg].source-1].order));
               real_t var = edges[edg].probparam[k][0];
               // Normalizing a bit more important here
@@ -561,7 +564,7 @@ void Network::ConnectVtx(mConn *msg) {
       if (vtxdist[msg->prtidx] <= adjcy[i][j] && adjcy[i][j] < vtxdist[msg->prtidx+1]) {
         // Reparameterize with information
         idx_t locsourceidx = adjcy[i][j] - vtxdist[msg->prtidx];
-        idx_t edg = connmodmap[msg->vtxmodidx[locsourceidx]*edges.size()+vtxmodidx[i]];
+        idx_t edg = connmodmap[msg->vtxnameidx[locsourceidx]*edges.size()+vtxnameidx[i]];
         //CkPrintf("%" PRIidx ", %" PRIidx ": %" PRIidx ", %" PRIidx"\n", i, adjcy[i][j], locsourceidx, edg);
         real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+locsourceidx*3, edges[edg].distparam.data());
         ReBuildEdgState(edgmodidx[i][j], distance, state[i][j+1]);
@@ -576,7 +579,7 @@ void Network::ConnectVtx(mConn *msg) {
     for (idx_t i = 0; i < norderprt; ++i) {
       for (idx_t j = 0; j < msg->nvtx; ++j) {
         // Skip unconnected populations
-        if (connmodmap.find(msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]) == connmodmap.end()) {
+        if (connmodmap.find(msg->vtxnameidx[j]*edges.size()+vtxnameidx[i]) == connmodmap.end()) {
           continue;
         }
         // Skip same index i == j
@@ -585,7 +588,7 @@ void Network::ConnectVtx(mConn *msg) {
         }
         // Evaluate connection between i and j
         else {
-          idx_t edg = connmodmap[msg->vtxmodidx[j]*edges.size()+vtxmodidx[i]];
+          idx_t edg = connmodmap[msg->vtxnameidx[j]*edges.size()+vtxnameidx[i]];
           // file-based edges already computed
           if (edges[edg].conntype[0] != CONNTYPE_FILE) {
             real_t distance = distfunc(edges[edg].distype, xyz.data()+i*3, msg->xyz+j*3, edges[edg].distparam.data());
@@ -779,7 +782,7 @@ void Network::RequestConnEdg(int reqidx) {
 mConn* Network::BuildConnVtx(int reqidx) {
   // Initialize connection message
   int msgSize[MSG_Conn];
-  msgSize[0] = norderprt;   // vtxmodidx
+  msgSize[0] = norderprt;   // vtxnameidx
   msgSize[1] = norderprt;   // vtxordidx
   msgSize[2] = norderprt*3; // xyz
   msgSize[3] = 0;           // vtxidx
@@ -792,7 +795,7 @@ mConn* Network::BuildConnVtx(int reqidx) {
 
   // Build message
   for (idx_t i = 0; i < norderprt; ++i) {
-    mconn->vtxmodidx[i] = vtxmodidx[i];
+    mconn->vtxnameidx[i] = vtxnameidx[i];
     mconn->vtxordidx[i] = vtxordidx[i];
     mconn->xyz[i*3+0] = xyz[i*3+0];
     mconn->xyz[i*3+1] = xyz[i*3+1];
@@ -831,7 +834,7 @@ mConn* Network::BuildConnEdg(int reqidx) {
 
   // Initialize connection message
   int msgSize[MSG_Conn];
-  msgSize[0] = 0;           // vtxmodidx
+  msgSize[0] = 0;           // vtxnameidx
   msgSize[1] = 0;           // vtxordidx
   msgSize[2] = 0;           // xyz
   msgSize[3] = norderprt;   // vtxidx

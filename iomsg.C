@@ -425,26 +425,27 @@ mGraph* Main::BuildGraph() {
 
   // Initialize graph message
   int msgSize[MSG_Graph];
-  msgSize[0] = vertices.size();   // vtxmodidx
-  msgSize[1] = vertices.size();   // vtxorder
-  msgSize[2] = vertices.size();   // vtxshape
-  msgSize[3] = vertices.size()+1; // xvtxparam
-  msgSize[4] = nvtxparam;         // vtxparam
-  msgSize[5] = vertices.size()*3; // vtxcoord
-  msgSize[6] = edges.size();      // edgsource
-  msgSize[7] = edges.size()+1;    // xedgtarget
-  msgSize[8] = nedgtarget;        // edgtarget
-  msgSize[9] = edges.size();      // edgmodidx
-  msgSize[10] = edges.size();     // edgcutoff
-  msgSize[11] = edges.size();     // edgdistype
-  msgSize[12] = edges.size();     // medgdistparam
-  msgSize[13] = nedgdistparam;    // edgdistparam
-  msgSize[14] = edges.size()+1;   // xedgconntype
-  msgSize[15] = nedgconntype;     // edgconntype
-  msgSize[16] = nedgconntype;     // medgprobparam
-  msgSize[17] = nedgprobparam;    // edgprobparam
-  msgSize[18] = nedgconntype;     // medgmaskparam
-  msgSize[19] = nedgmaskparam;    // edgmaskparam
+  msgSize[0] = vertices.size();   // vtxnameidx
+  msgSize[1] = vertices.size();   // vtxmodidx
+  msgSize[2] = vertices.size();   // vtxorder
+  msgSize[3] = vertices.size();   // vtxshape
+  msgSize[4] = vertices.size()+1; // xvtxparam
+  msgSize[5] = nvtxparam;         // vtxparam
+  msgSize[6] = vertices.size()*3; // vtxcoord
+  msgSize[7] = edges.size();      // edgsource
+  msgSize[8] = edges.size()+1;    // xedgtarget
+  msgSize[9] = nedgtarget;        // edgtarget
+  msgSize[10] = edges.size();      // edgmodidx
+  msgSize[11] = edges.size();     // edgcutoff
+  msgSize[12] = edges.size();     // edgdistype
+  msgSize[13] = edges.size();     // medgdistparam
+  msgSize[14] = nedgdistparam;    // edgdistparam
+  msgSize[15] = edges.size()+1;   // xedgconntype
+  msgSize[16] = nedgconntype;     // edgconntype
+  msgSize[17] = nedgconntype;     // medgprobparam
+  msgSize[18] = nedgprobparam;    // edgprobparam
+  msgSize[19] = nedgconntype;     // medgmaskparam
+  msgSize[20] = nedgmaskparam;    // edgmaskparam
   mGraph *mgraph = new(msgSize, 0) mGraph;
   // Sizes
   mgraph->nvtx = vertices.size();
@@ -464,6 +465,7 @@ mGraph* Main::BuildGraph() {
 
   // Streams and Vertices
   for (std::size_t i = 0; i < vertices.size(); ++i) {
+    mgraph->vtxnameidx[i] = vertices[i].nameidx;
     mgraph->vtxmodidx[i] = vertices[i].modidx;
     mgraph->vtxorder[i] = vertices[i].order;
     mgraph->vtxshape[i] = vertices[i].shape;

@@ -279,9 +279,10 @@ class mModel : public CMessage_mModel {
 
 // Network graph information
 //
-#define MSG_Graph 20
+#define MSG_Graph 21
 class mGraph : public CMessage_mGraph {
   public:
+    idx_t *vtxnameidx;    // Vertex group name (nameidx from vtxmap)
     idx_t *vtxmodidx;     // Which vertex to build (modidx from modmap)
     idx_t *vtxorder;      // How many of each vertex to build
     idx_t *vtxshape;      // What shape to build vertices
@@ -331,7 +332,7 @@ class mGroup : public CMessage_mGroup {
 #define MSG_Conn 6
 class mConn : public CMessage_mConn {
   public:
-    idx_t *vtxmodidx;   // vertex model
+    idx_t *vtxnameidx;  // vertex model name
     idx_t *vtxordidx;   // vertex model order
     real_t *xyz;        // vertex coordinates
     idx_t *vtxidx;      // vertex global idx
@@ -972,6 +973,7 @@ class Network : public CBase_Network {
     idx_t norderprt; // order per network partition
     std::vector<std::vector<idx_t>> xpopvtxidxprt;  // prefix of populations over partitions
     std::vector<std::vector<idx_t>> xglbvtxidxprt;  // prefix of vertex over partitions (population global)
+    std::vector<idx_t> vtxnameidx; // vertex model name index
     std::vector<idx_t> vtxordidx; // vertex index within model order
     std::vector<idx_t> nordervtx; // number of vertices built on this partition
     std::vector<idx_t> xordervtx; // offset of vertices built on this partition

@@ -70,6 +70,7 @@ module network {
   };
   
   message mGraph {
+    idx_t vtxnameidx[];
     idx_t vtxmodidx[];
     idx_t vtxorder[];
     idx_t vtxshape[];
@@ -109,7 +110,7 @@ module network {
   };
 
   message mConn {
-    idx_t vtxmodidx[];
+    idx_t vtxnameidx[];
     idx_t vtxordidx[];
     real_t xyz[];
     idx_t vtxidx[];
