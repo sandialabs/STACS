@@ -1,0 +1,66 @@
+/**
+ * Copyright (C) 2015 Felix Wang
+ *
+ * Simulation Tool for Asynchrnous Cortical Streams (stacs)
+ */
+
+#include "network.h"
+
+/**************************************************************************
+* Class declaration
+**************************************************************************/
+class IzhiThalamusMulti : public ModelTmpl < 810, IzhiThalamusMulti > {
+  public:
+    /* Constructor */
+    IzhiThalamusMulti() {
+      // parameters
+      paramlist.resize(3);
+      paramlist[0] = "rng";
+      paramlist[1] = "ampl";
+      paramlist[2] = "ntarg"; // Number of stimulation targets on each millisecond
+      // states
+      statelist.resize(0);
+      // sticks
+      sticklist.resize(0);
+      // auxiliary states
+      auxstate.resize(0);
+      // auxiliary sticks
+      auxstick.resize(0);
+      // ports
+      portlist.resize(0);
+    }
+    
+    /* Simulation */
+    tick_t Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events);
+    void Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) { }
+};
+
+
+/**************************************************************************
+* Class methods
+**************************************************************************/
+
+// Simulation step
+//
+tick_t IzhiThalamusMulti::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
+  // Random thalamic input (to transient current)
+  int ntarg = param[2]>0 ? param[2] : 1;
+  int tgt_idx;
+
+  if (param[0] > 0) {
+    // generate events
+    for (tgt_idx = 0; tgt_idx < ntarg; ++tgt_idx) {
+        event_t event;
+        event.diffuse = tdrift;
+        event.type = EVENT_STIM;
+        event.source = REMOTE_EDGE;
+        event.index = std::floor(param[0]*(*unifdist)(*rngine));
+        event.data = param[1];
+        events.push_back(event);
+        event.diffuse = tdrift + TICKS_PER_MS;
+        event.data = -param[1];
+        events.push_back(event);
+    }
+  }
+  return tdiff;
+}
