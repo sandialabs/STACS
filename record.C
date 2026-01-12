@@ -9,6 +9,7 @@
 /**************************************************************************
 * Charm++ Read-Only Variables
 **************************************************************************/
+extern /*readonly*/ tick_t tmax;
 
 
 /**************************************************************************
@@ -20,7 +21,7 @@
 void Network::AddRecord() {
   // Periodic Records
   for (std::size_t r = 0; r < recordlist.size(); ++r) {
-    if (recordlist[r].trec <= tsim) {
+    if (recordlist[r].trec <= tsim || tsim >= tmax) {
       // Set next recording
       recordlist[r].trec = tsim + recordlist[r].tfreq;
       // record time
