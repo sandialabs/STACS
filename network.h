@@ -60,7 +60,12 @@ struct vtxreord_t {
   idx_t vtxidx;
   idx_t vtxidxloc; // local index of vertex
   bool operator < (const vtxreord_t& vtx) const {
-    return (nameidx < vtx.nameidx);
+    if (nameidx != vtx.nameidx) {
+      return (nameidx < vtx.nameidx);
+    }
+    else {
+      return (ordidx < vtx.ordidx);
+    }
   }
 };
 
