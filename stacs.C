@@ -193,7 +193,8 @@ void Main::Init() {
         // Optional loading of information based on runmode
         // Partitioning information
         if (runmode == std::string(RUNMODE_MIGRATE) ||
-            runmode == std::string(RUNMODE_REPART)) {
+            runmode == std::string(RUNMODE_REPART)  ||
+            runmode == std::string(RUNMODE_REORDER)) {
           moveflag = true;
           ++ninit;
           netdata.LoadRepart();
@@ -221,7 +222,8 @@ void Main::Init() {
         // Optional loading of information based on runmode
         // Partitioning information
         if (runmode == std::string(RUNMODE_MIGRATE) ||
-            runmode == std::string(RUNMODE_REPART)) {
+            runmode == std::string(RUNMODE_REPART) ||
+            runmode == std::string(RUNMODE_REORDER)) {
           ++ninit;
           network.LoadRepart();
         }
@@ -277,7 +279,8 @@ void Main::Init() {
       // Determine if exiting afterwards or not
       if (runmode == std::string(RUNMODE_BUILD)   ||
           runmode == std::string(RUNMODE_MIGRATE) ||
-          runmode == std::string(RUNMODE_REPART)) {
+          runmode == std::string(RUNMODE_REPART)  ||
+          runmode == std::string(RUNMODE_REORDER)) {
         // Halting coordination
         chalt = 0;
         nhalt = 0;

@@ -27,6 +27,7 @@
 #define RUNMODE_BUILD     "build"
 #define RUNMODE_MIGRATE   "migrate"
 #define RUNMODE_REPART    "repart"
+#define RUNMODE_REORDER   "reorder"
 #define RUNMODE_FINDGROUP "findgroup"
 #define RUNMODE_ESTIMATE  "estimate"
 #define RUNMODE_EMPTY     ""

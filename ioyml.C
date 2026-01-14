@@ -78,6 +78,7 @@ int Main::ReadConfig(std::string configfile) {
       runmode != std::string(RUNMODE_BUILD) &&
       runmode != std::string(RUNMODE_MIGRATE) &&
       runmode != std::string(RUNMODE_REPART) &&
+      runmode != std::string(RUNMODE_REORDER) &&
       runmode != std::string(RUNMODE_FINDGROUP) && 
       runmode != std::string(RUNMODE_ESTIMATE)) {
     runmode = std::string(RUNMODE_DEFAULT);
