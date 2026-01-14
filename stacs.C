@@ -71,6 +71,20 @@ Main::Main(CkArgMsg *msg) {
     CkExit();
   }
 
+  // Charm information
+  mainProxy = thisProxy;
+  mCastGrpId = CProxy_CkMulticastMgr::ckNew();
+  real_t netpe = (real_t)netparts/CkNumPes();
+  if (netpe < 1) { netpe = 1; }
+
+  // Display configuration information
+  CkPrintf("  STACS Run Mode      (runmode): %s\n"
+           "  Network Data Files (netfiles): %d\n"
+           "  Network Partitions (netparts): %d\n"
+           "  Charm++ Processing Elements  : %d\n"
+           "  Network Partitions per PE    : %.2g\n",
+           runmode.c_str(), netfiles, netparts, CkNumPes(), netpe);
+
   // Read model information
   if (ReadModel()) {
     CkPrintf("Error reading model information...\n");
@@ -95,20 +109,6 @@ Main::Main(CkArgMsg *msg) {
     grpvtxmin = (idx_t)(std::floor(grpvtxminreal * netdist[netparts].nvtx));
     grpvtxmax = (idx_t)(std::floor(grpvtxmaxreal * netdist[netparts].nvtx));
   }
-
-  // Charm information
-  mainProxy = thisProxy;
-  mCastGrpId = CProxy_CkMulticastMgr::ckNew();
-  real_t netpe = (real_t)netparts/CkNumPes();
-  if (netpe < 1) { netpe = 1; }
-  
-  // Display configuration information
-  CkPrintf("  STACS Run Mode      (runmode): %s\n"
-           "  Network Data Files (netfiles): %d\n"
-           "  Network Partitions (netparts): %d\n"
-           "  Charm++ Processing Elements  : %d\n"
-           "  Network Partitions per PE    : %.2g\n",
-           runmode.c_str(), netfiles, netparts, CkNumPes(), netpe);
   
   // Netdata and network chare arrays
   ninit = 0;

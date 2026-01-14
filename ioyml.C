@@ -1884,6 +1884,21 @@ int Main::ReadGraph() {
       }
     }
   }
+
+  // Print out some information
+  for (std::size_t i = 0; i < vertices.size(); ++i) {
+    CkPrintf("  Vertex: %d   Model: %" PRIidx "   Name: %s   Order: %" PRIidx"\n", i, vertices[i].modidx, vertices[i].vtxname.c_str(), vertices[i].order);
+  }
+  for (std::size_t i = 0; i < edges.size(); ++i) {
+    std::string edgetargets;
+    // collect edgetargets
+    for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
+      std::ostringstream edgetarget;
+      edgetarget << " " << vertices[edges[i].target[j]].vtxname;
+      edgetargets.append(edgetarget.str());
+    }
+    CkPrintf("  Edges:  %d   Model: %" PRIidx "   Source: %s   Targets:%s\n", i, edges[i].modidx, vertices[edges[i].source].vtxname.c_str(), edgetargets.c_str());
+  }
   
   // Return success
   return 0;

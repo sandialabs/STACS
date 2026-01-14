@@ -104,23 +104,6 @@ void Network::OrderGraph(mGraph *msg) {
   // cleanup
   delete msg;
 
-  // Print out some information
-  if (prtidx == 0) {
-    for (std::size_t i = 0; i < vertices.size(); ++i) {
-      CkPrintf("  Vertex: %d   Model: %" PRIidx "   Order: %" PRIidx"\n", i, vertices[i].modidx, vertices[i].order);
-    }
-    for (std::size_t i = 0; i < edges.size(); ++i) {
-      std::string edgetargets;
-      // collect edgetargets
-      for (std::size_t j = 0; j < edges[i].target.size(); ++j) {
-        std::ostringstream edgetarget;
-        edgetarget << " " << edges[i].target[j];
-        edgetargets.append(edgetarget.str());
-      }
-      CkPrintf("  Edges:  %d   Model: %" PRIidx "   Source: %" PRIidx"   Targets:%s\n", i, edges[i].modidx, edges[i].source, edgetargets.c_str());
-    }
-  }
-
   // Create mapping from pairs of vertices (source, target) to edge index
   connmodmap.clear();
   // Create mapping from vertices to sample-based edge sources
