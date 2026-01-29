@@ -148,7 +148,7 @@ YaudWinMFCCEpisPort::YaudWinMFCCEpisPort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YaudWinMFCCEpis : public ModelTmpl < 102, YaudWinMFCCEpis > {
+class YaudWinMFCCEpis : public ModelTmpl < ModelHash("yaud_winmfcc_epis"), YaudWinMFCCEpis > {
   public:
     /* Constructor */
     YaudWinMFCCEpis() {

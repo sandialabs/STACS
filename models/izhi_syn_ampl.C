@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiSynAmpl : public ModelTmpl < 11, IzhiSynAmpl > {
+class IzhiSynAmpl : public ModelTmpl < ModelHash("izhi_syn_ampl"), IzhiSynAmpl > {
   public:
     /* Constructor */
     IzhiSynAmpl() {

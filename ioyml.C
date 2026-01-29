@@ -10,6 +10,7 @@
 
 #include <random>
 #include "stacs.h"
+#include "network.h"
 #include "build.h"
 #include "event.h"
 #include "record.h"
@@ -406,6 +407,7 @@ int Main::ReadModel() {
   // Setup model data
   //models.resize(modfile.size());
   modelconf.resize(nmodels);
+  std::vector<std::string> modtype_str(nmodels);
   // Model map
   //std::unordered_map<std::string, std::size_t> modmap;
   modmap.clear();
@@ -455,7 +457,8 @@ int Main::ReadModel() {
     }
     try {
       // modtype
-      modelconf[jmod].modtype = modfile[i]["modtype"].as<idx_t>();
+      modtype_str[jmod] = modfile[i]["modtype"].as<std::string>();
+      modelconf[jmod].modtype = ModelHash(modtype_str[jmod].c_str());
     } catch (YAML::RepresentationException& e) {
       CkPrintf("  modtype: %s\n", e.what());
       return 1;
@@ -1161,8 +1164,8 @@ int Main::ReadModel() {
         part << " " << modname;
         modelparts.append(part.str());
       }
-      CkPrintf("  Model: %zu   Name: %s   Type: %" PRIidx "   States: %" PRIidx "   Parts:%s\n",
-          i+1, modelconf[i].modname.c_str(), modelconf[i].modtype, modelconf[i].nstate + modelconf[i].nstick,
+      CkPrintf("  Model: %zu   Name: %s   Type: %s   States: %" PRIidx "   Parts:%s\n",
+          i+1, modelconf[i].modname.c_str(), modtype_str[i].c_str(), modelconf[i].nstate + modelconf[i].nstick,
           modelparts.c_str());
     }
     else {
@@ -1175,8 +1178,8 @@ int Main::ReadModel() {
         modelports.append(port.str());
       }
       // TODO: modtype to name for base model (may move into netdata for this?)
-      CkPrintf("  Model: %zu   Name: %s   Type: %" PRIidx "   States: %" PRIidx "   Params: %zu   Ports:%s\n",
-          i+1, modelconf[i].modname.c_str(), modelconf[i].modtype, modelconf[i].nstate + modelconf[i].nstick,
+      CkPrintf("  Model: %zu   Name: %s   Type: %s   States: %" PRIidx "   Params: %zu   Ports:%s\n",
+          i+1, modelconf[i].modname.c_str(), modtype_str[i].c_str(), modelconf[i].nstate + modelconf[i].nstick,
           modelconf[i].param.size(), (modelports == "") ? " None" : modelports.c_str());
     }
   }

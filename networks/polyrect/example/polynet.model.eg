@@ -1,7 +1,7 @@
 ---
 type: stream
 modname: spike_input
-modtype: 5
+modtype: spike_input
 param:
   - name: n
     value: 100
@@ -13,7 +13,7 @@ port:
 ---
 type: vertex
 modname: izhi_input
-modtype: 14
+modtype: izhi_neuron_clamp
 param:
   - name: a
     value: 0.02
@@ -50,7 +50,7 @@ state:
 ---
 type: vertex
 modname: izhiex
-modtype: 14
+modtype: izhi_neuron_clamp
 param:
   - name: a
     value: 0.02
@@ -87,7 +87,7 @@ state:
 ---
 type: vertex
 modname: izhiin
-modtype: 14
+modtype: izhi_neuron_clamp
 param:
   - name: a
     value: 0.1
@@ -124,7 +124,7 @@ state:
 ---
 type: edge
 modname: exstdp
-modtype: 12
+modtype: izhi_syn_stdp
 param:
   - name: wmax
     value: 10
@@ -164,7 +164,7 @@ state:
 ---
 type: edge
 modname: instdp
-modtype: 13
+modtype: izhi_syn_nostdp
 param:
 state:
   - name: delay
@@ -179,7 +179,7 @@ state:
 ---
 type: edge
 modname: synclamp
-modtype: 15
+modtype: spike_clamp
 state:
   - name: delay
     init: constant

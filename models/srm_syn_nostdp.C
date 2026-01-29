@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SRMSynNoSTDP : public ModelTmpl < 23, SRMSynNoSTDP > {
+class SRMSynNoSTDP : public ModelTmpl < ModelHash("srm_syn_nostdp"), SRMSynNoSTDP > {
   public:
     /* Constructor */
     SRMSynNoSTDP() {

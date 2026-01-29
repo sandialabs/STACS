@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class LIFSynNoSTDP : public ModelTmpl < 31, LIFSynNoSTDP > {
+class LIFSynNoSTDP : public ModelTmpl < ModelHash("lif_syn_nostdp"), LIFSynNoSTDP > {
   public:
     /* Constructor */
     LIFSynNoSTDP() {

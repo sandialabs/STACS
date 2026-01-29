@@ -45,7 +45,7 @@ YimgUspsEpisPort::YimgUspsEpisPort(int np) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YimgUspsEpis : public ModelTmpl < 202, YimgUspsEpis > {
+class YimgUspsEpis : public ModelTmpl < ModelHash("yimg_usps_epis"), YimgUspsEpis > {
   public:
     /* Constructor */
     YimgUspsEpis() {

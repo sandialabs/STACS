@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DGIzhiSynGaba : public ModelTmpl < 64, DGIzhiSynGaba > {
+class DGIzhiSynGaba : public ModelTmpl < ModelHash("dg_syn_gaba"), DGIzhiSynGaba > {
   public:
     /* Constructor */
     DGIzhiSynGaba() {

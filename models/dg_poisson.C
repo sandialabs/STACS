@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DGIzhiPoisson : public ModelTmpl < 61, DGIzhiPoisson > {
+class DGIzhiPoisson : public ModelTmpl < ModelHash("dg_poisson"), DGIzhiPoisson > {
   public:
     /* Constructor */
     DGIzhiPoisson() {

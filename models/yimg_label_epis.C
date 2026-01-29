@@ -42,7 +42,7 @@ YimgLabelEpisPort::YimgLabelEpisPort(int np) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YimgLabelEpis : public ModelTmpl < 107, YimgLabelEpis > {
+class YimgLabelEpis : public ModelTmpl < ModelHash("yimg_label_epis"), YimgLabelEpis > {
   public:
     /* Constructor */
     YimgLabelEpis() {

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class LIFSynPass : public ModelTmpl < 33, LIFSynPass > {
+class LIFSynPass : public ModelTmpl < ModelHash("lif_syn_pass"), LIFSynPass > {
   public:
     /* Constructor */
     LIFSynPass() {

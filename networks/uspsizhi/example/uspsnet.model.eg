@@ -1,7 +1,7 @@
 ---
 type: stream
 modname: yarpusps
-modtype: 202
+modtype: yimg_usps_epis
 param:
   - name: npxl
     value: 256
@@ -15,7 +15,7 @@ port:
 ---
 type: vertex
 modname: izhiex
-modtype: 10
+modtype: izhi_neuron
 param:
   - name: a
     value: 0.02
@@ -43,7 +43,7 @@ state:
 ---
 type: vertex
 modname: izhiin
-modtype: 10
+modtype: izhi_neuron
 param:
   - name: a
     value: 0.1
@@ -71,7 +71,7 @@ state:
 ---
 type: vertex
 modname: izhiimg
-modtype: 10
+modtype: izhi_neuron
 param:
   - name: a
     value: 0.02
@@ -99,7 +99,7 @@ state:
 ---
 type: vertex
 modname: izhithal
-modtype: 100
+modtype: izhi_thalamus
 param:
   - name: rng
     value: 1000
@@ -110,7 +110,7 @@ param:
 ---
 type: edge
 modname: exstdp
-modtype: 12
+modtype: izhi_syn_stdp
 param:
   - name: wmax
     value: 10
@@ -150,7 +150,7 @@ state:
 ---
 type: edge
 modname: instdp
-modtype: 13
+modtype: izhi_syn_nostdp
 param:
 state:
   - name: delay
@@ -165,7 +165,7 @@ state:
 ---
 type: edge
 modname: exnostdp
-modtype: 13
+modtype: izhi_syn_nostdp
 param:
 state:
   - name: delay
@@ -182,7 +182,7 @@ state:
 ---
 type: edge
 modname: imgampl
-modtype: 11
+modtype: izhi_syn_ampl
 param:
 state:
   - name: delay
@@ -194,7 +194,7 @@ state:
 ---
 type: edge
 modname: thampl
-modtype: 11
+modtype: izhi_syn_ampl
 param:
 state:
   - name: delay

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiSynNoSTDP : public ModelTmpl < 13, IzhiSynNoSTDP > {
+class IzhiSynNoSTDP : public ModelTmpl < ModelHash("izhi_syn_nostdp"), IzhiSynNoSTDP > {
   public:
     /* Constructor */
     IzhiSynNoSTDP() {

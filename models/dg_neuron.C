@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DGIzhiNeuron : public ModelTmpl < 60, DGIzhiNeuron > {
+class DGIzhiNeuron : public ModelTmpl < ModelHash("dg_neuron"), DGIzhiNeuron > {
   public:
     /* Constructor */
     DGIzhiNeuron() {

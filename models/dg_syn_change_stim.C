@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DGSynChangeStim : public ModelTmpl < 68, DGSynChangeStim > {
+class DGSynChangeStim : public ModelTmpl < ModelHash("dg_syn_change_stim"), DGSynChangeStim > {
   public:
     /* Constructor */
     DGSynChangeStim() {

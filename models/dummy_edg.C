@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DummyEdg : public ModelTmpl < 2, DummyEdg > {
+class DummyEdg : public ModelTmpl < ModelHash("dummy_edg"), DummyEdg > {
   public:
     /* Constructor */
     DummyEdg() {

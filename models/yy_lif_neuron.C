@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YYLIFNeuron : public ModelTmpl < 39, YYLIFNeuron > {
+class YYLIFNeuron : public ModelTmpl < ModelHash("yy_lif_neuron"), YYLIFNeuron > {
   public:
     /* Constructor */
     YYLIFNeuron() {

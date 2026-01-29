@@ -1,7 +1,7 @@
 ---
 type: vertex
 modname: coba_ex
-modtype: 70
+modtype: coba_neuron
 param:
   - name: v_reset
     value: -70.0 #mV
@@ -79,7 +79,7 @@ state:
 ---
 type: vertex
 modname: coba_in
-modtype: 70
+modtype: coba_neuron
 param:
   - name: v_reset
     value: -70.0 #mV
@@ -157,7 +157,7 @@ state:
 ---
 type: edge
 modname: syn_ex_ex
-modtype: 74
+modtype: coba_syn_ampa_nmda
 param:
   - name: R_ss
     value: 0.9
@@ -197,7 +197,7 @@ state:
 ---
 type: edge
 modname: syn_ex_in
-modtype: 74
+modtype: coba_syn_ampa_nmda
 param:
   - name: R_ss
     value: 0.9
@@ -232,7 +232,7 @@ state:
 ---
 type: edge
 modname: syn_in_ex
-modtype: 73
+modtype: coba_syn_gaba
 param:
   - name: R_ss
     value: 0.5
@@ -265,7 +265,7 @@ state:
 ---
 type: edge
 modname: syn_in_in
-modtype: 73
+modtype: coba_syn_gaba
 param:
   - name: R_ss
     value: 0.5

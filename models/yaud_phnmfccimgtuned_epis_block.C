@@ -158,7 +158,7 @@ YaudPhnMFCCImgTunedEpisBlockPort::YaudPhnMFCCImgTunedEpisBlockPort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YaudPhnMFCCImgTunedEpisBlock : public ModelTmpl < 111, YaudPhnMFCCImgTunedEpisBlock > {
+class YaudPhnMFCCImgTunedEpisBlock : public ModelTmpl < ModelHash("yaud_phnmfccimgtuned_epis_block"), YaudPhnMFCCImgTunedEpisBlock > {
   public:
     /* Constructor */
     YaudPhnMFCCImgTunedEpisBlock() {

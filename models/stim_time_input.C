@@ -5,7 +5,7 @@
 
 extern /*readonly*/ std::string netwkdir;
 
-class StimTimeInput : public ModelTmpl < 84, StimTimeInput > {
+class StimTimeInput : public ModelTmpl < ModelHash("stim_time_input"), StimTimeInput > {
     public:
         StimTimeInput() {
             // This model does not require keeping track of state

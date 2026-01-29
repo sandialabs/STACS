@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SRMSynStim : public ModelTmpl < 24, SRMSynStim > {
+class SRMSynStim : public ModelTmpl < ModelHash("srm_syn_stim"), SRMSynStim > {
   public:
     /* Constructor */
     SRMSynStim() {

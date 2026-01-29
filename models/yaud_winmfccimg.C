@@ -149,7 +149,7 @@ YaudWinMFCCImgPort::YaudWinMFCCImgPort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YaudWinMFCCImg : public ModelTmpl < 103, YaudWinMFCCImg > {
+class YaudWinMFCCImg : public ModelTmpl < ModelHash("yaud_winmfccimg"), YaudWinMFCCImg > {
   public:
     /* Constructor */
     YaudWinMFCCImg() {

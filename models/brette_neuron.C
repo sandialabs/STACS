@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class BretteNeuron : public ModelTmpl < 55, BretteNeuron > {
+class BretteNeuron : public ModelTmpl < ModelHash("brette_neuron"), BretteNeuron > {
   public:
     /* Constructor */
     BretteNeuron() {

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class FuguNeuron : public ModelTmpl < 80, FuguNeuron > {
+class FuguNeuron : public ModelTmpl < ModelHash("fugu_neuron"), FuguNeuron > {
   public:
     /* Constructor */
     FuguNeuron() {

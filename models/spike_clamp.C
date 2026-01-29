@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SpikeClamp : public ModelTmpl < 6, SpikeClamp > {
+class SpikeClamp : public ModelTmpl < ModelHash("spike_clamp"), SpikeClamp > {
   public:
     /* Constructor */
     SpikeClamp() {

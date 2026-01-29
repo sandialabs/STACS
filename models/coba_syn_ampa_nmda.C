@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class LIFSynCobaAmpaNmda : public ModelTmpl < 74, LIFSynCobaAmpaNmda > {
+class LIFSynCobaAmpaNmda : public ModelTmpl < ModelHash("coba_syn_ampa_nmda"), LIFSynCobaAmpaNmda > {
   public:
     /* Constructor */
     LIFSynCobaAmpaNmda() {

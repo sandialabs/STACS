@@ -72,7 +72,7 @@ struct dist_t {
 //
 struct model_t {
   std::string modname;
-  idx_t modtype;
+  uidx_t modtype;
   idx_t graphtype;
   idx_t nstate;
   idx_t nstick;

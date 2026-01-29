@@ -148,7 +148,7 @@ YaudWinMFCCImgEpisPort::YaudWinMFCCImgEpisPort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YaudWinMFCCImgEpis : public ModelTmpl < 104, YaudWinMFCCImgEpis > {
+class YaudWinMFCCImgEpis : public ModelTmpl < ModelHash("yaud_winmfccimg_epis"), YaudWinMFCCImgEpis > {
   public:
     /* Constructor */
     YaudWinMFCCImgEpis() {

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SimpleSynapse : public ModelTmpl < 9, SimpleSynapse > {
+class SimpleSynapse : public ModelTmpl < ModelHash("simple_synapse"), SimpleSynapse > {
   public:
     /* Constructor */
     SimpleSynapse() {

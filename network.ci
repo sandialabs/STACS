@@ -14,7 +14,7 @@ module network {
   };
   
   message mModname {
-    idx_t modtype[];
+    uidx_t modtype[];
     idx_t xmodname[];
     char modname[];
     idx_t xdatafiles[];
@@ -25,7 +25,7 @@ module network {
   };
 
   message mModel {
-    idx_t modtype[];
+    uidx_t modtype[];
     idx_t graphtype[];
     idx_t xmodname[];
     char modname[];

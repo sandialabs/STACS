@@ -1,7 +1,7 @@
 ---
 type: stream
 modname: yarpusps
-modtype: 202
+modtype: yimg_usps_epis
 param:
   - name: npxl
     value: 256
@@ -15,7 +15,7 @@ port:
 ---
 type: vertex
 modname: srmex
-modtype: 20
+modtype: srm_neuron
 param:
   - name: vrest
     value: -65.0
@@ -41,7 +41,7 @@ state:
 ---
 type: vertex
 modname: srmin
-modtype: 20
+modtype: srm_neuron
 param:
   - name: vrest
     value: -65.0
@@ -67,7 +67,7 @@ state:
 ---
 type: vertex
 modname: inpxl
-modtype: 20
+modtype: srm_neuron
 param:
   - name: vrest
     value: -65.0
@@ -93,7 +93,7 @@ state:
 ---
 type: edge
 modname: exstdp
-modtype: 21
+modtype: srm_syn_exstdp
 param:
   - name: wmax
     value: 1.2
@@ -126,7 +126,7 @@ state:
 ---
 type: edge
 modname: instdp
-modtype: 22
+modtype: srm_syn_instdp
 param:
   - name: wmax
     value: -0.9
@@ -157,7 +157,7 @@ state:
 ---
 type: edge
 modname: exnostdp
-modtype: 23
+modtype: srm_syn_nostdp
 param:
   - name: weight
     value: 3.0
@@ -171,7 +171,7 @@ state:
 ---
 type: edge
 modname: stimpxl
-modtype: 24
+modtype: srm_syn_stim
 param:
 state:
   - name: delay

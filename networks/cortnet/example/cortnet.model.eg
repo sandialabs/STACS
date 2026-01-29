@@ -1,7 +1,7 @@
 ---
 type: vertex
 modname: lif23e
-modtype: 50
+modtype: cort_neuron
 param:
   - name: v_thresh
     value: 15.0
@@ -37,7 +37,7 @@ state:
 ---
 type: vertex
 modname: lif23i
-modtype: 50
+modtype: cort_neuron
 param:
   - name: v_thresh
     value: 15.0
@@ -73,7 +73,7 @@ state:
 ---
 type: vertex
 modname: lif4e
-modtype: 50
+modtype: cort_neuron
 param:
   - name: v_thresh
     value: 15.0
@@ -109,7 +109,7 @@ state:
 ---
 type: vertex
 modname: lif4i
-modtype: 50
+modtype: cort_neuron
 param:
   - name: v_thresh
     value: 15.0
@@ -145,7 +145,7 @@ state:
 ---
 type: vertex
 modname: lif5e
-modtype: 50
+modtype: cort_neuron
 param:
   - name: v_thresh
     value: 15.0
@@ -181,7 +181,7 @@ state:
 ---
 type: vertex
 modname: lif5i
-modtype: 50
+modtype: cort_neuron
 param:
   - name: v_thresh
     value: 15.0
@@ -217,7 +217,7 @@ state:
 ---
 type: vertex
 modname: lif6e
-modtype: 50
+modtype: cort_neuron
 param:
   - name: v_thresh
     value: 15.0
@@ -253,7 +253,7 @@ state:
 ---
 type: vertex
 modname: lif6i
-modtype: 50
+modtype: cort_neuron
 param:
   - name: v_thresh
     value: 15.0
@@ -289,7 +289,7 @@ state:
 ---
 type: edge
 modname: syne
-modtype: 51
+modtype: cort_synapse
 param:
 state:
   - name: delay
@@ -308,7 +308,7 @@ state:
 ---
 type: edge
 modname: syne_high
-modtype: 51
+modtype: cort_synapse
 param:
 state:
   - name: delay
@@ -327,7 +327,7 @@ state:
 ---
 type: edge
 modname: syni
-modtype: 51
+modtype: cort_synapse
 param:
 state:
   - name: delay

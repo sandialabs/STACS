@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SimpleInput : public ModelTmpl < 7, SimpleInput > {
+class SimpleInput : public ModelTmpl < ModelHash("simple_input"), SimpleInput > {
   public:
     /* Constructor */
     SimpleInput() {

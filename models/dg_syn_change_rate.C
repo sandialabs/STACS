@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DGSynChangeRate : public ModelTmpl < 67, DGSynChangeRate > {
+class DGSynChangeRate : public ModelTmpl < ModelHash("dg_syn_change_rate"), DGSynChangeRate > {
   public:
     /* Constructor */
     DGSynChangeRate() {

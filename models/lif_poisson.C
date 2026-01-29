@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class LIFPoisson : public ModelTmpl < 34, LIFPoisson > {
+class LIFPoisson : public ModelTmpl < ModelHash("lif_poisson"), LIFPoisson > {
   public:
     /* Constructor */
     LIFPoisson() {

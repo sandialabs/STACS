@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SRMSynInSTDP : public ModelTmpl < 22, SRMSynInSTDP > {
+class SRMSynInSTDP : public ModelTmpl < ModelHash("srm_syn_instdp"), SRMSynInSTDP > {
   public:
     /* Constructor */
     SRMSynInSTDP() {

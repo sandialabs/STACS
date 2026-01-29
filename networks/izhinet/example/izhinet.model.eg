@@ -1,7 +1,7 @@
 ---
 type: vertex
 modname: thal
-modtype: 100
+modtype: izhi_thalamus
 param:
   - name: rng
     value: 1000
@@ -12,7 +12,7 @@ param:
 ---
 type: vertex
 modname: stim
-modtype: 106
+modtype: izhi_stim_izhi_epis
 param:
   - name: points
     value: 10
@@ -23,7 +23,7 @@ param:
 ---
 type: vertex
 modname: izhiex
-modtype: 10
+modtype: izhi_neuron
 param:
   - name: a
     value: 0.02
@@ -51,7 +51,7 @@ state:
 ---
 type: vertex
 modname: izhiin
-modtype: 10
+modtype: izhi_neuron
 param:
   - name: a
     value: 0.1
@@ -79,7 +79,7 @@ state:
 ---
 type: vertex
 modname: input
-modtype: 10
+modtype: izhi_neuron
 param:
   - name: a
     value: 0.02
@@ -107,7 +107,7 @@ state:
 ---
 type: edge
 modname: exstdp
-modtype: 12
+modtype: izhi_syn_stdp
 param:
   - name: wmax
     value: 10
@@ -147,7 +147,7 @@ state:
 ---
 type: edge
 modname: instdp
-modtype: 13
+modtype: izhi_syn_nostdp
 param:
 state:
   - name: delay
@@ -162,7 +162,7 @@ state:
 ---
 type: edge
 modname: exinput
-modtype: 13
+modtype: izhi_syn_nostdp
 state:
   - name: delay
     init: constant
@@ -176,7 +176,7 @@ state:
 ---
 type: edge
 modname: exthal
-modtype: 11
+modtype: izhi_syn_ampl
 param:
 state:
   - name: delay
@@ -188,7 +188,7 @@ state:
 ---
 type: edge
 modname: exstim
-modtype: 11
+modtype: izhi_syn_ampl
 param:
 state:
   - name: delay

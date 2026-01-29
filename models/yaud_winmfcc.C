@@ -149,7 +149,7 @@ YaudWinMFCCPort::YaudWinMFCCPort(int nm) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YaudWinMFCC : public ModelTmpl < 101, YaudWinMFCC > {
+class YaudWinMFCC : public ModelTmpl < ModelHash("yaud_winmfcc"), YaudWinMFCC > {
   public:
     /* Constructor */
     YaudWinMFCC() {

@@ -51,7 +51,7 @@ YimgLabelEpisBlockPort::YimgLabelEpisBlockPort(int np) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YimgLabelEpisBlock : public ModelTmpl < 109, YimgLabelEpisBlock > {
+class YimgLabelEpisBlock : public ModelTmpl < ModelHash("yimg_label_epis_block"), YimgLabelEpisBlock > {
   public:
     /* Constructor */
     YimgLabelEpisBlock() {

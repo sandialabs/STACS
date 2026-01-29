@@ -1,7 +1,7 @@
 ---
 type: vertex
 modname: lec
-modtype: 61
+modtype: dg_poisson
 param:
   - name: vt
     value: -35.0
@@ -43,7 +43,7 @@ state:
 ---
 type: vertex
 modname: mec
-modtype: 61
+modtype: dg_poisson
 param:
   - name: vt
     value: -35.0
@@ -85,7 +85,7 @@ state:
 ---
 type: vertex
 modname: mopp
-modtype: 60
+modtype: dg_neuron
 param:
   - name: vt
     value: -35.0
@@ -131,7 +131,7 @@ state:
 ---
 type: vertex
 modname: gc
-modtype: 60
+modtype: dg_neuron
 param:
   - name: vt
     value: -35.0
@@ -177,7 +177,7 @@ state:
 ---
 type: vertex
 modname: pbc
-modtype: 60
+modtype: dg_neuron
 param:
   - name: vt
     value: -35.0
@@ -223,7 +223,7 @@ state:
 ---
 type: vertex
 modname: cbc
-modtype: 60
+modtype: dg_neuron
 param:
   - name: vt
     value: -35.0
@@ -269,7 +269,7 @@ state:
 ---
 type: vertex
 modname: mc
-modtype: 60
+modtype: dg_neuron
 param:
   - name: vt
     value: -45.0
@@ -315,7 +315,7 @@ state:
 ---
 type: vertex
 modname: hipp
-modtype: 60
+modtype: dg_neuron
 param:
   - name: vt
     value: -35.0
@@ -361,7 +361,7 @@ state:
 ---
 type: vertex
 modname: hicap
-modtype: 60
+modtype: dg_neuron
 param:
   - name: vt
     value: -30.0
@@ -407,7 +407,7 @@ state:
 #---
 #type: edge
 #modname: syn_glu_stdp
-#modtype: 53
+#modtype: dg_syn_glu_stdp
 #param:
 #  - name: wmax
 #    value: 10
@@ -445,7 +445,7 @@ state:
 ---
 type: edge
 modname: syn_lec2mopp
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -467,7 +467,7 @@ state:
 ---
 type: edge
 modname: syn_lec2gc
-modtype: 63
+modtype: dg_syn_glu_stdp
 param:
   - name: n_sites
     value: 1
@@ -516,7 +516,7 @@ state:
 ---
 type: edge
 modname: syn_lec2pbc
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -538,7 +538,7 @@ state:
 ---
 type: edge
 modname: syn_lec2cbc
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -560,7 +560,7 @@ state:
 ---
 type: edge
 modname: syn_mec2mopp
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -582,7 +582,7 @@ state:
 ---
 type: edge
 modname: syn_mec2gc
-modtype: 63
+modtype: dg_syn_glu_stdp
 param:
   - name: n_sites
     value: 1
@@ -631,7 +631,7 @@ state:
 ---
 type: edge
 modname: syn_mec2pbc
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -653,7 +653,7 @@ state:
 ---
 type: edge
 modname: syn_mec2cbc
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -675,7 +675,7 @@ state:
 ---
 type: edge
 modname: syn_mopp2gc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -697,7 +697,7 @@ state:
 ---
 type: edge
 modname: syn_gc2pbc
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -719,7 +719,7 @@ state:
 ---
 type: edge
 modname: syn_gc2cbc
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 3
@@ -741,7 +741,7 @@ state:
 ---
 type: edge
 modname: syn_gc2mc
-modtype: 63
+modtype: dg_syn_glu_stdp
 param:
   - name: n_sites
     value: 4
@@ -790,7 +790,7 @@ state:
 ---
 type: edge
 modname: syn_gc2hipp
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 2
@@ -812,7 +812,7 @@ state:
 ---
 type: edge
 modname: syn_gc2hicap
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 2
@@ -834,7 +834,7 @@ state:
 ---
 type: edge
 modname: syn_pbc2gc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -856,7 +856,7 @@ state:
 ---
 type: edge
 modname: syn_pbc2pbc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -878,7 +878,7 @@ state:
 ---
 type: edge
 modname: syn_cbc2gc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -900,7 +900,7 @@ state:
 ---
 type: edge
 modname: syn_cbc2cbc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -922,7 +922,7 @@ state:
 ---
 type: edge
 modname: syn_mc2gc
-modtype: 63
+modtype: dg_syn_glu_stdp
 param:
   - name: n_sites
     value: 1
@@ -971,7 +971,7 @@ state:
 ---
 type: edge
 modname: syn_mc2pbc
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -993,7 +993,7 @@ state:
 ---
 type: edge
 modname: syn_mc2cbc
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 1
@@ -1015,7 +1015,7 @@ state:
 ---
 type: edge
 modname: syn_hipp2gc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -1037,7 +1037,7 @@ state:
 ---
 type: edge
 modname: syn_hicap2gc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -1059,7 +1059,7 @@ state:
 ---
 type: edge
 modname: syn_pbc2mc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -1081,7 +1081,7 @@ state:
 ---
 type: edge
 modname: syn_cbc2mc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -1103,7 +1103,7 @@ state:
 ---
 type: edge
 modname: syn_hipp2mc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -1125,7 +1125,7 @@ state:
 ---
 type: edge
 modname: syn_hicap2mc
-modtype: 64
+modtype: dg_syn_gaba
 param:
   - name: n_sites
     value: 1
@@ -1147,7 +1147,7 @@ state:
 ---
 type: edge
 modname: syn_mc2hipp
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 3
@@ -1169,7 +1169,7 @@ state:
 ---
 type: edge
 modname: syn_mc2hicap
-modtype: 62
+modtype: dg_syn_glu
 param:
   - name: n_sites
     value: 3

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class LIFSynCobaGaba : public ModelTmpl < 73, LIFSynCobaGaba > {
+class LIFSynCobaGaba : public ModelTmpl < ModelHash("coba_syn_gaba"), LIFSynCobaGaba > {
   public:
     /* Constructor */
     LIFSynCobaGaba() {

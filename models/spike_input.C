@@ -17,7 +17,7 @@ extern /*readonly*/ std::string netwkdir;
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SpikeInput : public ModelTmpl < 5, SpikeInput > {
+class SpikeInput : public ModelTmpl < ModelHash("spike_input"), SpikeInput > {
   public:
     /* Constructor */
     SpikeInput() {

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DummyStr : public ModelTmpl < 3, DummyStr > {
+class DummyStr : public ModelTmpl < ModelHash("dummy_str"), DummyStr > {
   public:
     /* Constructor */
     DummyStr() {

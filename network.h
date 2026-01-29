@@ -223,7 +223,7 @@ class mDist : public CMessage_mDist {
 #define MSG_Modname 6
 class mModname : public CMessage_mModname {
   public:
-    idx_t *modtype;
+    uidx_t *modtype;
     idx_t *xmodname;
     char *modname;
     idx_t *xdatafiles;
@@ -240,7 +240,7 @@ class mModname : public CMessage_mModname {
 #define MSG_Model 31
 class mModel : public CMessage_mModel {
   public:
-    idx_t *modtype;     // model index identifier
+    uidx_t *modtype;     // model index identifier
     idx_t *graphtype;   // type of model (vertex/edge)
     idx_t *xmodname;    // model name prefix
     char *modname;      // model name
@@ -487,7 +487,7 @@ class NetModel {
   public:
     virtual ~NetModel() { }
     /* Getters */
-    idx_t getModType() const { return modtype; }
+    uidx_t getModType() const { return modtype; }
     std::vector<std::string> getParamList() const { return paramlist; }
     std::vector<std::string> getStateList() const { return statelist; }
     std::vector<std::string> getStickList() const { return sticklist; }
@@ -554,7 +554,7 @@ class NetModel {
     std::uniform_real_distribution<real_t> *unifdist;
     std::normal_distribution<real_t> *normdist;
     /* Model Information */
-    idx_t modtype;
+    uidx_t modtype;
     std::vector<std::string> paramlist;
     std::vector<std::string> statelist;
     std::vector<std::string> sticklist;
@@ -569,14 +569,20 @@ class NetModel {
     bool plastic;
 };
 
+// String hash for model names
+//
+constexpr uidx_t ModelHash(const char* str, uidx_t hash = 14695981039346656037ULL){
+  return *str ? ModelHash(str + 1, (hash ^ static_cast<uidx_t>(*str)) * 1099511628211ULL) : hash;
+}
+
 // Network model template
 //
-template <idx_t TYPE, typename IMPL>
+template <uidx_t TYPE, typename IMPL>
 class ModelTmpl : public NetModel {
   public:
     static NetModel* Create() { return new IMPL(); }
-    static const idx_t MODELTYPE; // for registration
-    static void Enable() { volatile idx_t x = MODELTYPE; }
+    static const uidx_t MODELTYPE; // for registration
+    static void Enable() { volatile uidx_t x = MODELTYPE; }
   protected:
     ModelTmpl() { modtype = MODELTYPE; }
   private:
@@ -596,19 +602,19 @@ class ModelFactory {
     }
 
     /* Register concrete factory */
-    idx_t Register(idx_t modtype, t_pfFactory model) {
+    uidx_t Register(uidx_t modtype, t_pfFactory model) {
       //CkPrintf("Registering constructor for model %" PRIidx "\n", modtype);
       modellist[modtype] = model;
       return modtype;
     }
 
     /* Create concrete object */
-    NetModel *Create(idx_t modtype) {
+    NetModel *Create(uidx_t modtype) {
       return modellist[modtype]();
     }
 
     /* Model List*/
-    std::unordered_map<idx_t, t_pfFactory> modellist;
+    std::unordered_map<uidx_t, t_pfFactory> modellist;
 
   private:
     /* Empty */
@@ -621,8 +627,8 @@ class ModelFactory {
 
 // Network model factory registration
 //
-template <idx_t TYPE, typename IMPL>
-const idx_t ModelTmpl<TYPE, IMPL>::MODELTYPE = ModelFactory::newModel()->Register(
+template <uidx_t TYPE, typename IMPL>
+const uidx_t ModelTmpl<TYPE, IMPL>::MODELTYPE = ModelFactory::newModel()->Register(
     ModelTmpl<TYPE, IMPL >::_MODELTYPE, &ModelTmpl<TYPE, IMPL >::Create);
 
 

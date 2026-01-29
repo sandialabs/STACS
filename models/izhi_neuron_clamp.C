@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiNeuronClamp : public ModelTmpl < 14, IzhiNeuronClamp > {
+class IzhiNeuronClamp : public ModelTmpl < ModelHash("izhi_neuron_clamp"), IzhiNeuronClamp > {
   public:
     /* Constructor */
     IzhiNeuronClamp() {

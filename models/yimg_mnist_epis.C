@@ -45,7 +45,7 @@ YimgMnistEpisPort::YimgMnistEpisPort(int np) {
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YimgMnistEpis : public ModelTmpl < 110, YimgMnistEpis > {
+class YimgMnistEpis : public ModelTmpl < ModelHash("yimg_mnist_epis"), YimgMnistEpis > {
   public:
     /* Constructor */
     YimgMnistEpis() {

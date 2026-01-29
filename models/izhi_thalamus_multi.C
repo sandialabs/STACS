@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiThalamusMulti : public ModelTmpl < 810, IzhiThalamusMulti > {
+class IzhiThalamusMulti : public ModelTmpl < ModelHash("izhi_thalamus_multi"), IzhiThalamusMulti > {
   public:
     /* Constructor */
     IzhiThalamusMulti() {

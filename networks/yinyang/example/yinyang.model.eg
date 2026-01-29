@@ -1,7 +1,7 @@
 ---
 type: stream
 modname: yy_input
-modtype: 130
+modtype: yy_sample_epis
 param:
   - name: t_max
     value: 30.0
@@ -17,7 +17,7 @@ port:
 ---
 type: vertex
 modname: lif_input
-modtype: 39
+modtype: yy_lif_neuron
 param:
   - name: v_thresh
     value: 10.0
@@ -44,7 +44,7 @@ state:
 ---
 type: vertex
 modname: lif_hidden
-modtype: 39
+modtype: yy_lif_neuron
 param:
   - name: v_thresh
     value: 5.5
@@ -71,7 +71,7 @@ state:
 ---
 type: vertex
 modname: lif_output
-modtype: 39
+modtype: yy_lif_neuron
 param:
   - name: v_thresh
     value: 7.0
@@ -98,7 +98,7 @@ state:
 ---
 type: edge
 modname: syn_stdp_ih
-modtype: 36
+modtype: lif_syn_stdp
 param:
   - name: wmax
     value: 3.0
@@ -146,7 +146,7 @@ state:
 ---
 type: edge
 modname: syn_stdp_ho
-modtype: 36
+modtype: lif_syn_stdp
 param:
   - name: wmax
     value: 3.0
@@ -194,7 +194,7 @@ state:
 #---
 #type: edge
 #modname: syn_nostdp_hh
-#modtype: 31
+#modtype: lif_syn_nostdp
 #param:
 #state:
 #  - name: delay
@@ -209,7 +209,7 @@ state:
 ---
 type: edge
 modname: syn_ampl
-modtype: 40
+modtype: yy_lif_syn_ampl
 state:
   - name: delay
     rep: tick

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DGIzhiSynGluStdp : public ModelTmpl < 63, DGIzhiSynGluStdp > {
+class DGIzhiSynGluStdp : public ModelTmpl < ModelHash("dg_syn_glu_stdp"), DGIzhiSynGluStdp > {
   public:
     /* Constructor */
     DGIzhiSynGluStdp() {

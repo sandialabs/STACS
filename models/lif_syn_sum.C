@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class LIFSynSum : public ModelTmpl < 32, LIFSynSum > {
+class LIFSynSum : public ModelTmpl < ModelHash("lif_syn_sum"), LIFSynSum > {
   public:
     /* Constructor */
     LIFSynSum() {

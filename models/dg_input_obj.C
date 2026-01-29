@@ -17,7 +17,7 @@ extern /*readonly*/ std::string netwkdir;
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class DGInputObject : public ModelTmpl < 66, DGInputObject > {
+class DGInputObject : public ModelTmpl < ModelHash("dg_input_obj"), DGInputObject > {
   public:
     /* Constructor */
     DGInputObject() {

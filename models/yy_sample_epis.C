@@ -18,7 +18,7 @@ extern /*readonly*/ tick_t tepisode;
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class YinYangEpis : public ModelTmpl < 130, YinYangEpis > {
+class YinYangEpis : public ModelTmpl < ModelHash("yy_sample_epis"), YinYangEpis > {
   public:
     /* Constructor */
     YinYangEpis() {

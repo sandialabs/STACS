@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SRMStimIzhiEpis : public ModelTmpl < 201, SRMStimIzhiEpis > {
+class SRMStimIzhiEpis : public ModelTmpl < ModelHash("srm_stim_izhi_epis"), SRMStimIzhiEpis > {
   private:
     bool newepisode;
   public:

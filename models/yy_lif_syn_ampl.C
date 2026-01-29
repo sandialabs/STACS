@@ -9,10 +9,10 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class IzhiSynClamp : public ModelTmpl < 15, IzhiSynClamp > {
+class YYLIFSynAmpl : public ModelTmpl < ModelHash("yy_lif_syn_ampl"), YYLIFSynAmpl > {
   public:
     /* Constructor */
-    IzhiSynClamp() {
+    YYLIFSynAmpl() {
       // parameters
       paramlist.resize(0);
       // states
@@ -22,7 +22,7 @@ class IzhiSynClamp : public ModelTmpl < 15, IzhiSynClamp > {
       sticklist[0] = "delay";
       // auxiliary states
       auxstate.resize(1);
-      auxstate[0] = "I_clamp";
+      auxstate[0] = "I_stim";
       // auxiliary sticks
       auxstick.resize(0);
       // ports
@@ -41,16 +41,17 @@ class IzhiSynClamp : public ModelTmpl < 15, IzhiSynClamp > {
 
 // Simulation step
 //
-tick_t IzhiSynClamp::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
+tick_t YYLIFSynAmpl::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state, std::vector<tick_t>& stick, std::vector<event_t>& events) {
   return tdiff;
 }
 
 // Simulation jump
 //
-void IzhiSynClamp::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
+void YYLIFSynAmpl::Jump(const event_t& event, std::vector<std::vector<real_t>>& state, std::vector<std::vector<tick_t>>& stick, const std::vector<auxidx_t>& auxidx) {
   // External stim event
-  if (event.type == EVENT_CLAMP && event.source >= 0) {
+  if (event.type == EVENT_STIM && event.source >= 0) {
     // Add stim to applied current
-    state[0][auxidx[0].stateidx[0]] = event.data;
+    state[0][auxidx[0].stateidx[0]] += event.data;
   }
 }
+

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class SRMNeuron : public ModelTmpl < 20, SRMNeuron > {
+class SRMNeuron : public ModelTmpl < ModelHash("srm_neuron"), SRMNeuron > {
   public:
     /* Constructor */
     SRMNeuron() {

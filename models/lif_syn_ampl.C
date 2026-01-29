@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class LIFSynAmpl : public ModelTmpl < 37, LIFSynAmpl > {
+class LIFSynAmpl : public ModelTmpl < ModelHash("lif_syn_ampl"), LIFSynAmpl > {
   public:
     /* Constructor */
     LIFSynAmpl() {

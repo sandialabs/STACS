@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class BretteSynGi : public ModelTmpl < 57, BretteSynGi > {
+class BretteSynGi : public ModelTmpl < ModelHash("brette_syn_gi"), BretteSynGi > {
   public:
     /* Constructor */
     BretteSynGi() {

@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class LIFNeuronClamp : public ModelTmpl < 38, LIFNeuronClamp > {
+class LIFNeuronClamp : public ModelTmpl < ModelHash("lif_neuron_clamp"), LIFNeuronClamp > {
   public:
     /* Constructor */
     LIFNeuronClamp() {

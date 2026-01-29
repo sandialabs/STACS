@@ -5,7 +5,7 @@ events:
 ---
 type: stream
 modname: spike_input
-modtype: 5
+modtype: spike_input
 param:
 - name: n
   value: 101
@@ -15,7 +15,7 @@ port:
 ---
 type: vertex
 modname: fugu_neuron
-modtype: 80
+modtype: fugu_neuron
 param: null
 state:
 - name: v
@@ -52,7 +52,7 @@ state:
 ---
 type: edge
 modname: fugu_synapse
-modtype: 81
+modtype: fugu_synapse
 param: null
 state:
 - name: delay
@@ -67,7 +67,7 @@ state:
 ---
 type: edge
 modname: synclamp
-modtype: 15
+modtype: spike_clamp
 state:
 - name: delay
   init: constant
