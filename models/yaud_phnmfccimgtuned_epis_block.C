@@ -6,9 +6,12 @@
 
 #include "network.h"
 
+#ifdef STACS_WITH_FFTW
+#include <fftw3.h>
+#endif
+
 #ifdef STACS_WITH_YARP
 #include <yarp/sig/Sound.h>
-#include <fftw3.h>
 #include <mutex>
 #include <condition_variable>
 
@@ -53,6 +56,7 @@ class YaudPhnMFCCImgTunedEpisBlockPort : public yarp::os::BufferedPort<yarp::sig
       // Split samples into windows
       int nwindow = (((int)samplebuffer.size()) - noverlap)/(ninput - noverlap);
       mels.clear();
+#ifdef STACS_WITH_FFTW
       for (int w = 0; w < nwindow; ++w) {
         // Find power spectral density of window
         double* inputbuffer = static_cast<double*>(fftw_malloc(ninput * sizeof(double)));
@@ -85,6 +89,7 @@ class YaudPhnMFCCImgTunedEpisBlockPort : public yarp::os::BufferedPort<yarp::sig
         //fprintf(pMEL, "\n");
         //mels.pop_front();
       }
+#endif
       // Delete to the end of the processed sound samples
       samplebuffer.clear();//erase(samplebuffer.begin(), samplebuffer.begin() + nwindow * (ninput - noverlap));
       std::unique_lock<std::mutex> lck(mtx);

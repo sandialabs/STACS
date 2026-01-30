@@ -14,9 +14,11 @@ CFLAGS     = -O3 -Wall
 CHARMFLAGS = -module CkMulticast -language charm++
 PROJFLAGS  = -tracemode projections -tracemode summary
 YARPFLAGS  = -DSTACS_WITH_YARP
+FFTWFLAGS  = -DSTACS_WITH_FFTW
 
 LIB        = -std=c++11
-LDLIB      = -lm -lyaml-cpp -lfftw3
+LDLIB      = -lm -lyaml-cpp
+FFTWLDLIB  = -lfftw3
 YARPLDLIB  = -lYARP_init -lyarpcar -lYARP_OS \
              -lYARP_sig -lYARP_math -lYARP_dev \
              -lYARP_name -lACE
@@ -39,6 +41,12 @@ $(DECL) $(DEF): $(SRC_CI)
 
 clean:
 	rm -f  $(DECL) $(DEF) $(OBJ) $(OUT) charmrun
+
+# FFTW related
+ifeq ($(WITHFFTW), 1)
+  CFLAGS += $(FFTWFLAGS)
+  LDLIB += $(FFTWLDLIB)
+endif
 
 # YARP related
 ifeq ($(WITHYARP), 1)

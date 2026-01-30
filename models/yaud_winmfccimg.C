@@ -6,9 +6,12 @@
 
 #include "network.h"
 
+#ifdef STACS_WITH_FFTW
+#include <fftw3.h>
+#endif
+
 #ifdef STACS_WITH_YARP
 #include <yarp/sig/Sound.h>
-#include <fftw3.h>
 
 /**************************************************************************
 * Ports
@@ -48,6 +51,7 @@ class YaudWinMFCCImgPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
       //CkPrintf("Sample samples: %f, %f, %f, %f, %f\n", samplebuffer[50], samplebuffer[100], samplebuffer[150], samplebuffer[200], samplebuffer[250]);
       // Split samples into windows
       int nwindow = (((int)samplebuffer.size()) - noverlap)/(ninput - noverlap);
+#ifdef STACS_WITH_FFTW
       for (int w = 0; w < nwindow; ++w) {
         // Find power spectral density of window
         double* inputbuffer = static_cast<double*>(fftw_malloc(ninput * sizeof(double)));
@@ -80,6 +84,7 @@ class YaudWinMFCCImgPort : public yarp::os::BufferedPort<yarp::sig::Sound> {
         //fprintf(pMEL, "\n");
         //mels.pop_front();
       }
+#endif
       // Delete to the end of the processed sound samples
       samplebuffer.erase(samplebuffer.begin(), samplebuffer.begin() + nwindow * (ninput - noverlap));
     }
