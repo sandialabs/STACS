@@ -98,7 +98,7 @@ void Network::LoadFile() {
             for (std::size_t e = 0; e < edges.size(); ++e) {
               if (edges[e].modidx == modmap[modelconf[i].modname]) {
                 for (std::size_t v = 0; v < vertices.size(); ++v) {
-                  if (vertices[v].modidx == edges[e].target[0]) {
+                  if (vertices[v].nameidx == edges[e].target[0]) {
                     datamodidx[(idx_t) modelconf[i].stateparam[s][0]] = v;
                   }
                 }
@@ -111,7 +111,7 @@ void Network::LoadFile() {
             for (std::size_t e = 0; e < edges.size(); ++e) {
               if (edges[e].modidx == modmap[modelconf[i].modname]) {
                 for (std::size_t v = 0; v < vertices.size(); ++v) {
-                  if (vertices[v].modidx == edges[e].target[0]) {
+                  if (vertices[v].nameidx == edges[e].target[0]) {
                     datamodidx[(idx_t) modelconf[i].stickparam[s][0]] = v;
                   }
                 }
@@ -126,7 +126,7 @@ void Network::LoadFile() {
       for (std::size_t k = 0; k < edges[e].conntype.size(); ++k) {
         if (edges[e].conntype[k] == CONNTYPE_FILE) {
           for (std::size_t v = 0; v < vertices.size(); ++v) {
-            if (vertices[v].modidx == edges[e].target[0]) {
+            if (vertices[v].nameidx == edges[e].target[0]) {
               datamodidx[(idx_t) edges[e].probparam[k][0]] = v;
             }
           }
@@ -197,8 +197,8 @@ void Network::LoadMatrix(mMatrix *msg) {
     }
     datafiles[msg->dfidx].matrix.push_back(row);
   }
-  //CkPrintf("  Loaded datafile %d (%d - %d) on %d\n",
-  //    msg->dfidx, msg->xrow, msg->xrow+datafiles[msg->dfidx].matrix.size(), prtidx);
+  //CkPrintf("  Loaded datafile %d (%d - %d) (%d) on %d\n",
+  //    msg->dfidx, msg->xrow, msg->xrow+datafiles[msg->dfidx].matrix.size(), msg->rows[msg->nrow], prtidx);
 
   delete msg;
 

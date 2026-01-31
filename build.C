@@ -500,6 +500,8 @@ void Network::Build() {
               adjcy[i].push_back(glbsourceidx);
               adjcyset[i].insert(glbsourceidx); // The set is useful for faster searching of edge existence
               edgmodidx[i].push_back(edges[edg].modidx);
+              //CkPrintf("  edge from file: %" PRIidx "(%" PRIidx ") to %" PRIidx "(%" PRIidx ") modidx %" PRIidx "\n",
+              //    glbsourceidx, sourceordix, glbtargetidx, vtxordidx[i], edges[edg].modidx);
               // The state/stick will need to be reparameterized with correct distance information later
               state[i].push_back(BuildEdgState(edges[edg].modidx, 0.0, sourceordix, vtxordidx[i]));
               stick[i].push_back(BuildEdgStick(edges[edg].modidx, 0.0, sourceordix, vtxordidx[i]));
@@ -1011,7 +1013,7 @@ std::vector<tick_t> Network::BuildEdgStick(idx_t modidx, real_t dist, idx_t sour
     else if (modelconf[modidx].stickinit[j] == RNGTYPE_LBNORM) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglbnorm(modelconf[modidx].stickparam[j].data()));
     }
-    else if (modelconf[modidx].stateinit[j] == RNGTYPE_LBLOGNORM) {
+    else if (modelconf[modidx].stickinit[j] == RNGTYPE_LBLOGNORM) {
       rngstick[j] = (tick_t)(TICKS_PER_MS * rnglblognorm(modelconf[modidx].stickparam[j].data()));
     }
     else if (modelconf[modidx].stickinit[j] == RNGTYPE_LIN) {
