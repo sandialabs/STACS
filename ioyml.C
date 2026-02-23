@@ -1881,10 +1881,12 @@ int Main::ReadGraph() {
     std::sort(connections[i].begin(), connections[i].end());
     for (std::size_t j = 1; j < connections[i].size(); ++j) {
       if (connections[i][j] == connections[i][j-1]) {
-        CkPrintf("  error: multiple connection types between vertices\n"
-                 "         %s to %s not allowed (yet)\n",
+        //CkPrintf("  error: multiple connection types between vertices\n"
+        //         "         %s to %s not allowed (yet)\n",
+        CkPrintf("  warning: multiple connection types between vertices\n"
+                 "           %s to %s\n",
                  vertices[i].vtxname.c_str(), vertices[connections[i][j]].vtxname.c_str());
-        return 1;
+        //return 1;
       }
     }
   }

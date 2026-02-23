@@ -235,12 +235,12 @@ void Network::CycleSim() {
     mEvent *mevent = BuildEvent();
     netcomm.CommEvent(mevent);
 
+    // Add new records
+    AddRecord();
+
     // Increment simulated time
     tsim += tstep;
 
-    // Add new records
-    AddRecord();
-    
     // Increment iteration
     ++iter;
   }
