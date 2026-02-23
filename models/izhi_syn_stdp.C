@@ -31,7 +31,7 @@ class IzhiSynSTDP : public ModelTmpl < ModelHash("izhi_syn_stdp"), IzhiSynSTDP >
       sticklist[2] = "ntlast";
       // auxiliary states
       auxstate.resize(1);
-      auxstate[0] = "I";
+      auxstate[0] = "I_syn";
       // auxiliary sticks
       auxstick.resize(0);
       // ports

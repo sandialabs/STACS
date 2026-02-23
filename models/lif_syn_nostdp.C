@@ -23,7 +23,7 @@ class LIFSynNoSTDP : public ModelTmpl < ModelHash("lif_syn_nostdp"), LIFSynNoSTD
       sticklist[0] = "delay";
       // auxiliary states
       auxstate.resize(1);
-      auxstate[0] = "I";
+      auxstate[0] = "I_syn";
       // auxiliary sticks
       auxstick.resize(0);
       // ports

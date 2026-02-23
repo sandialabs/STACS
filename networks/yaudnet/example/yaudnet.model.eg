@@ -30,7 +30,7 @@ state:
   - name: u
     init: constant
     value: -13.0
-  - name: I
+  - name: I_syn
     init: constant
     value: 0.0
   - name: I_app
@@ -58,7 +58,7 @@ state:
   - name: u
     init: constant
     value: -13.0
-  - name: I
+  - name: I_syn
     init: constant
     value: 0.0
   - name: I_app
@@ -86,7 +86,7 @@ state:
   - name: u
     init: constant
     value: -13.0
-  - name: I
+  - name: I_syn
     init: constant
     value: 0.0
   - name: I_app

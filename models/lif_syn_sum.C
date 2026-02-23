@@ -18,7 +18,7 @@ class LIFSynSum : public ModelTmpl < ModelHash("lif_syn_sum"), LIFSynSum > {
       paramlist[0] = "tau";
       // states
       statelist.resize(1);
-      statelist[0] = "I";
+      statelist[0] = "I_syn";
       // sticks
       sticklist.resize(0);
       // auxiliary states

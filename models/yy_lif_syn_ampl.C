@@ -22,7 +22,7 @@ class YYLIFSynAmpl : public ModelTmpl < ModelHash("yy_lif_syn_ampl"), YYLIFSynAm
       sticklist[0] = "delay";
       // auxiliary states
       auxstate.resize(1);
-      auxstate[0] = "I_stim";
+      auxstate[0] = "I_app";
       // auxiliary sticks
       auxstick.resize(0);
       // ports

@@ -33,7 +33,7 @@ class LIFSynSTDP : public ModelTmpl < ModelHash("lif_syn_stdp"), LIFSynSTDP > {
       sticklist[2] = "ntlast";
       // auxiliary states
       auxstate.resize(1);
-      auxstate[0] = "I";
+      auxstate[0] = "I_syn";
       // auxiliary sticks
       auxstick.resize(0);
       // ports

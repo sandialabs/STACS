@@ -23,7 +23,7 @@ class LIFNeuronClamp : public ModelTmpl < ModelHash("lif_neuron_clamp"), LIFNeur
       // states
       statelist.resize(4);
       statelist[0] = "v";
-      statelist[1] = "I";
+      statelist[1] = "I_syn";
       statelist[2] = "I_app";
       statelist[3] = "I_clamp";
       // sticks
@@ -81,7 +81,7 @@ tick_t LIFNeuronClamp::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& st
     state[1] = state[1]*exp(-(tstep/param[3]));
   }
   
-  // shortcircuit the spiking activity with I_stim
+  // shortcircuit the spiking activity with I_clamp
   if (state[3] > 0.0 || (tstep*param[4]/1000.0) > (*unifdist)(*rngine)) {
     // reset
     state[0] = 0.0;

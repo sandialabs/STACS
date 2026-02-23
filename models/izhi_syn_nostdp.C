@@ -23,7 +23,7 @@ class IzhiSynNoSTDP : public ModelTmpl < ModelHash("izhi_syn_nostdp"), IzhiSynNo
       sticklist[0] = "delay";
       // auxiliary states
       auxstate.resize(1);
-      auxstate[0] = "I";
+      auxstate[0] = "I_syn";
       // auxiliary sticks
       auxstick.resize(0);
       // ports

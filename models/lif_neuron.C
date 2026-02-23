@@ -21,7 +21,7 @@ class LIFNeuron : public ModelTmpl < ModelHash("lif_neuron"), LIFNeuron > {
       // states
       statelist.resize(3);
       statelist[0] = "v";
-      statelist[1] = "I";
+      statelist[1] = "I_syn";
       statelist[2] = "I_app";
       // sticks
       sticklist.resize(0);

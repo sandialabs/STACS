@@ -26,7 +26,7 @@ class IzhiNeuronClamp : public ModelTmpl < ModelHash("izhi_neuron_clamp"), IzhiN
       statelist.resize(5);
       statelist[0] = "v";
       statelist[1] = "u";
-      statelist[2] = "I";
+      statelist[2] = "I_syn";
       statelist[3] = "I_app";
       statelist[4] = "I_clamp";
       // sticks

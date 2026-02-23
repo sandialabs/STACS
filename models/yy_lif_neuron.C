@@ -23,8 +23,8 @@ class YYLIFNeuron : public ModelTmpl < ModelHash("yy_lif_neuron"), YYLIFNeuron >
       // states
       statelist.resize(4);
       statelist[0] = "v";
-      statelist[1] = "I";
-      statelist[2] = "I_stim";
+      statelist[1] = "I_syn";
+      statelist[2] = "I_app";
       // sticks
       sticklist.resize(0);
       // auxiliary states
@@ -75,7 +75,7 @@ tick_t YYLIFNeuron::Step(tick_t tdrift, tick_t tdiff, std::vector<real_t>& state
     state[0] = 0.0;
   }
   
-  // shortcircuit the spiking activity with I_stim
+  // shortcircuit the spiking activity with I_app
   if (state[2] > 0.0 || (tstep*param[4]/1000.0) > (*unifdist)(*rngine)) {
     // reset
     state[0] = 0.0;

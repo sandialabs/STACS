@@ -33,10 +33,10 @@ state:
   - name: v
     init: constant
     value: 0.0
-  - name: I
+  - name: I_syn
     init: constant
     value: 0.0
-  - name: I_stim
+  - name: I_app
     init: constant
     value: 0.0
 ...
@@ -60,10 +60,10 @@ state:
   - name: v
     init: constant
     value: 0.0
-  - name: I
+  - name: I_syn
     init: constant
     value: 0.0
-  - name: I_stim
+  - name: I_app
     init: constant
     value: 0.0
 ...
@@ -87,10 +87,10 @@ state:
   - name: v
     init: constant
     value: 0.0
-  - name: I
+  - name: I_syn
     init: constant
     value: 0.0
-  - name: I_stim
+  - name: I_app
     init: constant
     value: 0.0
 ...

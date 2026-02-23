@@ -23,7 +23,7 @@ class IzhiNeuron : public ModelTmpl < ModelHash("izhi_neuron"), IzhiNeuron > {
       statelist.resize(4);
       statelist[0] = "v";
       statelist[1] = "u";
-      statelist[2] = "I";
+      statelist[2] = "I_syn";
       statelist[3] = "I_app";
       // sticks
       sticklist.resize(0);
