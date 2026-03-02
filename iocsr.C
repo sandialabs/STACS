@@ -45,7 +45,7 @@ int Main::ReadDist() {
   
   // Open file for reading
   CkPrintf("Reading network distribution\n");//from %s/%s.dist\n", netwkdir.c_str(), filebase.c_str());
-  sprintf(csrfile, "%s/%s.dist", netwkdir.c_str(), filebase.c_str());
+  sprintf(csrfile, "%s/%s%s.dist", netwkdir.c_str(), filebase.c_str(), fileload.c_str());
   pDist = fopen(csrfile,"r");
   if (pDist == NULL || line == NULL) {
     return 1;
@@ -417,7 +417,7 @@ void Netdata::ReadNetpart() {
   line = new char[MAXLINE];
 
   // Open files for reading
-  sprintf(csrfile, "%s/%s.part.%d", netwkdir.c_str(), filebase.c_str(), datidx);
+  sprintf(csrfile, "%s/%s%s.part.%d", netwkdir.c_str(), filebase.c_str(), fileload.c_str(), datidx);
   pPart = fopen(csrfile,"r");
   if (pPart == NULL) {
     CkPrintf("Error opening files for reading\n");
@@ -584,7 +584,7 @@ void Netdata::WriteRecord() {
 
   if (nevtlog) {
     // Open File
-    sprintf(recfile, "%s/%s/%s.evtlog.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, datidx);
+    sprintf(recfile, "%s/%s/%s%s.evtlog.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), fileload.c_str(), records[0]->iter, datidx);
     pEvtlog = fopen(recfile,"w");
     if (pEvtlog == NULL) {
       CkPrintf("Error opening files for recording %d\n", datidx);
@@ -613,7 +613,7 @@ void Netdata::WriteRecord() {
 
   if (nrecord) {
     // Open File
-    sprintf(recfile, "%s/%s/%s.record.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), records[0]->iter, datidx);
+    sprintf(recfile, "%s/%s/%s%s.record.%" PRIidx ".%d", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), fileload.c_str(), records[0]->iter, datidx);
     pRecord = fopen(recfile,"w");
     if (pRecord == NULL) {
       CkPrintf("Error opening files for recording %d\n", datidx);
@@ -665,9 +665,9 @@ void Network::WriteGroup(idx_t groupidx) {
   char grpfile[1024];
 
   // Open File
-  sprintf(grpfile, "%s/%s/%s.stamp.%" PRIidx "", netwkdir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[groupidx]);
+  sprintf(grpfile, "%s/%s/%s%s.stamp.%" PRIidx "", netwkdir.c_str(), groupdir.c_str(), filebase.c_str(), fileload.c_str(), vtxidx[groupidx]);
   pStamp = fopen(grpfile,"w");
-  sprintf(grpfile, "%s/%s/%s.route.%" PRIidx "", netwkdir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[groupidx]);
+  sprintf(grpfile, "%s/%s/%s%s.route.%" PRIidx "", netwkdir.c_str(), groupdir.c_str(), filebase.c_str(), fileload.c_str(), vtxidx[groupidx]);
   pRoute = fopen(grpfile,"w");
   if (pStamp == NULL || pRoute == NULL) {
     CkPrintf("Error opening files for group output %" PRIidx "\n", vtxidx[groupidx]);
@@ -710,7 +710,7 @@ void Network::ReadGroup(idx_t groupidx) {
   // Prepare buffer
   line = new char[MAXLINE];
   
-  sprintf(grpfile, "%s/%s/%s.stamp.%" PRIidx "", netwkdir.c_str(), groupdir.c_str(), filebase.c_str(), vtxidx[groupidx]);
+  sprintf(grpfile, "%s/%s/%s%s.stamp.%" PRIidx "", netwkdir.c_str(), groupdir.c_str(), filebase.c_str(), fileload.c_str(), vtxidx[groupidx]);
   pStamp = fopen(grpfile,"r");
   if (line == NULL || pStamp == NULL) {
     //CkPrintf("Warning: Group file does not exist %" PRIidx "\n", vtxidx[groupidx]);
@@ -773,7 +773,7 @@ void Netdata::WriteEstimate() {
   // Only save when data exists
   if (grplog.size() > 1) {
     // Open File
-    sprintf(recfile, "%s/%s/%s.grplog.%" PRIidx "", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), grplog[0].index);
+    sprintf(recfile, "%s/%s/%s%s.grplog.%" PRIidx "", netwkdir.c_str(), recordir.c_str(), filebase.c_str(), fileload.c_str(), grplog[0].index);
     pGrplog = fopen(recfile,"w");
     if (pGrplog == NULL) {
       CkPrintf("Error opening files for recording\n");
