@@ -9,7 +9,7 @@
 /**************************************************************************
 * Class declaration
 **************************************************************************/
-class CortNeuron : public ModelTmpl < ModelHash("cort_neruon"), CortNeuron > {
+class CortNeuron : public ModelTmpl < ModelHash("cort_neuron"), CortNeuron > {
   public:
     /* Constructor */
     CortNeuron() {
