@@ -8,14 +8,14 @@
 #define __STACS_EVENT_H__
 
 #define EVENT_TOTAL         8
-#define EVENT_SPIKE         0
-#define EVENT_STIM          1
-#define EVENT_SYNUP         2
-#define EVENT_GROUP         3
-#define EVENT_CURRENT       4
-#define EVENT_COUNT         5
-#define EVENT_CLAMP         6
-#define EVENT_RATE          7
+#define EVENT_SPIKE         0  // Regular spike
+#define EVENT_STIM          1  // Data payload
+#define EVENT_CURRENT       2  // Spike with data payload
+#define EVENT_CLAMP         3  // Set to data payload
+#define EVENT_SYNUP         4  // Synapse updates
+#define EVENT_COUNT         5  // Multiple spikes
+#define EVENT_RATE          6  // Spike rate
+#define EVENT_GROUP         7  // Spatio-temporal group activation
 
 #define REMOTE_EDGES        0x00001
 #define REMOTE_EDGE         0x00010
